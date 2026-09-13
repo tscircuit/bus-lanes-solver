@@ -265,51 +265,7 @@ export class BusLanesSolver extends BaseSolver {
       ...input.connections.filter((c) => !claimed.has(c.name)),
     ]
     this.orders = windingOrders(this.connections)
-    for (const o of input.obstacles) {
-      const a = { x: o.center.x - o.width / 2, y: o.center.y },
-        b = { x: o.center.x + o.width / 2, y: o.center.y }
-      // The segment/radius bounds index the rectangle; canEdge performs the
-      // exact rectangle clearance test.
-      for (const layer of o.layers)
-        this.addSegment({
-          a,
-          b,
-          radius: o.height / 2,
-          layer,
-          owners: o.connectedTo,
-          rect: o,
-        })
-    }
-    const layers = Array.from({ length: input.layerCount }, (_, i) =>
-      i === 0 ? "top" : i === input.layerCount - 1 ? "bottom" : `inner${i}`,
-    )
-    for (const t of input.traces ?? [])
-      for (let i = 0; i < t.route.length; i++) {
-        const p = t.route[i]
-        if (p.route_type === "via") {
-          const lo = layers.indexOf(p.from_layer),
-            hi = layers.indexOf(p.to_layer)
-          for (const layer of p.layers ??
-            layers.slice(Math.min(lo, hi), Math.max(lo, hi) + 1))
-            this.addSegment({
-              a: p,
-              b: p,
-              radius: (p.via_diameter ?? 0.3) / 2,
-              layer,
-              owners: [t.connection_name ?? "", t.source_trace_id ?? ""],
-            })
-        } else if (p.route_type === "wire") {
-          const q = t.route[i + 1]
-          if (q?.route_type === "wire" && q.layer === p.layer)
-            this.addSegment({
-              a: p,
-              b: q,
-              radius: p.width / 2,
-              layer: p.layer,
-              owners: [t.connection_name ?? "", t.source_trace_id ?? ""],
-            })
-        } else throw Error("Unsupported previous-route primitive")
-      }
+    for (const segment of this.inputSegments()) this.addSegment(segment)
     // Reserve every terminal before choosing a winding order. An early lane
     // must never occupy another lane's only attachment point.
     for (const c of this.connections)
@@ -324,6 +280,55 @@ export class BusLanesSolver extends BaseSolver {
     this.fixedSegments = [...this.segments]
     this.phase = "route"
     this.startLane()
+  }
+  /** Fixed input geometry is available without advancing the solver. */
+  private *inputSegments(): Generator<Segment> {
+    const input = this.input
+    for (const o of input.obstacles) {
+      const a = { x: o.center.x - o.width / 2, y: o.center.y },
+        b = { x: o.center.x + o.width / 2, y: o.center.y }
+      // The segment/radius bounds index the rectangle; canEdge performs the
+      // exact rectangle clearance test.
+      for (const layer of o.layers)
+        yield {
+          a,
+          b,
+          radius: o.height / 2,
+          layer,
+          owners: o.connectedTo,
+          rect: o,
+        }
+    }
+    const layers = Array.from({ length: input.layerCount }, (_, i) =>
+      i === 0 ? "top" : i === input.layerCount - 1 ? "bottom" : `inner${i}`,
+    )
+    for (const t of input.traces ?? [])
+      for (let i = 0; i < t.route.length; i++) {
+        const p = t.route[i]
+        if (p.route_type === "via") {
+          const lo = layers.indexOf(p.from_layer),
+            hi = layers.indexOf(p.to_layer)
+          for (const layer of p.layers ??
+            layers.slice(Math.min(lo, hi), Math.max(lo, hi) + 1))
+            yield {
+              a: p,
+              b: p,
+              radius: (p.via_diameter ?? 0.3) / 2,
+              layer,
+              owners: [t.connection_name ?? "", t.source_trace_id ?? ""],
+            }
+        } else if (p.route_type === "wire") {
+          const q = t.route[i + 1]
+          if (q?.route_type === "wire" && q.layer === p.layer)
+            yield {
+              a: p,
+              b: q,
+              radius: p.width / 2,
+              layer: p.layer,
+              owners: [t.connection_name ?? "", t.source_trace_id ?? ""],
+            }
+        } else throw Error("Unsupported previous-route primitive")
+      }
   }
   private retry() {
     this.attempt++
@@ -646,12 +651,14 @@ export class BusLanesSolver extends BaseSolver {
         fill: "#cbd5e1",
         stroke: "#64748b",
       })
-    for (const s of this.segments.filter((s) => s.layer === layer))
+    for (const s of this.inputSegments()) {
+      if (s.layer !== layer) continue
       lines.push({
         points: [s.a, s.b],
         strokeColor: "#94a3b8",
         strokeWidth: Math.max(0.025, s.radius * 2),
       })
+    }
     this.traces.forEach((t, i) =>
       lines.push({
         points: t.route,
