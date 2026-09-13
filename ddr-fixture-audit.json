@@ -1,0 +1,3158 @@
+[
+  {
+    "profile": "ddr_left_io_right",
+    "socCenter": {
+      "x": 9,
+      "y": 0
+    },
+    "ramCenter": {
+      "x": -12.000000000000002,
+      "y": 0
+    },
+    "socFanoutBounds": {
+      "minX": -1.5,
+      "maxX": 6.425,
+      "minY": -10.8,
+      "maxY": 8.7
+    },
+    "retainedCarrierBounds": {
+      "minX": -14.924999999999999,
+      "maxX": -1.5,
+      "minY": -10.225,
+      "maxY": 8.125
+    },
+    "xyBoundsOverlap": false,
+    "selectedViasInsideSocFanoutBounds": 1,
+    "shorterThan1mm": 20,
+    "differentNetCopperContacts": 0,
+    "contactExamples": [],
+    "corridors": [
+      {
+        "name": "source_trace_80",
+        "source": {
+          "x": -1.5,
+          "y": -0.3,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_197"
+        },
+        "selectedVia": {
+          "x": -4.599999999999998,
+          "y": 1.5
+        },
+        "ramPad": {
+          "x": -5.824999999999999,
+          "y": 3.5999999999999988,
+          "layer": "top",
+          "pointId": "pcb_port_584",
+          "pcb_port_id": "pcb_port_584"
+        },
+        "gapMm": 3.5846896657869824,
+        "viaToRamPadMm": 2.4311776981537156,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_81",
+        "source": {
+          "x": -1.5,
+          "y": 6,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_196"
+        },
+        "selectedVia": {
+          "x": -2.0749999999999993,
+          "y": 5.425000000000001
+        },
+        "ramPad": {
+          "x": -6.474999999999999,
+          "y": 3.599999999999999,
+          "layer": "top",
+          "pointId": "pcb_port_594",
+          "pcb_port_id": "pcb_port_594"
+        },
+        "gapMm": 0.8131727983645286,
+        "viaToRamPadMm": 4.763467749444726,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_82",
+        "source": {
+          "x": -1.5,
+          "y": 1.5,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_194"
+        },
+        "selectedVia": {
+          "x": -3.924999999999997,
+          "y": 3.6750000000000007
+        },
+        "ramPad": {
+          "x": -7.7749999999999995,
+          "y": 3.599999999999999,
+          "layer": "top",
+          "pointId": "pcb_port_614",
+          "pcb_port_id": "pcb_port_614"
+        },
+        "gapMm": 3.257491366066837,
+        "viaToRamPadMm": 3.850730450187343,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_83",
+        "source": {
+          "x": -1.5,
+          "y": 5.1,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_191"
+        },
+        "selectedVia": {
+          "x": -2.0749999999999993,
+          "y": 4.525000000000002
+        },
+        "ramPad": {
+          "x": -8.424999999999999,
+          "y": 3.5999999999999996,
+          "layer": "top",
+          "pointId": "pcb_port_624",
+          "pcb_port_id": "pcb_port_624"
+        },
+        "gapMm": 0.8131727983645274,
+        "viaToRamPadMm": 6.4170183886287875,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_84",
+        "source": {
+          "x": -1.5,
+          "y": 6.9,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_204"
+        },
+        "selectedVia": {
+          "x": -2.0749999999999993,
+          "y": 6.325000000000003
+        },
+        "ramPad": {
+          "x": -8.424999999999999,
+          "y": 1.9999999999999993,
+          "layer": "top",
+          "pointId": "pcb_port_626",
+          "pcb_port_id": "pcb_port_626"
+        },
+        "gapMm": 0.8131727983645274,
+        "viaToRamPadMm": 7.6829763113002,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_85",
+        "source": {
+          "x": -1.5,
+          "y": 8.7,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_261"
+        },
+        "selectedVia": {
+          "x": -2.0749999999999993,
+          "y": 8.125
+        },
+        "ramPad": {
+          "x": -7.775,
+          "y": 1.9999999999999993,
+          "layer": "top",
+          "pointId": "pcb_port_616",
+          "pcb_port_id": "pcb_port_616"
+        },
+        "gapMm": 0.8131727983645286,
+        "viaToRamPadMm": 8.366936416634228,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_86",
+        "source": {
+          "x": -1.5,
+          "y": 2.4,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_259"
+        },
+        "selectedVia": {
+          "x": -1.7999999999999972,
+          "y": 2.125
+        },
+        "ramPad": {
+          "x": -6.475,
+          "y": 1.999999999999999,
+          "layer": "top",
+          "pointId": "pcb_port_596",
+          "pcb_port_id": "pcb_port_596"
+        },
+        "gapMm": 0.40697051490249053,
+        "viaToRamPadMm": 4.676670824422008,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_87",
+        "source": {
+          "x": -1.5,
+          "y": 7.8,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_260"
+        },
+        "selectedVia": {
+          "x": -1.5,
+          "y": 7.200000000000003
+        },
+        "ramPad": {
+          "x": -5.825,
+          "y": 1.999999999999999,
+          "layer": "top",
+          "pointId": "pcb_port_586",
+          "pcb_port_id": "pcb_port_586"
+        },
+        "gapMm": 0.599999999999997,
+        "viaToRamPadMm": 6.763551212196152,
+        "viaInsideSocFanoutBounds": true
+      },
+      {
+        "name": "source_trace_88",
+        "source": {
+          "x": -1.5,
+          "y": -8.1,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_365"
+        },
+        "selectedVia": {
+          "x": -2.299999999999997,
+          "y": -7.399999999999999
+        },
+        "ramPad": {
+          "x": -5.825000000000001,
+          "y": -3.6000000000000014,
+          "layer": "top",
+          "pointId": "pcb_port_591",
+          "pcb_port_id": "pcb_port_591"
+        },
+        "gapMm": 1.0630145812734635,
+        "viaToRamPadMm": 5.1832060541714915,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_89",
+        "source": {
+          "x": -1.5,
+          "y": -2.7,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_348"
+        },
+        "selectedVia": {
+          "x": -1.7249999999999979,
+          "y": -2.924999999999999
+        },
+        "ramPad": {
+          "x": -6.4750000000000005,
+          "y": -3.600000000000001,
+          "layer": "top",
+          "pointId": "pcb_port_601",
+          "pcb_port_id": "pcb_port_601"
+        },
+        "gapMm": 0.318198051533944,
+        "viaToRamPadMm": 4.7977208130528,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_90",
+        "source": {
+          "x": -1.5,
+          "y": -1.8,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_347"
+        },
+        "selectedVia": {
+          "x": -1.75,
+          "y": -2.2249999999999996
+        },
+        "ramPad": {
+          "x": -7.775000000000001,
+          "y": -3.600000000000001,
+          "layer": "top",
+          "pointId": "pcb_port_621",
+          "pcb_port_id": "pcb_port_621"
+        },
+        "gapMm": 0.49307707308290016,
+        "viaToRamPadMm": 6.179906957228403,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_91",
+        "source": {
+          "x": -1.5,
+          "y": -3.6,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_357"
+        },
+        "selectedVia": {
+          "x": -7.774999999999999,
+          "y": -3.174999999999999
+        },
+        "ramPad": {
+          "x": -8.425,
+          "y": -3.6000000000000005,
+          "layer": "top",
+          "pointId": "pcb_port_631",
+          "pcb_port_id": "pcb_port_631"
+        },
+        "gapMm": 6.289375962685009,
+        "viaToRamPadMm": 0.776611228350456,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_92",
+        "source": {
+          "x": -1.5,
+          "y": -7.2,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_359"
+        },
+        "selectedVia": {
+          "x": -2.0749999999999993,
+          "y": -6.625
+        },
+        "ramPad": {
+          "x": -8.425,
+          "y": -2.0000000000000004,
+          "layer": "top",
+          "pointId": "pcb_port_629",
+          "pcb_port_id": "pcb_port_629"
+        },
+        "gapMm": 0.8131727983645293,
+        "viaToRamPadMm": 7.8557701723001045,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_93",
+        "source": {
+          "x": -1.5,
+          "y": -9,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_366"
+        },
+        "selectedVia": {
+          "x": -2.299999999999997,
+          "y": -8.275
+        },
+        "ramPad": {
+          "x": -7.775,
+          "y": -2.000000000000001,
+          "layer": "top",
+          "pointId": "pcb_port_619",
+          "pcb_port_id": "pcb_port_619"
+        },
+        "gapMm": 1.0796411440844569,
+        "viaToRamPadMm": 8.327739789402646,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_94",
+        "source": {
+          "x": -1.5,
+          "y": -6.3,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_358"
+        },
+        "selectedVia": {
+          "x": -2.174999999999997,
+          "y": -6.299999999999999
+        },
+        "ramPad": {
+          "x": -6.475,
+          "y": -2.000000000000001,
+          "layer": "top",
+          "pointId": "pcb_port_599",
+          "pcb_port_id": "pcb_port_599"
+        },
+        "gapMm": 0.6749999999999972,
+        "viaToRamPadMm": 6.081118318204309,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_95",
+        "source": {
+          "x": -1.5,
+          "y": -9.9,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_367"
+        },
+        "selectedVia": {
+          "x": -1.8499999999999979,
+          "y": -9.55
+        },
+        "ramPad": {
+          "x": -5.825,
+          "y": -2.0000000000000013,
+          "layer": "top",
+          "pointId": "pcb_port_589",
+          "pcb_port_id": "pcb_port_589"
+        },
+        "gapMm": 0.4949747468305815,
+        "viaToRamPadMm": 8.532474728940016,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_96",
+        "source": {
+          "x": -1.5,
+          "y": 3.9,
+          "layer": "inner4",
+          "pointId": "pcb_breakout_point_326"
+        },
+        "selectedVia": {
+          "x": -1.9499999999999993,
+          "y": 3.450000000000003
+        },
+        "ramPad": {
+          "x": -9.725,
+          "y": 3.5999999999999996,
+          "layer": "top",
+          "pointId": "pcb_port_644",
+          "pcb_port_id": "pcb_port_644"
+        },
+        "gapMm": 0.6363961030678902,
+        "viaToRamPadMm": 7.7764468107227485,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_97",
+        "source": {
+          "x": -1.5,
+          "y": 3,
+          "layer": "inner4",
+          "pointId": "pcb_breakout_point_263"
+        },
+        "selectedVia": {
+          "x": -9.774999999999999,
+          "y": 3.2250000000000014
+        },
+        "ramPad": {
+          "x": -10.375,
+          "y": 3.5999999999999996,
+          "layer": "top",
+          "pointId": "pcb_port_654",
+          "pcb_port_id": "pcb_port_654"
+        },
+        "gapMm": 8.278058347221284,
+        "viaToRamPadMm": 0.7075485849042455,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_98",
+        "source": {
+          "x": -1.5,
+          "y": -4.2,
+          "layer": "inner4",
+          "pointId": "pcb_breakout_point_327"
+        },
+        "selectedVia": {
+          "x": -2.0749999999999993,
+          "y": -3.625
+        },
+        "ramPad": {
+          "x": -9.725000000000001,
+          "y": -2.0000000000000004,
+          "layer": "top",
+          "pointId": "pcb_port_649",
+          "pcb_port_id": "pcb_port_649"
+        },
+        "gapMm": 0.8131727983645293,
+        "viaToRamPadMm": 7.820685711624015,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_99",
+        "source": {
+          "x": -1.5,
+          "y": 0.3,
+          "layer": "inner4",
+          "pointId": "pcb_breakout_point_323"
+        },
+        "selectedVia": {
+          "x": -8.75,
+          "y": -2.9749999999999996
+        },
+        "ramPad": {
+          "x": -9.725000000000001,
+          "y": -2.8000000000000003,
+          "layer": "top",
+          "pointId": "pcb_port_650",
+          "pcb_port_id": "pcb_port_650"
+        },
+        "gapMm": 7.955383397423407,
+        "viaToRamPadMm": 0.9905806378079487,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_100",
+        "source": {
+          "x": -1.5,
+          "y": 1.2,
+          "layer": "inner4",
+          "pointId": "pcb_breakout_point_283"
+        },
+        "selectedVia": {
+          "x": -9.625,
+          "y": -3.299999999999999
+        },
+        "ramPad": {
+          "x": -9.725000000000001,
+          "y": -3.6000000000000005,
+          "layer": "top",
+          "pointId": "pcb_port_651",
+          "pcb_port_id": "pcb_port_651"
+        },
+        "gapMm": 9.287928994129961,
+        "viaToRamPadMm": 0.3162277660168399,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_101",
+        "source": {
+          "x": -1.5,
+          "y": -3.3,
+          "layer": "inner4",
+          "pointId": "pcb_breakout_point_262"
+        },
+        "selectedVia": {
+          "x": -2.099999999999998,
+          "y": -3.299999999999999
+        },
+        "ramPad": {
+          "x": -10.375,
+          "y": -3.6000000000000005,
+          "layer": "top",
+          "pointId": "pcb_port_661",
+          "pcb_port_id": "pcb_port_661"
+        },
+        "gapMm": 0.5999999999999979,
+        "viaToRamPadMm": 8.280436280776517,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_102",
+        "source": {
+          "x": -1.5,
+          "y": 0.6,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_195"
+        },
+        "selectedVia": {
+          "x": -2.0749999999999993,
+          "y": 1.1750000000000007
+        },
+        "ramPad": {
+          "x": -6.474999999999999,
+          "y": 2.799999999999999,
+          "layer": "top",
+          "pointId": "pcb_port_595",
+          "pcb_port_id": "pcb_port_595"
+        },
+        "gapMm": 0.8131727983645296,
+        "viaToRamPadMm": 4.690482384574105,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_103",
+        "source": {
+          "x": -1.5,
+          "y": -10.8,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_368"
+        },
+        "selectedVia": {
+          "x": -2.0749999999999993,
+          "y": -10.225
+        },
+        "ramPad": {
+          "x": -6.4750000000000005,
+          "y": -2.8000000000000007,
+          "layer": "top",
+          "pointId": "pcb_port_600",
+          "pcb_port_id": "pcb_port_600"
+        },
+        "gapMm": 0.8131727983645299,
+        "viaToRamPadMm": 8.630795154561369,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_104",
+        "source": {
+          "x": -1.5,
+          "y": 2.76934155,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_202"
+        },
+        "selectedVia": {
+          "x": -3.6999999999999993,
+          "y": 3.900000000000002
+        },
+        "ramPad": {
+          "x": -7.124999999999999,
+          "y": 2.799999999999999,
+          "layer": "top",
+          "pointId": "pcb_port_605",
+          "pcb_port_id": "pcb_port_605"
+        },
+        "gapMm": 2.4735376549703876,
+        "viaToRamPadMm": 3.597308021284806,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_105",
+        "source": {
+          "x": -1.5,
+          "y": 4.2,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_203"
+        },
+        "selectedVia": {
+          "x": -1.875,
+          "y": 4
+        },
+        "ramPad": {
+          "x": -7.7749999999999995,
+          "y": 2.799999999999999,
+          "layer": "top",
+          "pointId": "pcb_port_615",
+          "pcb_port_id": "pcb_port_615"
+        },
+        "gapMm": 0.4250000000000001,
+        "viaToRamPadMm": 6.020797289396148,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_106",
+        "source": {
+          "x": -1.5,
+          "y": -5.4793664,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_363"
+        },
+        "selectedVia": {
+          "x": -2.0749999999999993,
+          "y": -4.899999999999999
+        },
+        "ramPad": {
+          "x": -7.125000000000001,
+          "y": -2.8000000000000007,
+          "layer": "top",
+          "pointId": "pcb_port_610",
+          "pcb_port_id": "pcb_port_610"
+        },
+        "gapMm": 0.8162661486604481,
+        "viaToRamPadMm": 5.469232121605373,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_107",
+        "source": {
+          "x": -1.5,
+          "y": -4.5,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_364"
+        },
+        "selectedVia": {
+          "x": -2.0749999999999993,
+          "y": -3.924999999999999
+        },
+        "ramPad": {
+          "x": -7.775000000000001,
+          "y": -2.8000000000000007,
+          "layer": "top",
+          "pointId": "pcb_port_620",
+          "pcb_port_id": "pcb_port_620"
+        },
+        "gapMm": 0.8131727983645299,
+        "viaToRamPadMm": 5.809959122059295,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_108",
+        "source": {
+          "x": -1.5,
+          "y": -2.05003626,
+          "layer": "inner4",
+          "pointId": "pcb_breakout_point_345"
+        },
+        "selectedVia": {
+          "x": -5.899999999999999,
+          "y": -1.625
+        },
+        "ramPad": {
+          "x": -10.375,
+          "y": -1.2000000000000002,
+          "layer": "top",
+          "pointId": "pcb_port_658",
+          "pcb_port_id": "pcb_port_658"
+        },
+        "gapMm": 4.420481401647876,
+        "viaToRamPadMm": 4.4951362604486205,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_109",
+        "source": {
+          "x": -1.5,
+          "y": -1.24397209,
+          "layer": "inner4",
+          "pointId": "pcb_breakout_point_346"
+        },
+        "selectedVia": {
+          "x": -3.875,
+          "y": -1.25
+        },
+        "ramPad": {
+          "x": -10.375,
+          "y": -2.0000000000000004,
+          "layer": "top",
+          "pointId": "pcb_port_659",
+          "pcb_port_id": "pcb_port_659"
+        },
+        "gapMm": 2.375007649608516,
+        "viaToRamPadMm": 6.5431261641512,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_110",
+        "source": {
+          "x": -1.5,
+          "y": 4.8,
+          "layer": "inner4",
+          "pointId": "pcb_breakout_point_322"
+        },
+        "selectedVia": {
+          "x": -2.0749999999999993,
+          "y": 4.225000000000001
+        },
+        "ramPad": {
+          "x": -10.375,
+          "y": 1.9999999999999998,
+          "layer": "top",
+          "pointId": "pcb_port_656",
+          "pcb_port_id": "pcb_port_656"
+        },
+        "gapMm": 0.813172798364528,
+        "viaToRamPadMm": 8.593056790223141,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_111",
+        "source": {
+          "x": -1.5,
+          "y": -2.4,
+          "layer": "inner4",
+          "pointId": "pcb_breakout_point_325"
+        },
+        "selectedVia": {
+          "x": -3.5249999999999986,
+          "y": -2.3999999999999986
+        },
+        "ramPad": {
+          "x": -9.725,
+          "y": 1.9999999999999996,
+          "layer": "top",
+          "pointId": "pcb_port_646",
+          "pcb_port_id": "pcb_port_646"
+        },
+        "gapMm": 2.0249999999999986,
+        "viaToRamPadMm": 7.602631123499285,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_112",
+        "source": {
+          "x": -1.5,
+          "y": 2.1,
+          "layer": "inner4",
+          "pointId": "pcb_breakout_point_284"
+        },
+        "selectedVia": {
+          "x": -8.349999999999998,
+          "y": 0.5500000000000007
+        },
+        "ramPad": {
+          "x": -14.925,
+          "y": -3.5999999999999996,
+          "layer": "top",
+          "pointId": "pcb_port_711",
+          "pcb_port_id": "pcb_port_711"
+        },
+        "gapMm": 7.0231759197673505,
+        "viaToRamPadMm": 7.775160770041996,
+        "viaInsideSocFanoutBounds": false
+      }
+    ]
+  },
+  {
+    "profile": "ddr_right_io_left",
+    "socCenter": {
+      "x": -9,
+      "y": 0
+    },
+    "ramCenter": {
+      "x": 12,
+      "y": 0
+    },
+    "socFanoutBounds": {
+      "minX": -21.6,
+      "maxX": 1.5,
+      "minY": -13.45,
+      "maxY": 11.349999999999998
+    },
+    "retainedCarrierBounds": {
+      "minX": 1.6000000000000014,
+      "maxX": 14.925,
+      "minY": -13.475,
+      "maxY": 8.825000000000003
+    },
+    "xyBoundsOverlap": false,
+    "selectedViasInsideSocFanoutBounds": 0,
+    "shorterThan1mm": 11,
+    "differentNetCopperContacts": 0,
+    "contactExamples": [],
+    "corridors": [
+      {
+        "name": "source_trace_80",
+        "source": {
+          "x": 1.5,
+          "y": 11.325,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_197"
+        },
+        "selectedVia": {
+          "x": 7.700000000000001,
+          "y": -5.475
+        },
+        "ramPad": {
+          "x": 5.825,
+          "y": -3.5999999999999996,
+          "layer": "top",
+          "pointId": "pcb_port_584",
+          "pcb_port_id": "pcb_port_584"
+        },
+        "gapMm": 17.907540311276698,
+        "viaToRamPadMm": 2.6516504294495538,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_81",
+        "source": {
+          "x": 1.5,
+          "y": 3.3,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_196"
+        },
+        "selectedVia": {
+          "x": 7.225000000000001,
+          "y": 0.25
+        },
+        "ramPad": {
+          "x": 6.475,
+          "y": -3.5999999999999996,
+          "layer": "top",
+          "pointId": "pcb_port_594",
+          "pcb_port_id": "pcb_port_594"
+        },
+        "gapMm": 6.486765372664562,
+        "viaToRamPadMm": 3.9223717314910376,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_82",
+        "source": {
+          "x": 1.5,
+          "y": 9.75,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_194"
+        },
+        "selectedVia": {
+          "x": 8.700000000000001,
+          "y": 2.5500000000000007
+        },
+        "ramPad": {
+          "x": 7.775,
+          "y": -3.5999999999999996,
+          "layer": "top",
+          "pointId": "pcb_port_614",
+          "pcb_port_id": "pcb_port_614"
+        },
+        "gapMm": 10.182337649086284,
+        "viaToRamPadMm": 6.219173980521851,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_83",
+        "source": {
+          "x": 1.5,
+          "y": 4.2,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_191"
+        },
+        "selectedVia": {
+          "x": 7.450000000000001,
+          "y": 0.4750000000000014
+        },
+        "ramPad": {
+          "x": 8.425,
+          "y": -3.6,
+          "layer": "top",
+          "pointId": "pcb_port_624",
+          "pcb_port_id": "pcb_port_624"
+        },
+        "gapMm": 7.0198379610928345,
+        "viaToRamPadMm": 4.190017899723103,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_84",
+        "source": {
+          "x": 1.5,
+          "y": 2.4,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_204"
+        },
+        "selectedVia": {
+          "x": 7.225000000000001,
+          "y": -0.07499999999999929
+        },
+        "ramPad": {
+          "x": 8.425,
+          "y": -1.9999999999999998,
+          "layer": "top",
+          "pointId": "pcb_port_626",
+          "pcb_port_id": "pcb_port_626"
+        },
+        "gapMm": 6.237086659651284,
+        "viaToRamPadMm": 2.2683970111071825,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_85",
+        "source": {
+          "x": 1.5,
+          "y": 0.6,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_261"
+        },
+        "selectedVia": {
+          "x": 6.925000000000001,
+          "y": -0.125
+        },
+        "ramPad": {
+          "x": 7.775,
+          "y": -1.9999999999999998,
+          "layer": "top",
+          "pointId": "pcb_port_616",
+          "pcb_port_id": "pcb_port_616"
+        },
+        "gapMm": 5.473230307597151,
+        "viaToRamPadMm": 2.0586706876040175,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_86",
+        "source": {
+          "x": 1.5,
+          "y": 9.155000000000001,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_259"
+        },
+        "selectedVia": {
+          "x": 1.6999999999999993,
+          "y": 6.900000000000002
+        },
+        "ramPad": {
+          "x": 6.475,
+          "y": -1.9999999999999996,
+          "layer": "top",
+          "pointId": "pcb_port_596",
+          "pcb_port_id": "pcb_port_596"
+        },
+        "gapMm": 2.2638518061039234,
+        "viaToRamPadMm": 10.100030940546668,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_87",
+        "source": {
+          "x": 1.5,
+          "y": 1.5,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_260"
+        },
+        "selectedVia": {
+          "x": 4.800000000000001,
+          "y": 0.875
+        },
+        "ramPad": {
+          "x": 5.825,
+          "y": -1.9999999999999996,
+          "layer": "top",
+          "pointId": "pcb_port_586",
+          "pcb_port_id": "pcb_port_586"
+        },
+        "gapMm": 3.3586641689814725,
+        "viaToRamPadMm": 3.052253266031506,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_88",
+        "source": {
+          "x": 1.5,
+          "y": -11.875,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_365"
+        },
+        "selectedVia": {
+          "x": 3.25,
+          "y": -9.35
+        },
+        "ramPad": {
+          "x": 5.825,
+          "y": 3.6000000000000005,
+          "layer": "top",
+          "pointId": "pcb_port_591",
+          "pcb_port_id": "pcb_port_591"
+        },
+        "gapMm": 3.0721531537343645,
+        "viaToRamPadMm": 13.203526990921782,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_89",
+        "source": {
+          "x": 1.5,
+          "y": -13.225,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_348"
+        },
+        "selectedVia": {
+          "x": 1.8000000000000007,
+          "y": -13.25
+        },
+        "ramPad": {
+          "x": 6.475,
+          "y": 3.6000000000000005,
+          "layer": "top",
+          "pointId": "pcb_port_601",
+          "pcb_port_id": "pcb_port_601"
+        },
+        "gapMm": 0.3010398644698081,
+        "viaToRamPadMm": 17.486512659761523,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_90",
+        "source": {
+          "x": 1.5,
+          "y": -13.45,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_347"
+        },
+        "selectedVia": {
+          "x": 2,
+          "y": -13.475
+        },
+        "ramPad": {
+          "x": 7.775,
+          "y": 3.6000000000000005,
+          "layer": "top",
+          "pointId": "pcb_port_621",
+          "pcb_port_id": "pcb_port_621"
+        },
+        "gapMm": 0.5006246098625197,
+        "viaToRamPadMm": 18.025156032611754,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_91",
+        "source": {
+          "x": 1.5,
+          "y": -13,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_357"
+        },
+        "selectedVia": {
+          "x": 1.8249999999999993,
+          "y": -12.95
+        },
+        "ramPad": {
+          "x": 8.425,
+          "y": 3.6,
+          "layer": "top",
+          "pointId": "pcb_port_631",
+          "pcb_port_id": "pcb_port_631"
+        },
+        "gapMm": 0.32882366094914706,
+        "viaToRamPadMm": 17.81747737475763,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_92",
+        "source": {
+          "x": 1.5,
+          "y": -12.1,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_359"
+        },
+        "selectedVia": {
+          "x": 2.625,
+          "y": -12.1
+        },
+        "ramPad": {
+          "x": 8.425,
+          "y": 2,
+          "layer": "top",
+          "pointId": "pcb_port_629",
+          "pcb_port_id": "pcb_port_629"
+        },
+        "gapMm": 1.125,
+        "viaToRamPadMm": 15.246311029229334,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_93",
+        "source": {
+          "x": 1.5,
+          "y": -11.65,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_366"
+        },
+        "selectedVia": {
+          "x": 2.7249999999999996,
+          "y": -11.649999999999999
+        },
+        "ramPad": {
+          "x": 7.775,
+          "y": 2.0000000000000004,
+          "layer": "top",
+          "pointId": "pcb_port_619",
+          "pcb_port_id": "pcb_port_619"
+        },
+        "gapMm": 1.2249999999999996,
+        "viaToRamPadMm": 14.554209013203018,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_94",
+        "source": {
+          "x": 1.5,
+          "y": -12.325,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_358"
+        },
+        "selectedVia": {
+          "x": 1.8249999999999993,
+          "y": -12.274999999999999
+        },
+        "ramPad": {
+          "x": 6.475,
+          "y": 2.0000000000000004,
+          "layer": "top",
+          "pointId": "pcb_port_599",
+          "pcb_port_id": "pcb_port_599"
+        },
+        "gapMm": 0.32882366094914706,
+        "viaToRamPadMm": 15.01326496802078,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_95",
+        "source": {
+          "x": 1.5,
+          "y": -11.425,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_367"
+        },
+        "selectedVia": {
+          "x": 2.0500000000000007,
+          "y": -11.425
+        },
+        "ramPad": {
+          "x": 5.825,
+          "y": 2.0000000000000004,
+          "layer": "top",
+          "pointId": "pcb_port_589",
+          "pcb_port_id": "pcb_port_589"
+        },
+        "gapMm": 0.5500000000000007,
+        "viaToRamPadMm": 13.945653444711725,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_96",
+        "source": {
+          "x": 1.5,
+          "y": 2.15,
+          "layer": "inner4",
+          "pointId": "pcb_breakout_point_326"
+        },
+        "selectedVia": {
+          "x": 2.075000000000001,
+          "y": 1.5749999999999993
+        },
+        "ramPad": {
+          "x": 9.725,
+          "y": -3.6,
+          "layer": "top",
+          "pointId": "pcb_port_644",
+          "pcb_port_id": "pcb_port_644"
+        },
+        "gapMm": 0.8131727983645308,
+        "viaToRamPadMm": 9.235969088298205,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_97",
+        "source": {
+          "x": 1.5,
+          "y": 3.55,
+          "layer": "inner4",
+          "pointId": "pcb_breakout_point_263"
+        },
+        "selectedVia": {
+          "x": 10.600000000000001,
+          "y": 1.6999999999999993
+        },
+        "ramPad": {
+          "x": 10.375,
+          "y": -3.6,
+          "layer": "top",
+          "pointId": "pcb_port_654",
+          "pcb_port_id": "pcb_port_654"
+        },
+        "gapMm": 9.286145594378759,
+        "viaToRamPadMm": 5.304773793480735,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_98",
+        "source": {
+          "x": 1.5,
+          "y": -11.030000000000001,
+          "layer": "inner4",
+          "pointId": "pcb_breakout_point_327"
+        },
+        "selectedVia": {
+          "x": 7.300000000000001,
+          "y": -0.8499999999999979
+        },
+        "ramPad": {
+          "x": 9.725,
+          "y": 2,
+          "layer": "top",
+          "pointId": "pcb_port_649",
+          "pcb_port_id": "pcb_port_649"
+        },
+        "gapMm": 11.716330483560117,
+        "viaToRamPadMm": 3.7420749591636966,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_99",
+        "source": {
+          "x": 1.5,
+          "y": 9.387500000000001,
+          "layer": "inner4",
+          "pointId": "pcb_breakout_point_323"
+        },
+        "selectedVia": {
+          "x": 2.075000000000001,
+          "y": 8.825000000000003
+        },
+        "ramPad": {
+          "x": 9.725,
+          "y": 2.8,
+          "layer": "top",
+          "pointId": "pcb_port_650",
+          "pcb_port_id": "pcb_port_650"
+        },
+        "gapMm": 0.8043825271598081,
+        "viaToRamPadMm": 9.737716621467273,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_100",
+        "source": {
+          "x": 1.5,
+          "y": 6.419999999999999,
+          "layer": "inner4",
+          "pointId": "pcb_breakout_point_283"
+        },
+        "selectedVia": {
+          "x": 1.9750000000000014,
+          "y": 5.950000000000003
+        },
+        "ramPad": {
+          "x": 9.725,
+          "y": 3.6,
+          "layer": "top",
+          "pointId": "pcb_port_651",
+          "pcb_port_id": "pcb_port_651"
+        },
+        "gapMm": 0.6682252614201275,
+        "viaToRamPadMm": 8.09845664308947,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_101",
+        "source": {
+          "x": 1.5,
+          "y": -11.255,
+          "layer": "inner4",
+          "pointId": "pcb_breakout_point_262"
+        },
+        "selectedVia": {
+          "x": 3,
+          "y": -10.975
+        },
+        "ramPad": {
+          "x": 10.375,
+          "y": 3.6,
+          "layer": "top",
+          "pointId": "pcb_port_661",
+          "pcb_port_id": "pcb_port_661"
+        },
+        "gapMm": 1.5259095648169982,
+        "viaToRamPadMm": 16.334664061436953,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_102",
+        "source": {
+          "x": 1.5,
+          "y": 10.5375,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_195"
+        },
+        "selectedVia": {
+          "x": 10.125,
+          "y": -4.75
+        },
+        "ramPad": {
+          "x": 6.475,
+          "y": -2.7999999999999994,
+          "layer": "top",
+          "pointId": "pcb_port_595",
+          "pcb_port_id": "pcb_port_595"
+        },
+        "gapMm": 17.552728598425944,
+        "viaToRamPadMm": 4.138236339311713,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_103",
+        "source": {
+          "x": 1.5,
+          "y": -11.2,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_368"
+        },
+        "selectedVia": {
+          "x": 2.5,
+          "y": -2.8249999999999993
+        },
+        "ramPad": {
+          "x": 6.475,
+          "y": 2.8000000000000003,
+          "layer": "top",
+          "pointId": "pcb_port_600",
+          "pcb_port_id": "pcb_port_600"
+        },
+        "gapMm": 8.434490203918669,
+        "viaToRamPadMm": 6.887760884351314,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_104",
+        "source": {
+          "x": 1.5,
+          "y": 6.67,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_202"
+        },
+        "selectedVia": {
+          "x": 8.325000000000001,
+          "y": -0.25
+        },
+        "ramPad": {
+          "x": 7.125,
+          "y": -2.7999999999999994,
+          "layer": "top",
+          "pointId": "pcb_port_605",
+          "pcb_port_id": "pcb_port_605"
+        },
+        "gapMm": 9.719414848641868,
+        "viaToRamPadMm": 2.81824413420839,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_105",
+        "source": {
+          "x": 1.5,
+          "y": 5.1,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_203"
+        },
+        "selectedVia": {
+          "x": 8.075000000000001,
+          "y": -0.4250000000000007
+        },
+        "ramPad": {
+          "x": 7.775,
+          "y": -2.7999999999999994,
+          "layer": "top",
+          "pointId": "pcb_port_615",
+          "pcb_port_id": "pcb_port_615"
+        },
+        "gapMm": 8.588145900018235,
+        "viaToRamPadMm": 2.3938723859053126,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_106",
+        "source": {
+          "x": 1.5,
+          "y": -12.55,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_363"
+        },
+        "selectedVia": {
+          "x": 2.2750000000000004,
+          "y": -12.5
+        },
+        "ramPad": {
+          "x": 7.125,
+          "y": 2.8000000000000003,
+          "layer": "top",
+          "pointId": "pcb_port_610",
+          "pcb_port_id": "pcb_port_610"
+        },
+        "gapMm": 0.7766112283504537,
+        "viaToRamPadMm": 16.050311523456486,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_107",
+        "source": {
+          "x": 1.5,
+          "y": -12.775,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_364"
+        },
+        "selectedVia": {
+          "x": 2.0250000000000004,
+          "y": -12.725
+        },
+        "ramPad": {
+          "x": 7.775,
+          "y": 2.8000000000000003,
+          "layer": "top",
+          "pointId": "pcb_port_620",
+          "pcb_port_id": "pcb_port_620"
+        },
+        "gapMm": 0.5273755777432251,
+        "viaToRamPadMm": 16.555607056221163,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_108",
+        "source": {
+          "x": 1.5,
+          "y": -11.705,
+          "layer": "inner4",
+          "pointId": "pcb_breakout_point_345"
+        },
+        "selectedVia": {
+          "x": 9.9,
+          "y": -4.524999999999999
+        },
+        "ramPad": {
+          "x": 10.375,
+          "y": 1.2,
+          "layer": "top",
+          "pointId": "pcb_port_658",
+          "pcb_port_id": "pcb_port_658"
+        },
+        "gapMm": 11.050447954721113,
+        "viaToRamPadMm": 5.74467144404273,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_109",
+        "source": {
+          "x": 1.5,
+          "y": -11.93,
+          "layer": "inner4",
+          "pointId": "pcb_breakout_point_346"
+        },
+        "selectedVia": {
+          "x": 10.125,
+          "y": -3.424999999999999
+        },
+        "ramPad": {
+          "x": 10.375,
+          "y": 2,
+          "layer": "top",
+          "pointId": "pcb_port_659",
+          "pcb_port_id": "pcb_port_659"
+        },
+        "gapMm": 12.1130363658333,
+        "viaToRamPadMm": 5.430757313671823,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_110",
+        "source": {
+          "x": 1.5,
+          "y": 0.75,
+          "layer": "inner4",
+          "pointId": "pcb_breakout_point_322"
+        },
+        "selectedVia": {
+          "x": 2.075000000000001,
+          "y": 0.1750000000000007
+        },
+        "ramPad": {
+          "x": 10.375,
+          "y": -2,
+          "layer": "top",
+          "pointId": "pcb_port_656",
+          "pcb_port_id": "pcb_port_656"
+        },
+        "gapMm": 0.8131727983645299,
+        "viaToRamPadMm": 8.580246208588655,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_111",
+        "source": {
+          "x": 1.5,
+          "y": -11.48,
+          "layer": "inner4",
+          "pointId": "pcb_breakout_point_325"
+        },
+        "selectedVia": {
+          "x": 2.5250000000000004,
+          "y": -11.425
+        },
+        "ramPad": {
+          "x": 9.725,
+          "y": -1.9999999999999998,
+          "layer": "top",
+          "pointId": "pcb_port_646",
+          "pcb_port_id": "pcb_port_646"
+        },
+        "gapMm": 1.0264745491243321,
+        "viaToRamPadMm": 11.860464788531687,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_112",
+        "source": {
+          "x": 1.5,
+          "y": 4.95,
+          "layer": "inner4",
+          "pointId": "pcb_breakout_point_284"
+        },
+        "selectedVia": {
+          "x": 12.575,
+          "y": 4.350000000000001
+        },
+        "ramPad": {
+          "x": 14.925,
+          "y": 3.6,
+          "layer": "top",
+          "pointId": "pcb_port_711",
+          "pcb_port_id": "pcb_port_711"
+        },
+        "gapMm": 11.091240913441561,
+        "viaToRamPadMm": 2.4667792767088037,
+        "viaInsideSocFanoutBounds": false
+      }
+    ]
+  },
+  {
+    "profile": "ddr_top_io_bottom",
+    "socCenter": {
+      "x": 0,
+      "y": -9
+    },
+    "ramCenter": {
+      "x": 0,
+      "y": 12.000000000000002
+    },
+    "socFanoutBounds": {
+      "minX": -15.39,
+      "maxX": -2.575000000000001,
+      "minY": -19.8,
+      "maxY": 1.5000000000000018
+    },
+    "retainedCarrierBounds": {
+      "minX": -15.4,
+      "maxX": 3.6000000000000014,
+      "minY": 1.5749999999999993,
+      "maxY": 14.925
+    },
+    "xyBoundsOverlap": false,
+    "selectedViasInsideSocFanoutBounds": 0,
+    "shorterThan1mm": 19,
+    "differentNetCopperContacts": 0,
+    "contactExamples": [],
+    "corridors": [
+      {
+        "name": "source_trace_80",
+        "source": {
+          "x": -12.75,
+          "y": 1.5,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_197"
+        },
+        "selectedVia": {
+          "x": -12.675,
+          "y": 2.4000000000000004
+        },
+        "ramPad": {
+          "x": 3.599999999999999,
+          "y": 5.825,
+          "layer": "top",
+          "pointId": "pcb_port_584",
+          "pcb_port_id": "pcb_port_584"
+        },
+        "gapMm": 0.9031195934094224,
+        "viaToRamPadMm": 16.631483698095007,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_81",
+        "source": {
+          "x": -11.07,
+          "y": 1.5,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_196"
+        },
+        "selectedVia": {
+          "x": -6.899999999999999,
+          "y": 3.0500000000000007
+        },
+        "ramPad": {
+          "x": 3.599999999999999,
+          "y": 6.475,
+          "layer": "top",
+          "pointId": "pcb_port_594",
+          "pcb_port_id": "pcb_port_594"
+        },
+        "gapMm": 4.448752634166123,
+        "viaToRamPadMm": 11.044483917322708,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_82",
+        "source": {
+          "x": -12.27,
+          "y": 1.5,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_194"
+        },
+        "selectedVia": {
+          "x": -6.299999999999999,
+          "y": 3.2750000000000004
+        },
+        "ramPad": {
+          "x": 3.5999999999999996,
+          "y": 7.775,
+          "layer": "top",
+          "pointId": "pcb_port_614",
+          "pcb_port_id": "pcb_port_614"
+        },
+        "gapMm": 6.22828427418017,
+        "viaToRamPadMm": 10.874741376235114,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_83",
+        "source": {
+          "x": -11.31,
+          "y": 1.5,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_191"
+        },
+        "selectedVia": {
+          "x": -11.225,
+          "y": 2.75
+        },
+        "ramPad": {
+          "x": 3.5999999999999996,
+          "y": 8.424999999999999,
+          "layer": "top",
+          "pointId": "pcb_port_624",
+          "pcb_port_id": "pcb_port_624"
+        },
+        "gapMm": 1.2528866668617717,
+        "viaToRamPadMm": 15.874074776187744,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_84",
+        "source": {
+          "x": -10.83,
+          "y": 1.5,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_204"
+        },
+        "selectedVia": {
+          "x": -10.75,
+          "y": 1.8000000000000007
+        },
+        "ramPad": {
+          "x": 1.9999999999999996,
+          "y": 8.424999999999999,
+          "layer": "top",
+          "pointId": "pcb_port_626",
+          "pcb_port_id": "pcb_port_626"
+        },
+        "gapMm": 0.3104834939252012,
+        "viaToRamPadMm": 14.368476780786471,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_85",
+        "source": {
+          "x": -10.35,
+          "y": 1.5,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_261"
+        },
+        "selectedVia": {
+          "x": -2.5749999999999993,
+          "y": 3.5
+        },
+        "ramPad": {
+          "x": 1.9999999999999996,
+          "y": 7.775,
+          "layer": "top",
+          "pointId": "pcb_port_616",
+          "pcb_port_id": "pcb_port_616"
+        },
+        "gapMm": 8.028114660367027,
+        "viaToRamPadMm": 6.26148943942254,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_86",
+        "source": {
+          "x": -12.03,
+          "y": 1.5,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_259"
+        },
+        "selectedVia": {
+          "x": -11.95,
+          "y": 2.3000000000000007
+        },
+        "ramPad": {
+          "x": 1.9999999999999993,
+          "y": 6.475,
+          "layer": "top",
+          "pointId": "pcb_port_596",
+          "pcb_port_id": "pcb_port_596"
+        },
+        "gapMm": 0.8039900496896719,
+        "viaToRamPadMm": 14.561357251300443,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_87",
+        "source": {
+          "x": -10.59,
+          "y": 1.5,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_260"
+        },
+        "selectedVia": {
+          "x": -10.524999999999999,
+          "y": 2.0250000000000004
+        },
+        "ramPad": {
+          "x": 1.9999999999999993,
+          "y": 5.825,
+          "layer": "top",
+          "pointId": "pcb_port_586",
+          "pcb_port_id": "pcb_port_586"
+        },
+        "gapMm": 0.5290085065478631,
+        "viaToRamPadMm": 13.088759490494123,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_88",
+        "source": {
+          "x": -14.67,
+          "y": 1.5,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_365"
+        },
+        "selectedVia": {
+          "x": -14.675,
+          "y": 1.9750000000000014
+        },
+        "ramPad": {
+          "x": -3.600000000000001,
+          "y": 5.825,
+          "layer": "top",
+          "pointId": "pcb_port_591",
+          "pcb_port_id": "pcb_port_591"
+        },
+        "gapMm": 0.47502631506054627,
+        "viaToRamPadMm": 11.72510660932343,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_89",
+        "source": {
+          "x": -13.23,
+          "y": 1.5,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_348"
+        },
+        "selectedVia": {
+          "x": -13.225,
+          "y": 1.8000000000000007
+        },
+        "ramPad": {
+          "x": -3.600000000000001,
+          "y": 6.475,
+          "layer": "top",
+          "pointId": "pcb_port_601",
+          "pcb_port_id": "pcb_port_601"
+        },
+        "gapMm": 0.3000416637735507,
+        "viaToRamPadMm": 10.700292052089043,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_90",
+        "source": {
+          "x": -12.99,
+          "y": 1.5,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_347"
+        },
+        "selectedVia": {
+          "x": -12.925,
+          "y": 1.8249999999999993
+        },
+        "ramPad": {
+          "x": -3.6000000000000005,
+          "y": 7.775,
+          "layer": "top",
+          "pointId": "pcb_port_621",
+          "pcb_port_id": "pcb_port_621"
+        },
+        "gapMm": 0.33143626838353024,
+        "viaToRamPadMm": 11.061560694585552,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_91",
+        "source": {
+          "x": -13.47,
+          "y": 1.5,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_357"
+        },
+        "selectedVia": {
+          "x": -13.475,
+          "y": 1.9750000000000014
+        },
+        "ramPad": {
+          "x": -3.6000000000000005,
+          "y": 8.425,
+          "layer": "top",
+          "pointId": "pcb_port_631",
+          "pcb_port_id": "pcb_port_631"
+        },
+        "gapMm": 0.47502631506054627,
+        "viaToRamPadMm": 11.794834674551398,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_92",
+        "source": {
+          "x": -14.43,
+          "y": 1.4999999999999982,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_359"
+        },
+        "selectedVia": {
+          "x": -14.425,
+          "y": 1.8000000000000007
+        },
+        "ramPad": {
+          "x": -2.0000000000000004,
+          "y": 8.425,
+          "layer": "top",
+          "pointId": "pcb_port_629",
+          "pcb_port_id": "pcb_port_629"
+        },
+        "gapMm": 0.3000416637735524,
+        "viaToRamPadMm": 14.080882429734295,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_93",
+        "source": {
+          "x": -14.91,
+          "y": 1.5000000000000018,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_366"
+        },
+        "selectedVia": {
+          "x": -14.9,
+          "y": 2.1750000000000007
+        },
+        "ramPad": {
+          "x": -2.0000000000000004,
+          "y": 7.775,
+          "layer": "top",
+          "pointId": "pcb_port_619",
+          "pcb_port_id": "pcb_port_619"
+        },
+        "gapMm": 0.6750740700100979,
+        "viaToRamPadMm": 14.063072210580446,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_94",
+        "source": {
+          "x": -14.19,
+          "y": 1.5,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_358"
+        },
+        "selectedVia": {
+          "x": -14.125,
+          "y": 1.8249999999999993
+        },
+        "ramPad": {
+          "x": -2.000000000000001,
+          "y": 6.475,
+          "layer": "top",
+          "pointId": "pcb_port_599",
+          "pcb_port_id": "pcb_port_599"
+        },
+        "gapMm": 0.33143626838353024,
+        "viaToRamPadMm": 12.986074272080844,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_95",
+        "source": {
+          "x": -15.15,
+          "y": 1.5000000000000018,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_367"
+        },
+        "selectedVia": {
+          "x": -15.15,
+          "y": 1.8249999999999993
+        },
+        "ramPad": {
+          "x": -2.000000000000001,
+          "y": 5.825,
+          "layer": "top",
+          "pointId": "pcb_port_589",
+          "pcb_port_id": "pcb_port_589"
+        },
+        "gapMm": 0.3249999999999975,
+        "viaToRamPadMm": 13.744908148110701,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_96",
+        "source": {
+          "x": -13.23,
+          "y": 1.5,
+          "layer": "inner4",
+          "pointId": "pcb_breakout_point_326"
+        },
+        "selectedVia": {
+          "x": -8.299999999999999,
+          "y": 4.050000000000001
+        },
+        "ramPad": {
+          "x": 3.5999999999999996,
+          "y": 9.725,
+          "layer": "top",
+          "pointId": "pcb_port_644",
+          "pcb_port_id": "pcb_port_644"
+        },
+        "gapMm": 5.550441423886935,
+        "viaToRamPadMm": 13.183915389595002,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_97",
+        "source": {
+          "x": -13.47,
+          "y": 1.5,
+          "layer": "inner4",
+          "pointId": "pcb_breakout_point_263"
+        },
+        "selectedVia": {
+          "x": -13.4,
+          "y": 2.1750000000000007
+        },
+        "ramPad": {
+          "x": 3.6,
+          "y": 10.375,
+          "layer": "top",
+          "pointId": "pcb_port_654",
+          "pcb_port_id": "pcb_port_654"
+        },
+        "gapMm": 0.6786199230791865,
+        "viaToRamPadMm": 18.874321179846444,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_98",
+        "source": {
+          "x": -15.39,
+          "y": 1.5,
+          "layer": "inner4",
+          "pointId": "pcb_breakout_point_327"
+        },
+        "selectedVia": {
+          "x": -15.4,
+          "y": 2
+        },
+        "ramPad": {
+          "x": -2.0000000000000004,
+          "y": 9.725000000000001,
+          "layer": "top",
+          "pointId": "pcb_port_649",
+          "pcb_port_id": "pcb_port_649"
+        },
+        "gapMm": 0.5000999900019995,
+        "viaToRamPadMm": 15.467243613520802,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_99",
+        "source": {
+          "x": -14.19,
+          "y": 1.5,
+          "layer": "inner4",
+          "pointId": "pcb_breakout_point_323"
+        },
+        "selectedVia": {
+          "x": -6.375,
+          "y": 7.225000000000001
+        },
+        "ramPad": {
+          "x": -2.8000000000000003,
+          "y": 9.725000000000001,
+          "layer": "top",
+          "pointId": "pcb_port_650",
+          "pcb_port_id": "pcb_port_650"
+        },
+        "gapMm": 9.687613225144778,
+        "viaToRamPadMm": 4.3624104575337705,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_100",
+        "source": {
+          "x": -13.95,
+          "y": 1.5,
+          "layer": "inner4",
+          "pointId": "pcb_breakout_point_283"
+        },
+        "selectedVia": {
+          "x": -13.95,
+          "y": 2.0250000000000004
+        },
+        "ramPad": {
+          "x": -3.6000000000000005,
+          "y": 9.725000000000001,
+          "layer": "top",
+          "pointId": "pcb_port_651",
+          "pcb_port_id": "pcb_port_651"
+        },
+        "gapMm": 0.5250000000000004,
+        "viaToRamPadMm": 12.900096898860875,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_101",
+        "source": {
+          "x": -15.15,
+          "y": 1.5,
+          "layer": "inner4",
+          "pointId": "pcb_breakout_point_262"
+        },
+        "selectedVia": {
+          "x": -10.625,
+          "y": 7.225000000000001
+        },
+        "ramPad": {
+          "x": -3.6,
+          "y": 10.375,
+          "layer": "top",
+          "pointId": "pcb_port_661",
+          "pcb_port_id": "pcb_port_661"
+        },
+        "gapMm": 7.297345407749315,
+        "viaToRamPadMm": 7.698904142798506,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_102",
+        "source": {
+          "x": -12.51,
+          "y": 1.5,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_195"
+        },
+        "selectedVia": {
+          "x": -12.425,
+          "y": 1.8249999999999993
+        },
+        "ramPad": {
+          "x": 2.799999999999999,
+          "y": 6.475,
+          "layer": "top",
+          "pointId": "pcb_port_595",
+          "pcb_port_id": "pcb_port_595"
+        },
+        "gapMm": 0.33593154064481556,
+        "viaToRamPadMm": 15.919268984472874,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_103",
+        "source": {
+          "x": -15.39,
+          "y": 1.5,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_368"
+        },
+        "selectedVia": {
+          "x": -10.75,
+          "y": 6.350000000000001
+        },
+        "ramPad": {
+          "x": -2.8000000000000007,
+          "y": 6.475,
+          "layer": "top",
+          "pointId": "pcb_port_600",
+          "pcb_port_id": "pcb_port_600"
+        },
+        "gapMm": 6.7120861138695185,
+        "viaToRamPadMm": 7.950982643673672,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_104",
+        "source": {
+          "x": -11.79,
+          "y": 1.5,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_202"
+        },
+        "selectedVia": {
+          "x": -11.725,
+          "y": 2.5250000000000004
+        },
+        "ramPad": {
+          "x": 2.7999999999999994,
+          "y": 7.125,
+          "layer": "top",
+          "pointId": "pcb_port_605",
+          "pcb_port_id": "pcb_port_605"
+        },
+        "gapMm": 1.027058907755539,
+        "viaToRamPadMm": 15.235997669991944,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_105",
+        "source": {
+          "x": -11.55,
+          "y": 1.5,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_203"
+        },
+        "selectedVia": {
+          "x": -11.475,
+          "y": 1.8249999999999993
+        },
+        "ramPad": {
+          "x": 2.7999999999999994,
+          "y": 7.775,
+          "layer": "top",
+          "pointId": "pcb_port_615",
+          "pcb_port_id": "pcb_port_615"
+        },
+        "gapMm": 0.3335416016031579,
+        "viaToRamPadMm": 15.465384734949208,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_106",
+        "source": {
+          "x": -13.95,
+          "y": 1.5,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_363"
+        },
+        "selectedVia": {
+          "x": -3.424999999999999,
+          "y": 6.700000000000001
+        },
+        "ramPad": {
+          "x": -2.8000000000000003,
+          "y": 7.125,
+          "layer": "top",
+          "pointId": "pcb_port_610",
+          "pcb_port_id": "pcb_port_610"
+        },
+        "gapMm": 11.739489980403748,
+        "viaToRamPadMm": 0.755810822891547,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_107",
+        "source": {
+          "x": -13.71,
+          "y": 1.5,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_364"
+        },
+        "selectedVia": {
+          "x": -13.6,
+          "y": 2.825000000000001
+        },
+        "ramPad": {
+          "x": -2.8000000000000003,
+          "y": 7.775,
+          "layer": "top",
+          "pointId": "pcb_port_620",
+          "pcb_port_id": "pcb_port_620"
+        },
+        "gapMm": 1.3295581972971333,
+        "viaToRamPadMm": 11.880340904199675,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_108",
+        "source": {
+          "x": -14.67,
+          "y": 1.5,
+          "layer": "inner4",
+          "pointId": "pcb_breakout_point_345"
+        },
+        "selectedVia": {
+          "x": -3.2749999999999986,
+          "y": 8.75
+        },
+        "ramPad": {
+          "x": -1.2000000000000002,
+          "y": 10.375,
+          "layer": "top",
+          "pointId": "pcb_port_658",
+          "pcb_port_id": "pcb_port_658"
+        },
+        "gapMm": 13.505870020106073,
+        "viaToRamPadMm": 2.6355739412886887,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_109",
+        "source": {
+          "x": -14.43,
+          "y": 1.5,
+          "layer": "inner4",
+          "pointId": "pcb_breakout_point_346"
+        },
+        "selectedVia": {
+          "x": -14.325,
+          "y": 2.825000000000001
+        },
+        "ramPad": {
+          "x": -2,
+          "y": 10.375,
+          "layer": "top",
+          "pointId": "pcb_port_659",
+          "pcb_port_id": "pcb_port_659"
+        },
+        "gapMm": 1.3291538661870577,
+        "viaToRamPadMm": 14.45365438219691,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_110",
+        "source": {
+          "x": -12.99,
+          "y": 1.5,
+          "layer": "inner4",
+          "pointId": "pcb_breakout_point_322"
+        },
+        "selectedVia": {
+          "x": -0.8999999999999986,
+          "y": 8.850000000000001
+        },
+        "ramPad": {
+          "x": 1.9999999999999998,
+          "y": 10.375,
+          "layer": "top",
+          "pointId": "pcb_port_656",
+          "pcb_port_id": "pcb_port_656"
+        },
+        "gapMm": 14.14887274661837,
+        "viaToRamPadMm": 3.276526361865564,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_111",
+        "source": {
+          "x": -14.91,
+          "y": 1.5,
+          "layer": "inner4",
+          "pointId": "pcb_breakout_point_325"
+        },
+        "selectedVia": {
+          "x": -14.9,
+          "y": 1.8000000000000007
+        },
+        "ramPad": {
+          "x": 1.9999999999999998,
+          "y": 9.725,
+          "layer": "top",
+          "pointId": "pcb_port_646",
+          "pcb_port_id": "pcb_port_646"
+        },
+        "gapMm": 0.3001666203960734,
+        "viaToRamPadMm": 18.66589470129948,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_112",
+        "source": {
+          "x": -13.71,
+          "y": 1.5,
+          "layer": "inner4",
+          "pointId": "pcb_breakout_point_284"
+        },
+        "selectedVia": {
+          "x": -13.7,
+          "y": 2.325000000000001
+        },
+        "ramPad": {
+          "x": -3.5999999999999996,
+          "y": 14.925,
+          "layer": "top",
+          "pointId": "pcb_port_711",
+          "pcb_port_id": "pcb_port_711"
+        },
+        "gapMm": 0.8250606038346527,
+        "viaToRamPadMm": 16.148374531202823,
+        "viaInsideSocFanoutBounds": false
+      }
+    ]
+  },
+  {
+    "profile": "ddr_bottom_io_top",
+    "socCenter": {
+      "x": 0,
+      "y": 9
+    },
+    "ramCenter": {
+      "x": 0,
+      "y": -12
+    },
+    "socFanoutBounds": {
+      "minX": -15.39,
+      "maxX": -2.5749999999999993,
+      "minY": -1.5,
+      "maxY": 17.700000000000003
+    },
+    "retainedCarrierBounds": {
+      "minX": -15.55,
+      "maxX": 3.6000000000000014,
+      "minY": -14.924999999999999,
+      "maxY": -1.5749999999999993
+    },
+    "xyBoundsOverlap": false,
+    "selectedViasInsideSocFanoutBounds": 0,
+    "shorterThan1mm": 17,
+    "differentNetCopperContacts": 0,
+    "contactExamples": [],
+    "corridors": [
+      {
+        "name": "source_trace_80",
+        "source": {
+          "x": -12.99,
+          "y": -1.5,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_197"
+        },
+        "selectedVia": {
+          "x": -12.925,
+          "y": -1.9749999999999979
+        },
+        "ramPad": {
+          "x": -3.6,
+          "y": -5.825,
+          "layer": "top",
+          "pointId": "pcb_port_584",
+          "pcb_port_id": "pcb_port_584"
+        },
+        "gapMm": 0.4794267410147226,
+        "viaToRamPadMm": 10.088514509084083,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_81",
+        "source": {
+          "x": -14.67,
+          "y": -1.5,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_196"
+        },
+        "selectedVia": {
+          "x": -13.1,
+          "y": -4.274999999999999
+        },
+        "ramPad": {
+          "x": -3.6,
+          "y": -6.475,
+          "layer": "top",
+          "pointId": "pcb_port_594",
+          "pcb_port_id": "pcb_port_594"
+        },
+        "gapMm": 3.188342045640648,
+        "viaToRamPadMm": 9.751410154434076,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_82",
+        "source": {
+          "x": -13.47,
+          "y": -1.5,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_194"
+        },
+        "selectedVia": {
+          "x": -13.4,
+          "y": -1.8249999999999993
+        },
+        "ramPad": {
+          "x": -3.6,
+          "y": -7.775,
+          "layer": "top",
+          "pointId": "pcb_port_614",
+          "pcb_port_id": "pcb_port_614"
+        },
+        "gapMm": 0.33245300419758517,
+        "viaToRamPadMm": 11.464837547911442,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_83",
+        "source": {
+          "x": -14.43,
+          "y": -1.5,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_191"
+        },
+        "selectedVia": {
+          "x": -14.425,
+          "y": -1.7999999999999972
+        },
+        "ramPad": {
+          "x": -3.6,
+          "y": -8.425,
+          "layer": "top",
+          "pointId": "pcb_port_624",
+          "pcb_port_id": "pcb_port_624"
+        },
+        "gapMm": 0.3000416637735471,
+        "viaToRamPadMm": 12.691384873212225,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_84",
+        "source": {
+          "x": -14.91,
+          "y": -1.5,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_204"
+        },
+        "selectedVia": {
+          "x": -13.45,
+          "y": -4.274999999999999
+        },
+        "ramPad": {
+          "x": -2,
+          "y": -8.425,
+          "layer": "top",
+          "pointId": "pcb_port_626",
+          "pcb_port_id": "pcb_port_626"
+        },
+        "gapMm": 3.1356378936350406,
+        "viaToRamPadMm": 12.178875153313626,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_85",
+        "source": {
+          "x": -15.39,
+          "y": -1.4999999999999982,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_261"
+        },
+        "selectedVia": {
+          "x": -15.325,
+          "y": -1.8249999999999993
+        },
+        "ramPad": {
+          "x": -2,
+          "y": -7.775,
+          "layer": "top",
+          "pointId": "pcb_port_616",
+          "pcb_port_id": "pcb_port_616"
+        },
+        "gapMm": 0.3314362683835323,
+        "viaToRamPadMm": 14.593084834948366,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_86",
+        "source": {
+          "x": -13.71,
+          "y": -1.5,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_259"
+        },
+        "selectedVia": {
+          "x": -13.775,
+          "y": -2.125
+        },
+        "ramPad": {
+          "x": -2,
+          "y": -6.475,
+          "layer": "top",
+          "pointId": "pcb_port_596",
+          "pcb_port_id": "pcb_port_596"
+        },
+        "gapMm": 0.6283709095749102,
+        "viaToRamPadMm": 12.552813429665877,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_87",
+        "source": {
+          "x": -15.15,
+          "y": -1.5,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_260"
+        },
+        "selectedVia": {
+          "x": -15.075,
+          "y": -3
+        },
+        "ramPad": {
+          "x": -2,
+          "y": -5.825,
+          "layer": "top",
+          "pointId": "pcb_port_586",
+          "pcb_port_id": "pcb_port_586"
+        },
+        "gapMm": 1.501873829587559,
+        "viaToRamPadMm": 13.376705498739216,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_88",
+        "source": {
+          "x": -11.07,
+          "y": -1.5,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_365"
+        },
+        "selectedVia": {
+          "x": -11.075,
+          "y": -1.7999999999999972
+        },
+        "ramPad": {
+          "x": 3.6,
+          "y": -5.825,
+          "layer": "top",
+          "pointId": "pcb_port_591",
+          "pcb_port_id": "pcb_port_591"
+        },
+        "gapMm": 0.3000416637735471,
+        "viaToRamPadMm": 15.216972432123283,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_89",
+        "source": {
+          "x": -12.51,
+          "y": -1.5,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_348"
+        },
+        "selectedVia": {
+          "x": -12.425,
+          "y": -2.0249999999999986
+        },
+        "ramPad": {
+          "x": 3.6,
+          "y": -6.475,
+          "layer": "top",
+          "pointId": "pcb_port_601",
+          "pcb_port_id": "pcb_port_601"
+        },
+        "gapMm": 0.5318364410229882,
+        "viaToRamPadMm": 16.631389749506805,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_90",
+        "source": {
+          "x": -12.75,
+          "y": -1.5,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_347"
+        },
+        "selectedVia": {
+          "x": -12.675,
+          "y": -1.7999999999999972
+        },
+        "ramPad": {
+          "x": 3.6,
+          "y": -7.775,
+          "layer": "top",
+          "pointId": "pcb_port_621",
+          "pcb_port_id": "pcb_port_621"
+        },
+        "gapMm": 0.3092329219213216,
+        "viaToRamPadMm": 17.337134999762796,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_91",
+        "source": {
+          "x": -12.27,
+          "y": -1.5,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_357"
+        },
+        "selectedVia": {
+          "x": -12.2,
+          "y": -2.5
+        },
+        "ramPad": {
+          "x": 3.6,
+          "y": -8.425,
+          "layer": "top",
+          "pointId": "pcb_port_631",
+          "pcb_port_id": "pcb_port_631"
+        },
+        "gapMm": 1.0024470060806208,
+        "viaToRamPadMm": 16.874407397002123,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_92",
+        "source": {
+          "x": -11.31,
+          "y": -1.5,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_359"
+        },
+        "selectedVia": {
+          "x": -5.949999999999999,
+          "y": -3.3249999999999993
+        },
+        "ramPad": {
+          "x": 2,
+          "y": -8.425,
+          "layer": "top",
+          "pointId": "pcb_port_629",
+          "pcb_port_id": "pcb_port_629"
+        },
+        "gapMm": 5.662174935481949,
+        "viaToRamPadMm": 9.445236894858699,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_93",
+        "source": {
+          "x": -10.83,
+          "y": -1.5,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_366"
+        },
+        "selectedVia": {
+          "x": -5.024999999999999,
+          "y": -3.549999999999997
+        },
+        "ramPad": {
+          "x": 2,
+          "y": -7.775,
+          "layer": "top",
+          "pointId": "pcb_port_619",
+          "pcb_port_id": "pcb_port_619"
+        },
+        "gapMm": 6.156340227765194,
+        "viaToRamPadMm": 8.197636854606332,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_94",
+        "source": {
+          "x": -11.55,
+          "y": -1.5,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_358"
+        },
+        "selectedVia": {
+          "x": -4.899999999999999,
+          "y": -4.349999999999998
+        },
+        "ramPad": {
+          "x": 2,
+          "y": -6.475,
+          "layer": "top",
+          "pointId": "pcb_port_599",
+          "pcb_port_id": "pcb_port_599"
+        },
+        "gapMm": 7.234984450570714,
+        "viaToRamPadMm": 7.219807822927144,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_95",
+        "source": {
+          "x": -10.59,
+          "y": -1.5,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_367"
+        },
+        "selectedVia": {
+          "x": -10.075,
+          "y": -2.0249999999999986
+        },
+        "ramPad": {
+          "x": 2,
+          "y": -5.825,
+          "layer": "top",
+          "pointId": "pcb_port_589",
+          "pcb_port_id": "pcb_port_589"
+        },
+        "gapMm": 0.7354250471666022,
+        "viaToRamPadMm": 12.65881609788214,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_96",
+        "source": {
+          "x": -15.15,
+          "y": -1.4999999999999982,
+          "layer": "inner4",
+          "pointId": "pcb_breakout_point_326"
+        },
+        "selectedVia": {
+          "x": -12.5,
+          "y": -4.724999999999998
+        },
+        "ramPad": {
+          "x": -3.6,
+          "y": -9.725,
+          "layer": "top",
+          "pointId": "pcb_port_644",
+          "pcb_port_id": "pcb_port_644"
+        },
+        "gapMm": 4.174101699767268,
+        "viaToRamPadMm": 10.208329931972223,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_97",
+        "source": {
+          "x": -14.91,
+          "y": -1.5,
+          "layer": "inner4",
+          "pointId": "pcb_breakout_point_263"
+        },
+        "selectedVia": {
+          "x": -14.825,
+          "y": -1.8249999999999993
+        },
+        "ramPad": {
+          "x": -3.6,
+          "y": -10.375,
+          "layer": "top",
+          "pointId": "pcb_port_654",
+          "pcb_port_id": "pcb_port_654"
+        },
+        "gapMm": 0.335931540644816,
+        "viaToRamPadMm": 14.110390674960067,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_98",
+        "source": {
+          "x": -12.99,
+          "y": -1.5,
+          "layer": "inner4",
+          "pointId": "pcb_breakout_point_327"
+        },
+        "selectedVia": {
+          "x": -8.2,
+          "y": -2.2749999999999986
+        },
+        "ramPad": {
+          "x": 2,
+          "y": -9.725,
+          "layer": "top",
+          "pointId": "pcb_port_649",
+          "pcb_port_id": "pcb_port_649"
+        },
+        "gapMm": 4.852290696155786,
+        "viaToRamPadMm": 12.631013419357927,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_99",
+        "source": {
+          "x": -14.19,
+          "y": -1.5,
+          "layer": "inner4",
+          "pointId": "pcb_breakout_point_323"
+        },
+        "selectedVia": {
+          "x": 2.1750000000000007,
+          "y": -9.399999999999999
+        },
+        "ramPad": {
+          "x": 2.8,
+          "y": -9.725,
+          "layer": "top",
+          "pointId": "pcb_port_650",
+          "pcb_port_id": "pcb_port_650"
+        },
+        "gapMm": 18.172045151825923,
+        "viaToRamPadMm": 0.7044501401802682,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_100",
+        "source": {
+          "x": -14.43,
+          "y": -1.5,
+          "layer": "inner4",
+          "pointId": "pcb_breakout_point_283"
+        },
+        "selectedVia": {
+          "x": -14.425,
+          "y": -2.125
+        },
+        "ramPad": {
+          "x": 3.6,
+          "y": -9.725,
+          "layer": "top",
+          "pointId": "pcb_port_651",
+          "pcb_port_id": "pcb_port_651"
+        },
+        "gapMm": 0.6250199996800102,
+        "viaToRamPadMm": 19.5617132429652,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_101",
+        "source": {
+          "x": -13.23,
+          "y": -1.5,
+          "layer": "inner4",
+          "pointId": "pcb_breakout_point_262"
+        },
+        "selectedVia": {
+          "x": -13.15,
+          "y": -1.7999999999999972
+        },
+        "ramPad": {
+          "x": 3.6,
+          "y": -10.375,
+          "layer": "top",
+          "pointId": "pcb_port_661",
+          "pcb_port_id": "pcb_port_661"
+        },
+        "gapMm": 0.31048349392519775,
+        "viaToRamPadMm": 18.817362328445505,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_102",
+        "source": {
+          "x": -13.23,
+          "y": -1.5,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_195"
+        },
+        "selectedVia": {
+          "x": -12.399999999999999,
+          "y": -3.549999999999997
+        },
+        "ramPad": {
+          "x": -2.8,
+          "y": -6.475,
+          "layer": "top",
+          "pointId": "pcb_port_595",
+          "pcb_port_id": "pcb_port_595"
+        },
+        "gapMm": 2.2116509670379707,
+        "viaToRamPadMm": 10.035717463141337,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_103",
+        "source": {
+          "x": -9.7,
+          "y": -1.5,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_368"
+        },
+        "selectedVia": {
+          "x": -6.649999999999999,
+          "y": -1.5749999999999993
+        },
+        "ramPad": {
+          "x": 2.8,
+          "y": -6.475,
+          "layer": "top",
+          "pointId": "pcb_port_600",
+          "pcb_port_id": "pcb_port_600"
+        },
+        "gapMm": 3.05092199179199,
+        "viaToRamPadMm": 10.644834428021884,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_104",
+        "source": {
+          "x": -13.95,
+          "y": -1.5,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_202"
+        },
+        "selectedVia": {
+          "x": -13.875,
+          "y": -1.7999999999999972
+        },
+        "ramPad": {
+          "x": -2.8,
+          "y": -7.125,
+          "layer": "top",
+          "pointId": "pcb_port_605",
+          "pcb_port_id": "pcb_port_605"
+        },
+        "gapMm": 0.3092329219213216,
+        "viaToRamPadMm": 12.2886634749268,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_105",
+        "source": {
+          "x": -14.19,
+          "y": -1.5,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_203"
+        },
+        "selectedVia": {
+          "x": -13.35,
+          "y": -3.549999999999997
+        },
+        "ramPad": {
+          "x": -2.8,
+          "y": -7.775,
+          "layer": "top",
+          "pointId": "pcb_port_615",
+          "pcb_port_id": "pcb_port_615"
+        },
+        "gapMm": 2.2154232101338986,
+        "viaToRamPadMm": 11.364555644634772,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_106",
+        "source": {
+          "x": -11.79,
+          "y": -1.5,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_363"
+        },
+        "selectedVia": {
+          "x": -11.725,
+          "y": -2.7749999999999986
+        },
+        "ramPad": {
+          "x": 2.8,
+          "y": -7.125,
+          "layer": "top",
+          "pointId": "pcb_port_610",
+          "pcb_port_id": "pcb_port_610"
+        },
+        "gapMm": 1.276655787595073,
+        "viaToRamPadMm": 15.16239179681095,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_107",
+        "source": {
+          "x": -12.03,
+          "y": -1.5,
+          "layer": "inner2",
+          "pointId": "pcb_breakout_point_364"
+        },
+        "selectedVia": {
+          "x": -11.95,
+          "y": -2.049999999999997
+        },
+        "ramPad": {
+          "x": 2.8,
+          "y": -7.775,
+          "layer": "top",
+          "pointId": "pcb_port_620",
+          "pcb_port_id": "pcb_port_620"
+        },
+        "gapMm": 0.5557877292636073,
+        "viaToRamPadMm": 15.822077139238074,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_108",
+        "source": {
+          "x": -13.71,
+          "y": -1.5,
+          "layer": "inner4",
+          "pointId": "pcb_breakout_point_345"
+        },
+        "selectedVia": {
+          "x": -13.7,
+          "y": -1.9249999999999972
+        },
+        "ramPad": {
+          "x": 1.2,
+          "y": -10.375,
+          "layer": "top",
+          "pointId": "pcb_port_658",
+          "pcb_port_id": "pcb_port_658"
+        },
+        "gapMm": 0.42511763077999676,
+        "viaToRamPadMm": 17.129287784376793,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_109",
+        "source": {
+          "x": -13.95,
+          "y": -1.5,
+          "layer": "inner4",
+          "pointId": "pcb_breakout_point_346"
+        },
+        "selectedVia": {
+          "x": -13.975,
+          "y": -2.049999999999997
+        },
+        "ramPad": {
+          "x": 2,
+          "y": -10.375,
+          "layer": "top",
+          "pointId": "pcb_port_659",
+          "pcb_port_id": "pcb_port_659"
+        },
+        "gapMm": 0.5505678886386283,
+        "viaToRamPadMm": 18.014057011123285,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_110",
+        "source": {
+          "x": -15.39,
+          "y": -1.5,
+          "layer": "inner4",
+          "pointId": "pcb_breakout_point_322"
+        },
+        "selectedVia": {
+          "x": -9.149999999999999,
+          "y": -8.95
+        },
+        "ramPad": {
+          "x": -2,
+          "y": -10.375,
+          "layer": "top",
+          "pointId": "pcb_port_656",
+          "pcb_port_id": "pcb_port_656"
+        },
+        "gapMm": 9.71802963568233,
+        "viaToRamPadMm": 7.290618972350701,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_111",
+        "source": {
+          "x": -13.47,
+          "y": -1.5,
+          "layer": "inner4",
+          "pointId": "pcb_breakout_point_325"
+        },
+        "selectedVia": {
+          "x": -13.475,
+          "y": -2.125
+        },
+        "ramPad": {
+          "x": -2,
+          "y": -9.725,
+          "layer": "top",
+          "pointId": "pcb_port_646",
+          "pcb_port_id": "pcb_port_646"
+        },
+        "gapMm": 0.6250199996800102,
+        "viaToRamPadMm": 13.763561494031986,
+        "viaInsideSocFanoutBounds": false
+      },
+      {
+        "name": "source_trace_112",
+        "source": {
+          "x": -14.67,
+          "y": -1.5,
+          "layer": "inner4",
+          "pointId": "pcb_breakout_point_284"
+        },
+        "selectedVia": {
+          "x": -12.875,
+          "y": -4.5
+        },
+        "ramPad": {
+          "x": 3.6,
+          "y": -14.925,
+          "layer": "top",
+          "pointId": "pcb_port_711",
+          "pcb_port_id": "pcb_port_711"
+        },
+        "gapMm": 3.4960012871851176,
+        "viaToRamPadMm": 19.496313754143372,
+        "viaInsideSocFanoutBounds": false
+      }
+    ]
+  }
+]

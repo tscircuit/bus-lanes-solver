@@ -5,6 +5,6 @@ export default (
   <FixtureLoader
     url={url}
     title="ddr bottom io top / byte1"
-    description="A real AM62L bus corridor: the SoC fanout ends at its saved exit, and the RAM-side destination is the first existing carrier via. The remaining RAM route and all other copper are frozen obstacles. This is a planar subproblem, not a claim that the complete RAM fanout uses no vias. Step through failures to inspect winding order and congestion."
+    description="Legacy carrier-prefix sample. The target is the first via of an already routed SoC-to-RAM connection, often close to the SoC exit. Most of the connection to RAM is fixed gray copper. This does not test routing between independently generated SoC and RAM fanouts; see the dataset audit in the repository."
   />
 )

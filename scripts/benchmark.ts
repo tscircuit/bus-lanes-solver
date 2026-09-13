@@ -56,7 +56,7 @@ for (const file of files) {
 const positives = reports.filter((r) => !r.expectedRejection),
   negatives = reports.filter((r) => r.expectedRejection)
 console.log(
-  `DDR samples solved: ${positives.filter((r) => r.solved).length}/${positives.length}; expected layer-change rejections: ${negatives.filter((r) => r.failureCode === "layer_change_required").length}/${negatives.length}`,
+  `Legacy carrier-prefix samples solved: ${positives.filter((r) => r.solved).length}/${positives.length}; expected layer-change rejections: ${negatives.filter((r) => r.failureCode === "layer_change_required").length}/${negatives.length}`,
 )
 await Bun.write(
   "benchmark-results.json",

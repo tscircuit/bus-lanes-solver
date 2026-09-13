@@ -71,10 +71,11 @@ The repository follows the [handbook bootstrapping guide](https://github.com/tsc
 
 ## DDR benchmark
 
-Current result: **12/12 same-layer samples solved (132 lanes), 4/4 expected
-layer-change rejections**. The checked-in report includes iterations, attempts and
-elapsed time. These are isolated same-layer corridors, not complete via-free RAM
-connections. `fixture-results.json` retains the original 10,000-iteration baseline.
+The existing **12/12 result covers reconstructed carrier prefixes**, not routing
+between independent SoC and RAM fanouts. The first global-route via was used as
+the target, leaving most of the RAM connection fixed. These samples remain useful
+regressions but do not establish success on the intended fanout-to-fanout problem.
+See [the dataset audit](./DATASET-AUDIT.md). Full fanout-to-fanout coverage is pending.
 
 Run `./benchmark.sh` from this repository (Bun required). It routes all twelve
 same-layer AM62L samples without modifying their terminals, obstacles or widths,
