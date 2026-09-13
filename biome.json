@@ -1,0 +1,1 @@
+{"$schema":"https://biomejs.dev/schemas/2.2.4/schema.json","files":{"includes":["**","!tests/fixtures/**","!cosmos-export/**","!node_modules/**"]},"formatter":{"indentStyle":"space"},"javascript":{"formatter":{"semicolons":"asNeeded"}}}
