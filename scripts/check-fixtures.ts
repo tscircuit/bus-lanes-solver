@@ -31,4 +31,4 @@ for await (const file of new Glob("tests/fixtures/*.json").scan(".")) {
   )
     throw Error("Via invariant broken")
 }
-await Bun.write("fixture-results.json", JSON.stringify(reports, null, 2))
+await Bun.write("fixture-results.json", `${JSON.stringify(reports, null, 2)}\n`)
