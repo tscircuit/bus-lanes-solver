@@ -1,0 +1,146 @@
+[
+  {
+    "file": "tests/fixtures/ddr_left_io_right-byte0.json",
+    "solved": true,
+    "error": null,
+    "failureCode": null,
+    "iterations": 245,
+    "routedLanes": 11,
+    "milliseconds": 81.89375000000001
+  },
+  {
+    "file": "tests/fixtures/ddr_left_io_right-byte1.json",
+    "solved": true,
+    "error": null,
+    "failureCode": null,
+    "iterations": 556,
+    "routedLanes": 11,
+    "milliseconds": 90.97925000000001
+  },
+  {
+    "file": "tests/fixtures/ddr_top_io_bottom-ca.json",
+    "solved": false,
+    "error": "BusLanesSolver ran out of iterations",
+    "failureCode": "search_budget_exhausted",
+    "iterations": 10000,
+    "routedLanes": 6,
+    "milliseconds": 472.107959
+  },
+  {
+    "file": "tests/fixtures/ddr_left_io_right-raw.json",
+    "solved": false,
+    "error": "source_trace_80: inner2 → top; fan out both endpoints onto a common fixed layer first",
+    "failureCode": "layer_change_required",
+    "iterations": 1,
+    "routedLanes": 0,
+    "milliseconds": 0.05312500000002274
+  },
+  {
+    "file": "tests/fixtures/ddr_bottom_io_top-ca.json",
+    "solved": false,
+    "error": "BusLanesSolver ran out of iterations",
+    "failureCode": "search_budget_exhausted",
+    "iterations": 10000,
+    "routedLanes": 3,
+    "milliseconds": 417.39150000000006
+  },
+  {
+    "file": "tests/fixtures/ddr_right_io_left-ca.json",
+    "solved": true,
+    "error": null,
+    "failureCode": null,
+    "iterations": 724,
+    "routedLanes": 11,
+    "milliseconds": 79.85370899999998
+  },
+  {
+    "file": "tests/fixtures/ddr_left_io_right-ca.json",
+    "solved": true,
+    "error": null,
+    "failureCode": null,
+    "iterations": 1060,
+    "routedLanes": 11,
+    "milliseconds": 90.99933299999998
+  },
+  {
+    "file": "tests/fixtures/ddr_top_io_bottom-byte1.json",
+    "solved": false,
+    "error": "source_trace_107: no same-layer route found at 0.1 mm resolution; vias are forbidden",
+    "failureCode": "no_planar_route",
+    "iterations": 1919,
+    "routedLanes": 10,
+    "milliseconds": 130.97350000000006
+  },
+  {
+    "file": "tests/fixtures/ddr_top_io_bottom-byte0.json",
+    "solved": false,
+    "error": "BusLanesSolver ran out of iterations",
+    "failureCode": "search_budget_exhausted",
+    "iterations": 10000,
+    "routedLanes": 6,
+    "milliseconds": 310.925833
+  },
+  {
+    "file": "tests/fixtures/ddr_bottom_io_top-raw.json",
+    "solved": false,
+    "error": "source_trace_80: inner2 → top; fan out both endpoints onto a common fixed layer first",
+    "failureCode": "layer_change_required",
+    "iterations": 1,
+    "routedLanes": 0,
+    "milliseconds": 0.04250000000001819
+  },
+  {
+    "file": "tests/fixtures/ddr_bottom_io_top-byte0.json",
+    "solved": false,
+    "error": "BusLanesSolver ran out of iterations",
+    "failureCode": "search_budget_exhausted",
+    "iterations": 10000,
+    "routedLanes": 6,
+    "milliseconds": 421.68566699999974
+  },
+  {
+    "file": "tests/fixtures/ddr_right_io_left-raw.json",
+    "solved": false,
+    "error": "source_trace_80: inner2 → top; fan out both endpoints onto a common fixed layer first",
+    "failureCode": "layer_change_required",
+    "iterations": 1,
+    "routedLanes": 0,
+    "milliseconds": 0.021332999999685853
+  },
+  {
+    "file": "tests/fixtures/ddr_right_io_left-byte0.json",
+    "solved": false,
+    "error": "BusLanesSolver ran out of iterations",
+    "failureCode": "search_budget_exhausted",
+    "iterations": 10000,
+    "routedLanes": 0,
+    "milliseconds": 243.52145900000005
+  },
+  {
+    "file": "tests/fixtures/ddr_top_io_bottom-raw.json",
+    "solved": false,
+    "error": "source_trace_80: inner2 → top; fan out both endpoints onto a common fixed layer first",
+    "failureCode": "layer_change_required",
+    "iterations": 1,
+    "routedLanes": 0,
+    "milliseconds": 0.02633400000013353
+  },
+  {
+    "file": "tests/fixtures/ddr_right_io_left-byte1.json",
+    "solved": false,
+    "error": "source_trace_92: no same-layer route found at 0.1 mm resolution; vias are forbidden",
+    "failureCode": "no_planar_route",
+    "iterations": 216,
+    "routedLanes": 4,
+    "milliseconds": 80.10674999999992
+  },
+  {
+    "file": "tests/fixtures/ddr_bottom_io_top-byte1.json",
+    "solved": false,
+    "error": "BusLanesSolver ran out of iterations",
+    "failureCode": "search_budget_exhausted",
+    "iterations": 10000,
+    "routedLanes": 5,
+    "milliseconds": 249.70191699999987
+  }
+]

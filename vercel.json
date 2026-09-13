@@ -1,1 +1,6 @@
-{"buildCommand":"bun run build:site","outputDirectory":"cosmos-export","installCommand":"bun install","framework":null}
+{
+  "buildCommand": "bun run build:site",
+  "outputDirectory": "cosmos-export",
+  "installCommand": "bun install",
+  "framework": null
+}
