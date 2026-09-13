@@ -1,3 +1,5 @@
+import { MinHeap } from "./min-heap"
+import { windingOrders } from "./winding-orders"
 import { BaseSolver } from "@tscircuit/solver-utils"
 import type { GraphicsObject } from "graphics-debug"
 import type {
@@ -45,8 +47,12 @@ export class BusLanesSolver extends BaseSolver {
   private segments: Segment[] = []
   private spatial = new Map<string, Segment[]>()
   private segmentKeys = new Set<string>()
+  private attempt = 0
+  private orders: Connection[][] = []
+  private laneExpansions = 0
+  private fixedSegments: Segment[] = []
   private lane = 0
-  private open: SearchNode[] = []
+  private open = new MinHeap<SearchNode>()
   private best = new Map<string, number>()
   private current?: SearchNode
   private expansions = 0
@@ -55,7 +61,7 @@ export class BusLanesSolver extends BaseSolver {
     super()
     this.input = structuredClone(input)
     this.options = options
-    this.MAX_ITERATIONS = options.maxSearchIterations ?? 500000
+    this.MAX_ITERATIONS = options.maxSearchIterations ?? 5000000
   }
   tryFinalAcceptance() {
     if (!this.failed)
@@ -258,11 +264,12 @@ export class BusLanesSolver extends BaseSolver {
       ),
       ...input.connections.filter((c) => !claimed.has(c.name)),
     ]
+    this.orders = windingOrders(this.connections)
     for (const o of input.obstacles) {
       const a = { x: o.center.x - o.width / 2, y: o.center.y },
         b = { x: o.center.x + o.width / 2, y: o.center.y }
-      // Filled rectangles represented by horizontal scan segments; exact rectangle
-      // collision is covered by the half-height radius (conservative rounded box).
+      // The segment/radius bounds index the rectangle; canEdge performs the
+      // exact rectangle clearance test.
       for (const layer of o.layers)
         this.addSegment({
           a,
@@ -303,11 +310,45 @@ export class BusLanesSolver extends BaseSolver {
             })
         } else throw Error("Unsupported previous-route primitive")
       }
+    // Reserve every terminal before choosing a winding order. An early lane
+    // must never occupy another lane's only attachment point.
+    for (const c of this.connections)
+      for (const p of c.pointsToConnect)
+        this.addSegment({
+          a: p,
+          b: p,
+          radius: this.widths.get(c.name)! / 2,
+          layer: p.layer,
+          owners: [c.name],
+        })
+    this.fixedSegments = [...this.segments]
     this.phase = "route"
     this.startLane()
   }
+  private retry() {
+    this.attempt++
+    if (this.attempt >= this.orders.length * 2) return false
+    this.connections = this.orders[Math.floor(this.attempt / 2)].map((c) => ({
+      ...c,
+      pointsToConnect:
+        this.attempt % 2 === 1
+          ? [...c.pointsToConnect].reverse()
+          : c.pointsToConnect,
+    }))
+    this.traces = []
+    this.segments = []
+    this.spatial.clear()
+    this.segmentKeys.clear()
+    for (const segment of this.fixedSegments) this.addSegment(segment)
+    this.lane = 0
+    this.tuning = 0
+    this.phase = "route"
+    this.startLane()
+    return true
+  }
   private startLane() {
-    this.open = []
+    this.laneExpansions = 0
+    this.open = new MinHeap<SearchNode>()
     this.best.clear()
     this.current = undefined
     if (this.lane >= this.connections.length) {
@@ -351,20 +392,23 @@ export class BusLanesSolver extends BaseSolver {
   private search() {
     const c = this.connections[this.lane],
       [start, goal] = c.pointsToConnect,
-      step = this.options.gridStep ?? 0.1
-    if (!this.open.length) {
+      step = this.options.gridStep ?? (this.attempt === 0 ? 0.1 : 0.025)
+    if (
+      !this.open.length ||
+      this.laneExpansions >= (this.options.maxLaneIterations ?? 30000)
+    ) {
+      if (this.retry()) return
       this.fail(
         "no_planar_route",
         `${c.name}: no same-layer route found at ${step} mm resolution; vias are forbidden`,
       )
       return
     }
-    let best = 0
-    for (let i = 1; i < this.open.length; i++)
-      if (this.open[i].f < this.open[best].f) best = i
-    const current = this.open.splice(best, 1)[0]
+    const current = this.open.pop()
+    if (current.g > (this.best.get(current.id) ?? Infinity)) return
     this.current = current
     this.expansions++
+    this.laneExpansions++
     const dx = goal.x - current.x,
       dy = goal.y - current.y
     // Exact endpoint attachment is permitted only along orthogonal or 45° lines.
@@ -400,7 +444,13 @@ export class BusLanesSolver extends BaseSolver {
       )
         continue
       this.best.set(id, g)
-      this.open.push({ ...p, id, g, f: g + distance(p, goal), parent: current })
+      this.open.push({
+        ...p,
+        id,
+        g,
+        f: g + 1.2 * distance(p, goal),
+        parent: current,
+      })
     }
     // Off-grid terminals get exact 45°/orthogonal finishing elbows, never a snap.
     for (const p of [
@@ -514,6 +564,19 @@ export class BusLanesSolver extends BaseSolver {
       else if (this.phase === "route") this.search()
       else if (this.phase === "match") this.match()
       else if (this.phase === "validate_output") {
+        for (const t of this.traces) {
+          const c = this.connections.find((c) => c.name === t.connection_name)!
+          for (let i = 1; i < t.route.length; i++) {
+            const a = t.route[i - 1],
+              b = t.route[i]
+            const dx = Math.abs(a.x - b.x),
+              dy = Math.abs(a.y - b.y)
+            if (Math.min(dx, dy) > 1e-8 && Math.abs(dx - dy) > 1e-8)
+              throw Error("Non-octilinear route")
+            if (!this.canEdge([a, b], c))
+              throw Error("Final route clearance violation")
+          }
+        }
         for (const t of this.traces)
           if (
             t.route.some(
@@ -552,6 +615,7 @@ export class BusLanesSolver extends BaseSolver {
       : 0
     this.stats = {
       phase: this.phase,
+      attempt: this.attempt,
       lane: this.lane,
       totalLanes: this.connections.length,
       expandedNodes: this.expansions,
@@ -602,7 +666,7 @@ export class BusLanesSolver extends BaseSolver {
           color: j ? "#d97706" : "#2563eb",
           label: `${connection.name} ${j ? "target" : "source"} [${p.layer}]`,
         })
-    for (const p of this.open.slice(-500))
+    for (const p of this.open.values().slice(-500))
       points.push({ x: p.x, y: p.y, color: "#67e8f9" })
     if (this.current) {
       const path = []

@@ -1,3 +1,4 @@
+import { pointSegmentDistance } from "../lib/geometry"
 import { expect, test } from "bun:test"
 import { BusLanesSolver, resolveBusWidth, type SimpleRouteJson } from "../lib"
 const input = (): SimpleRouteJson => ({
@@ -109,4 +110,27 @@ test("exhausted search refuses partial output", () => {
   expect(s.failureCode).toBe("search_budget_exhausted")
   expect(s.phase).toBe("failed")
   expect(() => s.getOutput()).toThrow()
+})
+
+test("reserves unrouted terminals instead of letting an earlier lane occupy them", () => {
+  const j = input()
+  j.buses = []
+  j.connections[1].pointsToConnect = [
+    { x: 5, y: 0, layer: "top" },
+    { x: 5, y: 2, layer: "top" },
+  ]
+  const before = JSON.stringify(j)
+  const s = new BusLanesSolver(j)
+  s.solve()
+  expect(s.solved).toBe(true)
+  const first = s.traces.find((t) => t.connection_name === "a")!
+  for (let i = 1; i < first.route.length; i++) {
+    expect(
+      pointSegmentDistance({ x: 5, y: 0 }, [
+        first.route[i - 1],
+        first.route[i],
+      ]),
+    ).toBeGreaterThanOrEqual(0.174999)
+  }
+  expect(JSON.stringify(j)).toBe(before)
 })

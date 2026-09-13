@@ -10,7 +10,7 @@ export function FixtureView({
   title: string
   description: string
 }) {
-  const [step, setStep] = useState(0.1)
+  const [step, setStep] = useState(0)
   return (
     <main style={{ fontFamily: "system-ui", padding: 20, color: "#0f172a" }}>
       <header
@@ -33,6 +33,7 @@ export function FixtureView({
             value={step}
             onChange={(e) => setStep(Number(e.target.value))}
           >
+            <option value={0}>Automatic (0.10 → 0.025 mm)</option>
             <option value={0.1}>0.10 mm</option>
             <option value={0.05}>0.05 mm</option>
             <option value={0.025}>0.025 mm</option>
@@ -43,8 +44,7 @@ export function FixtureView({
         key={step}
         createSolver={() =>
           new BusLanesSolver(input, {
-            gridStep: step,
-            maxSearchIterations: 100000,
+            gridStep: step || undefined,
           })
         }
       />

@@ -1,0 +1,178 @@
+[
+  {
+    "file": "tests/fixtures/ddr_bottom_io_top-byte0.json",
+    "expectedRejection": false,
+    "solved": true,
+    "failureCode": null,
+    "error": null,
+    "iterations": 40501,
+    "attempts": 2,
+    "routedLanes": 11,
+    "milliseconds": 1335
+  },
+  {
+    "file": "tests/fixtures/ddr_bottom_io_top-byte1.json",
+    "expectedRejection": false,
+    "solved": true,
+    "failureCode": null,
+    "error": null,
+    "iterations": 811583,
+    "attempts": 22,
+    "routedLanes": 11,
+    "milliseconds": 22264
+  },
+  {
+    "file": "tests/fixtures/ddr_bottom_io_top-ca.json",
+    "expectedRejection": false,
+    "solved": true,
+    "failureCode": null,
+    "error": null,
+    "iterations": 45357,
+    "attempts": 1,
+    "routedLanes": 11,
+    "milliseconds": 1071
+  },
+  {
+    "file": "tests/fixtures/ddr_bottom_io_top-raw.json",
+    "expectedRejection": true,
+    "solved": false,
+    "failureCode": "layer_change_required",
+    "error": "source_trace_80: inner2 → top; fan out both endpoints onto a common fixed layer first",
+    "iterations": 1,
+    "attempts": 1,
+    "routedLanes": 0,
+    "milliseconds": 0
+  },
+  {
+    "file": "tests/fixtures/ddr_left_io_right-byte0.json",
+    "expectedRejection": false,
+    "solved": true,
+    "failureCode": null,
+    "error": null,
+    "iterations": 38,
+    "attempts": 1,
+    "routedLanes": 11,
+    "milliseconds": 65
+  },
+  {
+    "file": "tests/fixtures/ddr_left_io_right-byte1.json",
+    "expectedRejection": false,
+    "solved": true,
+    "failureCode": null,
+    "error": null,
+    "iterations": 97,
+    "attempts": 1,
+    "routedLanes": 11,
+    "milliseconds": 68
+  },
+  {
+    "file": "tests/fixtures/ddr_left_io_right-ca.json",
+    "expectedRejection": false,
+    "solved": true,
+    "failureCode": null,
+    "error": null,
+    "iterations": 168,
+    "attempts": 1,
+    "routedLanes": 11,
+    "milliseconds": 74
+  },
+  {
+    "file": "tests/fixtures/ddr_left_io_right-raw.json",
+    "expectedRejection": true,
+    "solved": false,
+    "failureCode": "layer_change_required",
+    "error": "source_trace_80: inner2 → top; fan out both endpoints onto a common fixed layer first",
+    "iterations": 1,
+    "attempts": 1,
+    "routedLanes": 0,
+    "milliseconds": 0
+  },
+  {
+    "file": "tests/fixtures/ddr_right_io_left-byte0.json",
+    "expectedRejection": false,
+    "solved": true,
+    "failureCode": null,
+    "error": null,
+    "iterations": 1081518,
+    "attempts": 20,
+    "routedLanes": 11,
+    "milliseconds": 18708
+  },
+  {
+    "file": "tests/fixtures/ddr_right_io_left-byte1.json",
+    "expectedRejection": false,
+    "solved": true,
+    "failureCode": null,
+    "error": null,
+    "iterations": 260,
+    "attempts": 2,
+    "routedLanes": 11,
+    "milliseconds": 108
+  },
+  {
+    "file": "tests/fixtures/ddr_right_io_left-ca.json",
+    "expectedRejection": false,
+    "solved": true,
+    "failureCode": null,
+    "error": null,
+    "iterations": 384,
+    "attempts": 1,
+    "routedLanes": 11,
+    "milliseconds": 83
+  },
+  {
+    "file": "tests/fixtures/ddr_right_io_left-raw.json",
+    "expectedRejection": true,
+    "solved": false,
+    "failureCode": "layer_change_required",
+    "error": "source_trace_80: inner2 → top; fan out both endpoints onto a common fixed layer first",
+    "iterations": 1,
+    "attempts": 1,
+    "routedLanes": 0,
+    "milliseconds": 0
+  },
+  {
+    "file": "tests/fixtures/ddr_top_io_bottom-byte0.json",
+    "expectedRejection": false,
+    "solved": true,
+    "failureCode": null,
+    "error": null,
+    "iterations": 97293,
+    "attempts": 3,
+    "routedLanes": 11,
+    "milliseconds": 2769
+  },
+  {
+    "file": "tests/fixtures/ddr_top_io_bottom-byte1.json",
+    "expectedRejection": false,
+    "solved": true,
+    "failureCode": null,
+    "error": null,
+    "iterations": 173857,
+    "attempts": 5,
+    "routedLanes": 11,
+    "milliseconds": 3849
+  },
+  {
+    "file": "tests/fixtures/ddr_top_io_bottom-ca.json",
+    "expectedRejection": false,
+    "solved": true,
+    "failureCode": null,
+    "error": null,
+    "iterations": 179779,
+    "attempts": 2,
+    "routedLanes": 11,
+    "milliseconds": 3004
+  },
+  {
+    "file": "tests/fixtures/ddr_top_io_bottom-raw.json",
+    "expectedRejection": true,
+    "solved": false,
+    "failureCode": "layer_change_required",
+    "error": "source_trace_80: inner2 → top; fan out both endpoints onto a common fixed layer first",
+    "iterations": 1,
+    "attempts": 1,
+    "routedLanes": 0,
+    "milliseconds": 0
+  }
+]
