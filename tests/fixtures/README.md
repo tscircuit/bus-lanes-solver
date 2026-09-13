@@ -1,5 +1,8 @@
-These are legacy carrier-prefix regression samples, not independent SoC-to-RAM fanout captures. See [the dataset audit](../../DATASET-AUDIT.md).
+The default benchmark uses `two-fanouts/*.json`: actual SRJs captured from the
+DDR_INTERCONNECT phase of the circuits in `examples`. Both fanouts already exist;
+no carrier traces exist. Metadata contains fixed paths, enclosing regions, and
+build/DRC results. See `examples/README.md` for reproduction.
 
-These SRJ captures come from the AM62L module's four layout profiles, generated on 2026-09-13. The raw inputs are the actual dedicated DDR phase inputs. The planar inputs retain the built saved SoC fanout and fixed carrier copper; only the selected bank's route from its SoC exit to its first carrier via is removed and presented for solving. The first via and all remaining RAM-side copper remain fixed. No endpoint layer is changed.
-
-Reproduction requires the AM62L module's `previews/ram/<profile>.phase-3.input.json` and `dist/<profile>/circuit.json`. The export script is in `scripts/export-am62l-fixtures.ts` and takes the module directory as its argument.
+The files directly in this directory are legacy captures. `*-raw.json` are
+mixed-layer negative tests; the byte/CA files reconstruct old carrier prefixes
+and are excluded from the default benchmark. See `DATASET-AUDIT.md`.

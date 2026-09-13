@@ -1,12 +1,37 @@
+import { validateTwoFanoutSample } from "./validate-two-fanout-sample"
 import { Glob } from "bun"
 import { BusLanesSolver, type SimpleRouteJson } from "../lib"
-const files = Array.from(
-  new Glob("tests/fixtures/ddr_*.json").scanSync("."),
-).sort()
+const legacy = process.argv.includes("--legacy")
+const files = legacy
+  ? Array.from(new Glob("tests/fixtures/ddr_*.json").scanSync(".")).sort()
+  : [
+      ...Array.from(
+        new Glob("tests/fixtures/two-fanouts/ddr_*.json").scanSync("."),
+      ).filter((f) => !f.endsWith(".meta.json")),
+      ...Array.from(new Glob("tests/fixtures/ddr_*-raw.json").scanSync(".")),
+    ].sort()
 if (!files.length) throw Error("No DDR samples found")
+if (!legacy) {
+  for (const profile of [
+    "ddr_left_io_right",
+    "ddr_right_io_left",
+    "ddr_top_io_bottom",
+    "ddr_bottom_io_top",
+  ]) {
+    if (!files.includes(`tests/fixtures/two-fanouts/${profile}.json`))
+      throw Error(`Missing full DDR phase: ${profile}`)
+  }
+}
 const reports = []
 for (const file of files) {
   const input: SimpleRouteJson = await Bun.file(file).json()
+  const dataset =
+    !legacy && !file.endsWith("-raw.json")
+      ? validateTwoFanoutSample(
+          input,
+          await Bun.file(file.replace(".json", ".meta.json")).json(),
+        )
+      : undefined
   const before = JSON.stringify(input)
   const solver = new BusLanesSolver(input)
   const start = performance.now()
@@ -37,8 +62,16 @@ for (const file of files) {
               .pointsToConnect[0].layer,
       ),
     )
+  if (valid && !legacy && !negative) {
+    validateTwoFanoutSample(
+      input,
+      await Bun.file(file.replace(".json", ".meta.json")).json(),
+      solver.traces,
+    )
+  }
   const report = {
     file,
+    dataset,
     expectedRejection: negative,
     solved: valid,
     failureCode: solver.failureCode,
@@ -56,10 +89,10 @@ for (const file of files) {
 const positives = reports.filter((r) => !r.expectedRejection),
   negatives = reports.filter((r) => r.expectedRejection)
 console.log(
-  `Legacy carrier-prefix samples solved: ${positives.filter((r) => r.solved).length}/${positives.length}; expected layer-change rejections: ${negatives.filter((r) => r.failureCode === "layer_change_required").length}/${negatives.length}`,
+  `${legacy ? "Legacy carrier-prefix samples" : "Full two-fanout DDR phases"} solved: ${positives.filter((r) => r.solved).length}/${positives.length}; expected layer-change rejections: ${negatives.filter((r) => r.failureCode === "layer_change_required").length}/${negatives.length}`,
 )
 await Bun.write(
-  "benchmark-results.json",
+  legacy ? "legacy-benchmark-results.json" : "benchmark-results.json",
   `${JSON.stringify(reports, null, 2)}\n`,
 )
 if (

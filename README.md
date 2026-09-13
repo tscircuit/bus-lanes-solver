@@ -56,9 +56,10 @@ bun run start
 bun run build:site
 ```
 
-Cosmos includes four raw AM62L DDR captures and twelve planar corridor pages (BYTE0, BYTE1 and command/address for each orientation), plus a small matching example. Use Step, Animate and Solve in `GenericSolverDebugger`. Source/target labels include the layer; candidate paths, frontier nodes, fixed copper and committed lanes are rendered separately. Input and graphics downloads make failures reproducible.
-
-Raw captures intentionally fail: SoC exits are on inner layers and RAM pads on top. Planar corridor captures terminate at the **first existing carrier via**, freeze the rest of the RAM route, and preserve other copper as obstacles. They isolate the same-layer problem; they do not claim that the complete RAM connection is via-free. Explicit coarse grid settings may still fail; the automatic setting retries winding orders on a finer grid.
+Cosmos shows four full AM62L DDR phase captures and a length/impedance example.
+Each AM62L page has two separate fanouts, 6 mm between their enclosing regions,
+and all 33 DDR signals waiting to be routed. Gray copper is fixed fanout copper;
+colored copper is the new interconnect. The SoC remains unrotated.
 
 ```sh
 bun test
@@ -71,27 +72,25 @@ The repository follows the [handbook bootstrapping guide](https://github.com/tsc
 
 ## DDR benchmark
 
-The existing **12/12 result covers reconstructed carrier prefixes**, not routing
-between independent SoC and RAM fanouts. The first global-route via was used as
-the target, leaving most of the RAM connection fixed. These samples remain useful
-regressions but do not establish success on the intended fanout-to-fanout problem.
-See [the dataset audit](./DATASET-AUDIT.md). Full fanout-to-fanout coverage is pending.
+`./benchmark.sh` measures the four **full fanout-to-fanout DDR phases**. Before
+routing, it checks both fanouts' coverage, their 6 mm separation, exact endpoints,
+matching exit layers, absence of pre-routed carrier traces, and independent fixed
+copper DRC. It then verifies complete via-free routing and independent DRC of the combined
+fanout and interconnect copper, and writes
+`benchmark-results.json`. Any invalid sample or unsolved connection fails the run.
 
-Run `./benchmark.sh` from this repository (Bun required). It routes all twelve
-same-layer AM62L samples without modifying their terminals, obstacles or widths,
-prints the solved count, and writes `benchmark-results.json`. Four raw mixed-layer
-captures are checked separately as expected `layer_change_required` rejections;
-they are never counted as solved. The command exits nonzero if any positive
-sample fails or an expected rejection is missing.
+The actual tscircuit compositions are in [`examples`](./examples/README.md).
+Each uses two `<fanout pcbTracePaths={...}>` components followed by
+`<autoroutingphase autorouter="bus_lanes" />`. The phase receives exact preserved
+traces; it does not use rectangular approximations of diagonal fanout copper.
 
-The automatic solver starts at 0.1 mm, then retries at 0.025 mm using geometric
-source/target winding sweeps, reversed sweeps and seam rotations. Each order is
-searched from both endpoint directions. Retries discard only newly routed copper;
-all input copper and terminal reservations remain fixed. Every committed segment
-is checked again for clearance and 0/45/90-degree geometry before acceptance.
+The old 12 carrier-prefix cases are retained only as legacy regressions:
+`./benchmark.sh --legacy`. They are excluded from the default score and Cosmos
+pages. The [historical audit](./DATASET-AUDIT.md) explains their limitations.
+Four raw mixed-layer captures remain negative tests and are counted separately.
 
-This draws on [fanout-solver's winding route-order alternatives](https://github.com/tscircuit/fanout-solver/blob/main/lib/route-via-minimal-winding.ts).
-`maxLaneIterations` bounds each search (default 30,000); `maxSearchIterations`
-bounds the entire solve (default 5,000,000). Exhausting either all alternatives
-or the total budget remains an error. Grid resolution can be fixed explicitly
-with `gridStep`, including in Cosmos.
+The automatic solver starts at 0.1 mm, then retries at 0.025 mm using source/target
+winding sweeps, reversed sweeps and seam rotations, searching each order from
+both ends. This draws on [fanout-solver's winding alternatives](https://github.com/tscircuit/fanout-solver/blob/main/lib/route-via-minimal-winding.ts).
+`maxLaneIterations` bounds each search (30,000 by default), and
+`maxSearchIterations` bounds the whole solve (5,000,000). Exhaustion is an error.

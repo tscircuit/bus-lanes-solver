@@ -4,8 +4,10 @@
     "includes": [
       "**",
       "!tests/fixtures/**",
+      "!examples/data/**",
       "!cosmos-export/**",
-      "!node_modules/**"
+      "!node_modules/**",
+      "!.cache/**"
     ]
   },
   "formatter": { "indentStyle": "space" },

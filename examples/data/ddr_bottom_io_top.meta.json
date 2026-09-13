@@ -1,0 +1,307 @@
+{
+  "profile": "ddr_bottom_io_top",
+  "kind": "independent-fanouts",
+  "marginMm": 6,
+  "socRegion": {
+    "minX": -15.59,
+    "maxX": 5.827,
+    "minY": -1.7,
+    "maxY": 17.900000000000002
+  },
+  "ramRegion": {
+    "minX": -31.5,
+    "maxX": 4.899999999999999,
+    "minY": -44.099999999999994,
+    "maxY": -7.699999999999999
+  },
+  "ramFanoutDrc": {
+    "valid": true,
+    "checkedTraceCount": 33,
+    "checkedSegmentCount": 241,
+    "checkedViaCount": 99,
+    "issues": []
+  },
+  "fixedCopperDrc": {
+    "valid": true,
+    "checkedTraceCount": 66,
+    "checkedSegmentCount": 969,
+    "checkedViaCount": 165,
+    "issues": []
+  },
+  "carrierTraceCount": 0,
+  "connectionCount": 33,
+  "ramLayerSequences": {
+    "source_trace_80": [
+      [
+        "top",
+        "inner4",
+        "bottom",
+        "inner2"
+      ]
+    ],
+    "source_trace_81": [
+      [
+        "top",
+        "inner4",
+        "bottom",
+        "inner2"
+      ]
+    ],
+    "source_trace_82": [
+      [
+        "top",
+        "inner4",
+        "bottom",
+        "inner2"
+      ]
+    ],
+    "source_trace_83": [
+      [
+        "top",
+        "inner4",
+        "bottom",
+        "inner2"
+      ]
+    ],
+    "source_trace_84": [
+      [
+        "top",
+        "inner4",
+        "bottom",
+        "inner2"
+      ]
+    ],
+    "source_trace_85": [
+      [
+        "top",
+        "inner4",
+        "bottom",
+        "inner2"
+      ]
+    ],
+    "source_trace_86": [
+      [
+        "top",
+        "inner4",
+        "bottom",
+        "inner2"
+      ]
+    ],
+    "source_trace_87": [
+      [
+        "top",
+        "inner4",
+        "bottom",
+        "inner2"
+      ]
+    ],
+    "source_trace_88": [
+      [
+        "top",
+        "inner4",
+        "bottom",
+        "inner2"
+      ]
+    ],
+    "source_trace_89": [
+      [
+        "top",
+        "inner4",
+        "bottom",
+        "inner2"
+      ]
+    ],
+    "source_trace_90": [
+      [
+        "top",
+        "inner4",
+        "bottom",
+        "inner2"
+      ]
+    ],
+    "source_trace_91": [
+      [
+        "top",
+        "inner4",
+        "bottom",
+        "inner2"
+      ]
+    ],
+    "source_trace_92": [
+      [
+        "top",
+        "inner4",
+        "bottom",
+        "inner2"
+      ]
+    ],
+    "source_trace_93": [
+      [
+        "top",
+        "inner4",
+        "bottom",
+        "inner2"
+      ]
+    ],
+    "source_trace_94": [
+      [
+        "top",
+        "inner4",
+        "bottom",
+        "inner2"
+      ]
+    ],
+    "source_trace_95": [
+      [
+        "top",
+        "inner4",
+        "bottom",
+        "inner2"
+      ]
+    ],
+    "source_trace_96": [
+      [
+        "top",
+        "inner2",
+        "bottom",
+        "inner4"
+      ]
+    ],
+    "source_trace_97": [
+      [
+        "top",
+        "inner2",
+        "bottom",
+        "inner4"
+      ]
+    ],
+    "source_trace_98": [
+      [
+        "top",
+        "inner2",
+        "bottom",
+        "inner4"
+      ]
+    ],
+    "source_trace_99": [
+      [
+        "top",
+        "inner2",
+        "bottom",
+        "inner4"
+      ]
+    ],
+    "source_trace_100": [
+      [
+        "top",
+        "inner2",
+        "bottom",
+        "inner4"
+      ]
+    ],
+    "source_trace_101": [
+      [
+        "top",
+        "inner2",
+        "bottom",
+        "inner4"
+      ]
+    ],
+    "source_trace_102": [
+      [
+        "top",
+        "inner4",
+        "bottom",
+        "inner2"
+      ]
+    ],
+    "source_trace_103": [
+      [
+        "top",
+        "inner4",
+        "bottom",
+        "inner2"
+      ]
+    ],
+    "source_trace_104": [
+      [
+        "top",
+        "inner4",
+        "bottom",
+        "inner2"
+      ]
+    ],
+    "source_trace_105": [
+      [
+        "top",
+        "inner4",
+        "bottom",
+        "inner2"
+      ]
+    ],
+    "source_trace_106": [
+      [
+        "top",
+        "inner4",
+        "bottom",
+        "inner2"
+      ]
+    ],
+    "source_trace_107": [
+      [
+        "top",
+        "inner4",
+        "bottom",
+        "inner2"
+      ]
+    ],
+    "source_trace_108": [
+      [
+        "top",
+        "inner2",
+        "bottom",
+        "inner4"
+      ]
+    ],
+    "source_trace_109": [
+      [
+        "top",
+        "inner2",
+        "bottom",
+        "inner4"
+      ]
+    ],
+    "source_trace_110": [
+      [
+        "top",
+        "inner2",
+        "bottom",
+        "inner4"
+      ]
+    ],
+    "source_trace_111": [
+      [
+        "top",
+        "inner2",
+        "bottom",
+        "inner4"
+      ]
+    ],
+    "source_trace_112": [
+      [
+        "top",
+        "inner2",
+        "bottom",
+        "inner4"
+      ]
+    ]
+  },
+  "socCenter": {
+    "x": 0,
+    "y": 9
+  },
+  "ramCenter": {
+    "x": -13.3,
+    "y": -25.9
+  }
+}

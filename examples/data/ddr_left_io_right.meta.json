@@ -1,0 +1,274 @@
+{
+  "profile": "ddr_left_io_right",
+  "kind": "independent-fanouts",
+  "marginMm": 6,
+  "socRegion": {
+    "minX": -1.7,
+    "maxX": 14.827,
+    "minY": -11,
+    "maxY": 8.899999999999999
+  },
+  "ramRegion": {
+    "minX": -44.099999999999994,
+    "maxX": -7.699999999999999,
+    "minY": -18.2,
+    "maxY": 18.2
+  },
+  "ramFanoutDrc": {
+    "valid": true,
+    "checkedTraceCount": 33,
+    "checkedSegmentCount": 178,
+    "checkedViaCount": 66,
+    "issues": []
+  },
+  "fixedCopperDrc": {
+    "valid": true,
+    "checkedTraceCount": 66,
+    "checkedSegmentCount": 857,
+    "checkedViaCount": 132,
+    "issues": []
+  },
+  "carrierTraceCount": 0,
+  "connectionCount": 33,
+  "ramLayerSequences": {
+    "source_trace_80": [
+      [
+        "top",
+        "bottom",
+        "inner2"
+      ]
+    ],
+    "source_trace_81": [
+      [
+        "top",
+        "bottom",
+        "inner2"
+      ]
+    ],
+    "source_trace_82": [
+      [
+        "top",
+        "bottom",
+        "inner2"
+      ]
+    ],
+    "source_trace_83": [
+      [
+        "top",
+        "bottom",
+        "inner2"
+      ]
+    ],
+    "source_trace_84": [
+      [
+        "top",
+        "bottom",
+        "inner2"
+      ]
+    ],
+    "source_trace_85": [
+      [
+        "top",
+        "bottom",
+        "inner2"
+      ]
+    ],
+    "source_trace_86": [
+      [
+        "top",
+        "bottom",
+        "inner2"
+      ]
+    ],
+    "source_trace_87": [
+      [
+        "top",
+        "bottom",
+        "inner2"
+      ]
+    ],
+    "source_trace_88": [
+      [
+        "top",
+        "bottom",
+        "inner2"
+      ]
+    ],
+    "source_trace_89": [
+      [
+        "top",
+        "bottom",
+        "inner2"
+      ]
+    ],
+    "source_trace_90": [
+      [
+        "top",
+        "bottom",
+        "inner2"
+      ]
+    ],
+    "source_trace_91": [
+      [
+        "top",
+        "bottom",
+        "inner2"
+      ]
+    ],
+    "source_trace_92": [
+      [
+        "top",
+        "bottom",
+        "inner2"
+      ]
+    ],
+    "source_trace_93": [
+      [
+        "top",
+        "bottom",
+        "inner2"
+      ]
+    ],
+    "source_trace_94": [
+      [
+        "top",
+        "bottom",
+        "inner2"
+      ]
+    ],
+    "source_trace_95": [
+      [
+        "top",
+        "bottom",
+        "inner2"
+      ]
+    ],
+    "source_trace_96": [
+      [
+        "top",
+        "bottom",
+        "inner4"
+      ]
+    ],
+    "source_trace_97": [
+      [
+        "top",
+        "bottom",
+        "inner4"
+      ]
+    ],
+    "source_trace_98": [
+      [
+        "top",
+        "bottom",
+        "inner4"
+      ]
+    ],
+    "source_trace_99": [
+      [
+        "top",
+        "bottom",
+        "inner4"
+      ]
+    ],
+    "source_trace_100": [
+      [
+        "top",
+        "bottom",
+        "inner4"
+      ]
+    ],
+    "source_trace_101": [
+      [
+        "top",
+        "bottom",
+        "inner4"
+      ]
+    ],
+    "source_trace_102": [
+      [
+        "top",
+        "bottom",
+        "inner2"
+      ]
+    ],
+    "source_trace_103": [
+      [
+        "top",
+        "bottom",
+        "inner2"
+      ]
+    ],
+    "source_trace_104": [
+      [
+        "top",
+        "bottom",
+        "inner2"
+      ]
+    ],
+    "source_trace_105": [
+      [
+        "top",
+        "bottom",
+        "inner2"
+      ]
+    ],
+    "source_trace_106": [
+      [
+        "top",
+        "bottom",
+        "inner2"
+      ]
+    ],
+    "source_trace_107": [
+      [
+        "top",
+        "bottom",
+        "inner2"
+      ]
+    ],
+    "source_trace_108": [
+      [
+        "top",
+        "bottom",
+        "inner4"
+      ]
+    ],
+    "source_trace_109": [
+      [
+        "top",
+        "bottom",
+        "inner4"
+      ]
+    ],
+    "source_trace_110": [
+      [
+        "top",
+        "bottom",
+        "inner4"
+      ]
+    ],
+    "source_trace_111": [
+      [
+        "top",
+        "bottom",
+        "inner4"
+      ]
+    ],
+    "source_trace_112": [
+      [
+        "top",
+        "bottom",
+        "inner4"
+      ]
+    ]
+  },
+  "socCenter": {
+    "x": 9,
+    "y": 0
+  },
+  "ramCenter": {
+    "x": -25.9,
+    "y": 0
+  }
+}

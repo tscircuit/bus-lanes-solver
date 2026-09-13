@@ -5,3 +5,5 @@ bun.lockb
 .vercel
 cosmos-export
 *.log
+
+.cache

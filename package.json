@@ -22,16 +22,17 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.2.4",
+    "@tscircuit/fanout-solver": "0.0.73",
     "@types/bun": "latest",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "circuit-json-to-connectivity-map": "^0.0.30",
     "react": "^19",
-    "react-dom": "^19",
     "react-cosmos": "^7.0.0",
     "react-cosmos-plugin-vite": "^7.0.0",
-    "vite": "^7.3.0",
+    "react-dom": "^19",
     "typescript": "^5",
-    "circuit-json-to-connectivity-map": "^0.0.30"
+    "vite": "^7.3.0"
   },
   "repository": {
     "type": "git",

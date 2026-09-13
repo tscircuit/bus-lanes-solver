@@ -1,4 +1,8 @@
-# AM62L dataset audit
+# Historical AM62L carrier-prefix dataset audit
+
+Superseded by the actual two-fanout phase captures in `tests/fixtures/two-fanouts`.
+The default benchmark and Cosmos now use those captures. This audit describes
+only the retained legacy cases.
 
 The current planar fixtures reconstruct the prefix of a completed carrier route.
 The exporter selects the **first via from the SoC end** and freezes the rest of
