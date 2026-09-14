@@ -6,5 +6,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
-      - run: bun install
+      # Formatting does not need native image-renderer install scripts.
+      - run: bun install --ignore-scripts
       - run: bun run format:check
