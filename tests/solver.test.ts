@@ -1,6 +1,6 @@
 import { pointSegmentDistance } from "../lib/geometry"
 import { expect, test } from "bun:test"
-import { BusLanesSolver, resolveBusWidth, type SimpleRouteJson } from "../lib"
+import { BusLanesSolver, type SimpleRouteJson } from "../lib"
 const input = (): SimpleRouteJson => ({
   layerCount: 2,
   minTraceWidth: 0.1,
@@ -34,10 +34,11 @@ test("routes and length matches lanes without any layer transitions", () => {
       .flatMap((t) => t.route)
       .every((p) => p.route_type === "wire" && p.layer === "top"),
   ).toBe(true)
-  expect(s.stats.traceLengthsMm[0].length).toBeCloseTo(
-    s.stats.traceLengthsMm[1].length,
-    7,
-  )
+  expect(
+    Math.abs(
+      s.stats.traceLengthsMm[0].length - s.stats.traceLengthsMm[1].length,
+    ),
+  ).toBeCloseTo(0.01, 7)
 })
 test("fails rather than routing a via between different endpoint layers", () => {
   const j = input()
@@ -66,24 +67,17 @@ test("cannot cross a blocking wall and leaves input untouched", () => {
   expect(s.failureCode).toBe("no_planar_route")
   expect(JSON.stringify(j)).toBe(before)
 })
-test("uses impedance profile, rejects missing profiles and conflicting explicit widths", () => {
-  const bus = {
-    busId: "DATA",
-    connectionNames: ["a"],
-    targetImpedance: 50,
-    impedanceProfile: {
-      layer: "top",
-      points: [
-        { traceWidth: 0.1, impedance: 60 },
-        { traceWidth: 0.2, impedance: 40 },
-      ],
-    },
-  }
-  expect(resolveBusWidth(bus, "top")).toBeCloseTo(0.15)
-  expect(() => resolveBusWidth({ ...bus, traceWidth: 0.2 }, "top")).toThrow()
-  expect(() =>
-    resolveBusWidth({ ...bus, impedanceProfile: undefined }, "top"),
-  ).toThrow()
+test("uses the existing SRJ bus trace width", () => {
+  const j = input()
+  j.buses![0].traceWidth = 0.15
+  const s = new BusLanesSolver(j)
+  s.solve()
+  expect(s.solved).toBe(true)
+  expect(
+    s.traces.every((t) =>
+      t.route.every((p) => p.route_type === "wire" && p.width === 0.15),
+    ),
+  ).toBe(true)
 })
 test("routes around an obstacle on the same layer", () => {
   const j = input()
@@ -193,10 +187,10 @@ test("matching includes both immutable fixed fanouts, not just the carrier", () 
   const compensated = new BusLanesSolver(j)
   compensated.solve()
   expect(compensated.solved).toBe(true)
-  expect(compensated.stats.busLengths[0].skewMm).toBeLessThan(1e-7)
+  expect(compensated.stats.busLengths[0].skewMm).toBeCloseTo(0.01, 7)
   expect(
     compensated.stats.busLengths[0].lengths[0].carrierLengthMm,
-  ).toBeCloseTo(11, 7)
+  ).toBeCloseTo(10.99, 7)
 })
 
 test("invalid skew tolerances are rejected", () => {
@@ -278,4 +272,73 @@ test("length tuning distributes lobes on the long run and preserves terminal app
   expect(Math.min(...lobes.map((p) => p.x))).toBeLessThan(4)
   expect(Math.max(...lobes.map((p) => p.x))).toBeGreaterThan(11)
   expect(Math.max(...lobes.map((p) => Math.abs(p.y - 1)))).toBeLessThan(1)
+})
+
+test("routes already within bus tolerance receive no tuning", () => {
+  const j = input()
+  j.buses![0].maxLengthSkew = 2
+  const s = new BusLanesSolver(j)
+  s.solve()
+  expect(s.solved).toBe(true)
+  expect(s.traces.every((t) => t.route.length === 2)).toBe(true)
+  expect(s.stats.busLengths[0].skewMm).toBeCloseTo(2, 7)
+})
+
+test("pair-only matching uses core lengthTolerance without exact equality", () => {
+  const j = input()
+  j.buses = []
+  j.differentialPairs = [{ connectionNames: ["a", "b"], lengthTolerance: 0.5 }]
+  const s = new BusLanesSolver(j)
+  s.solve()
+  expect(s.solved).toBe(true)
+  expect(s.stats.pairLengths[0].matched).toBe(true)
+  expect(s.stats.pairLengths[0].skewMm).toBeCloseTo(0.5, 7)
+  expect(s.stats.pairLengths[0].lengths[1].totalLengthMm).toBeCloseTo(9.5, 7)
+  j.differentialPairs[0].lengthTolerance = 2
+  const unchanged = new BusLanesSolver(j)
+  unchanged.solve()
+  expect(unchanged.solved).toBe(true)
+  expect(unchanged.traces.every((t) => t.route.length === 2)).toBe(true)
+})
+
+test("overlapping bus and pair constraints keep independent tolerances", () => {
+  const j = input()
+  j.connections.push({
+    name: "c",
+    pointsToConnect: [
+      { x: 0, y: 4, layer: "top" },
+      { x: 6, y: 4, layer: "top" },
+    ],
+  })
+  j.buses![0].maxLengthSkew = 1
+  j.differentialPairs = [{ connectionNames: ["b", "c"], lengthTolerance: 0.5 }]
+  const s = new BusLanesSolver(j)
+  s.solve()
+  expect(s.solved).toBe(true)
+  expect(s.stats.busLengths[0].skewMm).toBeCloseTo(1, 7)
+  expect(s.stats.pairLengths[0].skewMm).toBeCloseTo(0.5, 7)
+  const lengths = s.stats.traceLengthsMm
+    .map((t: { length: number }) => t.length)
+    .sort((a: number, b: number) => a - b)
+  for (const [i, expected] of [8.5, 9, 10].entries())
+    expect(lengths[i]).toBeCloseTo(expected, 7)
+})
+
+test("invalid pair tolerances and unknown pair members fail explicitly", () => {
+  for (const tolerance of [-1, NaN, Infinity]) {
+    const j = input()
+    j.differentialPairs = [
+      { connectionNames: ["a", "b"], lengthTolerance: tolerance },
+    ]
+    const s = new BusLanesSolver(j)
+    s.solve()
+    expect(s.failed).toBe(true)
+  }
+  const j = input()
+  j.differentialPairs = [
+    { connectionNames: ["a", "missing"], lengthTolerance: 1 },
+  ]
+  const s = new BusLanesSolver(j)
+  s.solve()
+  expect(s.failed).toBe(true)
 })

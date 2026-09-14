@@ -44,3 +44,58 @@ export function busLengthReports(input: SimpleRouteJson, traces: Trace[]) {
     }
   })
 }
+
+/** Existing SRJ skew bounds; omitted bus bounds do not request tuning. */
+export function lengthConstraints(input: SimpleRouteJson) {
+  return [
+    ...(input.buses ?? [])
+      .filter((b) => b.maxLengthSkew !== undefined)
+      .map((b) => ({
+        names: b.connectionNames,
+        tolerance: b.maxLengthSkew!,
+      })),
+    ...(input.differentialPairs ?? []).map((p) => ({
+      names: p.connectionNames,
+      tolerance: p.lengthTolerance,
+    })),
+  ]
+}
+
+/** Least non-shortening lengths satisfying every overlapping bus/pair bound.
+ * Relax difference constraints rather than collapsing connected groups to equality. */
+export function minimumLengthTargets(input: SimpleRouteJson, traces: Trace[]) {
+  const targets = new Map(
+    traces.map((t) => [
+      t.connection_name!,
+      length(t.route) + fixedRouteLength(input, t.connection_name!),
+    ]),
+  )
+  const constraints = lengthConstraints(input)
+  for (let pass = 0; pass < targets.size; pass++) {
+    let changed = false
+    for (const { names, tolerance } of constraints) {
+      const floor = Math.max(...names.map((n) => targets.get(n)!)) - tolerance
+      for (const name of names)
+        if (targets.get(name)! < floor - 1e-9) {
+          targets.set(name, floor)
+          changed = true
+        }
+    }
+    if (!changed) break
+  }
+  return targets
+}
+
+export function pairLengthReports(input: SimpleRouteJson, traces: Trace[]) {
+  return busLengthReports(
+    {
+      ...input,
+      buses: (input.differentialPairs ?? []).map((p, i) => ({
+        busId: `pair_${i}`,
+        connectionNames: p.connectionNames,
+        maxLengthSkew: p.lengthTolerance,
+      })),
+    },
+    traces,
+  )
+}

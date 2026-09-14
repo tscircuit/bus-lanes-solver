@@ -17,12 +17,11 @@ Each connection must have exactly two terminals on the same fixed layer. The sol
 
 - `buses[].connectionNames`: connections belonging to the bus, in routing order.
 - `buses[].maxLengthSkew`: maximum difference in total planar copper lengths, in millimeters, including fixed traces associated by `source_trace_id` or `connection_name`. The solver adds clearance-checked tuning detours and verifies the final result.
-- `buses[].targetImpedance`: desired single-ended impedance in ohms.
-- `buses[].impedanceProfile`: `{ layer, points: [{ traceWidth, impedance }] }`, with widths in millimeters and impedances in ohms. Supply a table computed for your actual stackup by a field solver or fabricator. Widths must increase as impedance decreases. The solver interpolates within the table, never extrapolates or assumes a stackup. An explicit `traceWidth` must agree with the target.
+- `buses[].traceWidth`: explicit width in millimeters; otherwise uses connection `nominalTraceWidth` / `width`, then `minTraceWidth`.
 - `buses[].allowedLayers`: must contain the fixed terminal layer.
 - `differentialPairs[].lengthTolerance`: supported as a routed-length constraint. Coupled-pair `traceGap` and `maxUncoupledLength` constraints are explicitly rejected; this solver does not yet enforce coupled-pair geometry.
 
-Matching includes both fixed fanouts and the routes produced by this phase. It measures XY copper length; via depth, layer-dependent propagation velocity, and package delays are not inferred. A width table is a geometry model, not signal-integrity qualification. No undocumented impedance or delay defaults are supplied.
+Matching includes both fixed fanouts and the routes produced by this phase. It measures XY copper length; via depth, layer-dependent propagation velocity, and package delays are not inferred. No impedance or delay defaults are supplied. Matching uses the existing core SRJ fields: bus `maxLengthSkew` and differential-pair `lengthTolerance` (mapped from the JSX pair’s `maxLengthSkew`). Routes already inside the bound remain untuned; shorter routes grow only to the permitted lower bound. Overlapping bus and pair constraints are resolved together without forcing exact equality.
 
 ## tscircuit integration
 
@@ -35,18 +34,11 @@ The accompanying core/props changes introduce:
   connections={["DATA0", "DATA1"]}
   routingPhaseIndex={1}
   maxLengthSkew="0.1mm"
-  targetImpedance="50ohm"
-  pcbImpedanceProfile={{
-    layer: "top",
-    points: [
-      { traceWidth: "0.1mm", impedance: "60ohm" },
-      { traceWidth: "0.2mm", impedance: "40ohm" },
-    ],
-  }}
+  pcbTraceWidth="0.15mm"
 />
 ```
 
-The table above is illustrative, not a production stackup. Core forwards bus impedance intent and the profile to SRJ. Fanout phases must establish matching fixed-layer endpoints before this phase runs. Failed lane routing does not trigger a global-router fallback.
+Fanout phases must establish matching fixed-layer endpoints before this phase runs. Failed lane routing does not trigger a global-router fallback.
 
 ## Debugger
 
@@ -56,7 +48,7 @@ bun run start
 bun run build:site
 ```
 
-Cosmos shows four full AM62L DDR phase captures and a length/impedance example.
+Cosmos shows four full AM62L DDR phase captures and a skew-tolerance example.
 Each AM62L page has two separate, real `FanoutSolver` outputs and all 33 DDR
 signals waiting to be routed. The enclosing regions are 17.76 mm apart, with a
 4 mm transverse package offset. Fixed and newly routed copper share stable
@@ -88,8 +80,8 @@ interconnects must also pass independent combined-copper DRC.
 
 **Current result: 4/4 full interconnects (132/132 signals), with combined-copper
 DRC and length matching passing.** All four core circuit builds complete with zero circuit errors.
-All three logical DDR groups in every sample request a 0.1 mm maximum skew. The measured total copper skew is below 0.000001 mm in all 12 groups (numerical precision); the previous routing-only samples had up to 24.7 mm skew.
-The measured solves take 98–264 ms on the development machine; the benchmark
+All three logical DDR groups in every sample request a 0.1 mm maximum skew. The measured total copper skew stays within that bound in all 12 groups; the previous routing-only samples had up to 24.7 mm skew.
+The measured solves take 100–306 ms on the development machine; the benchmark
 records solve time and time including output DRC separately.
 
 FanoutSolver receives compatible handoff layers and winding guidance. The left
@@ -131,4 +123,4 @@ Future changes must be submitted through pull requests with reviewed visual snap
 
 Length tuning prioritizes long runs over short terminal approaches and centers evenly pitched, chamfered serpentine lobes along them. Lobe count scales with the required added length, spreading large corrections without turning small corrections into dense teeth. Chamfers scale with lobe dimensions instead of a fixed microscopic corner cut. Returning arms retain at least three trace widths of center-to-center spacing (and the requested copper clearance). When the shortest lanes leave no room, the router opens an octilinear central corridor in winding order and rematches all affected bus lengths. Endpoints and fixed fanouts remain unchanged.
 
-Snapshots include [individual layer views](./docs/iterations/distributed-meanders) as well as complete boards. All new carrier bends in the DDR samples are checked to turn by at most 45 degrees; length matching and combined-copper DRC remain mandatory.
+Snapshots include [individual layer views](./docs/iterations/skew-tolerances) as well as complete boards. All new carrier bends in the DDR samples are checked to turn by at most 45 degrees; length matching and combined-copper DRC remain mandatory.

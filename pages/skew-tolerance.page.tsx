@@ -25,22 +25,15 @@ const input: SimpleRouteJson = {
     {
       busId: "DATA",
       connectionNames: ["DATA0", "DATA1"],
-      maxLengthSkew: 0.01,
-      targetImpedance: 50,
-      impedanceProfile: {
-        layer: "top",
-        points: [
-          { traceWidth: 0.1, impedance: 60 },
-          { traceWidth: 0.2, impedance: 40 },
-        ],
-      },
+      maxLengthSkew: 0.5,
+      traceWidth: 0.15,
     },
   ],
 }
 export default (
   <FixtureView
     input={input}
-    title="Length and impedance constraints"
-    description="Synthetic profile demonstration: a 50 Ω target interpolates a 0.15 mm width from the supplied sample table; both lanes tune to 10 mm within 0.01 mm. The example table is not a fabrication stackup specification."
+    title="Skew tolerance"
+    description="The shorter lane grows only to 9.5 mm: the requested 0.5 mm bus skew permits it to remain shorter than the 10 mm lane. Width is supplied explicitly."
   />
 )

@@ -52,3 +52,13 @@ Snapshots in `iterations/distributed-meanders` include initial, intermediate, co
 The benchmark passes all four full DDR samples (132 connections) and rejects all four mixed-layer negatives. Full solves measured 98–264 ms. All 12 bus groups retain under 0.000001 mm total planar copper skew, independent combined-copper DRC passes, and no layer transitions are added. A synthetic regression preserves both short terminal approaches and checks distributed interior lobes, exact length and returning-arm spacing.
 
 All 12 initial/intermediate PNGs are byte-identical to the reviewed smooth-meanders baseline. All four completed boards and inner4 detail views were inspected. Actual core builds produce zero circuit errors for all four orientations.
+
+## Honor the requested skew
+
+Length targets now use the existing SRJ bus `maxLengthSkew` and pair `lengthTolerance`. The previous matcher collapsed each group to exact equality, ignoring the available tolerance. We now raise only the lengths below each permitted minimum, propagating overlapping bus/pair bounds until stable. Both kinds of bound are validated on the final copper and reported by the debugger. Widths use existing explicit width properties; the unsupported impedance/profile API and demonstration have been removed.
+
+A regression shows a 10 mm / 8 mm pair with a 0.5 mm tolerance produces 10 mm / 9.5 mm, while a 2 mm tolerance adds no meanders. An overlapping 1 mm bus and 0.5 mm pair retain distinct lengths of 10, 9 and 8.5 mm. This computes least non-shortening target lengths for each candidate geometry; corridor spreading is still a feasibility heuristic, not a global minimum-length proof.
+
+The unchanged DDR inputs request 0.1 mm bus skew, so improvement is modest: carrier copper falls by 3.000 mm in bottom, left and right, and 2.998 mm in top. The fixed fanout length differences still require substantial compensation at that tolerance. All four samples pass combined copper DRC, 132/132 carriers route without layer transitions, and all 12 buses stay within 0.1 mm plus numerical precision. Four mixed-layer negatives are rejected. Solves measured 100–306 ms; all four actual core builds have zero circuit errors.
+
+Reviewed layer detail and complete snapshots are in `iterations/skew-tolerances`. The main shapes remain close to the distributed-meanders version, as expected from the small allowed tolerance. All 12 initial/intermediate images are byte-identical to that reviewed baseline. No fanout copper or sample tolerance was changed to improve the score.
