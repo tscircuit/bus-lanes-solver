@@ -27,7 +27,7 @@ A visibility-graph search failure is not a proof of planar impossibility. The ro
 
 The routing-only baseline above did not request length matching. Including both fixed fanouts exposed up to 24.7 mm of skew. The current examples request 0.1 mm maximum skew for RAM_BYTE0, RAM_BYTE1 and RAM_CA. All 12 groups now measure less than 0.000001 mm total planar copper skew, while retaining the exact fixed fanouts. Package delay, via depth and layer-dependent propagation velocity are outside this geometric measurement.
 
-The tuner generates continuous chamfered accordion patterns on axial or diagonal carrier segments. It revisits a blocked lane after other lanes have moved, checks other-net and returning-arm clearance, and validates the final total lengths. Candidates are generated lazily; the full solves measured 74–287 ms, or 116–353 ms including independent output DRC. All four actual core builds finish without circuit errors.
+The tuner generates continuous chamfered accordion patterns on axial or diagonal carrier segments. It revisits a blocked lane after other lanes have moved, checks other-net and returning-arm clearance, and validates the final total lengths. Candidates are generated lazily; the full solves measured 54–268 ms, or 90–341 ms including independent output DRC. All four actual core builds finish without circuit errors.
 
 Current snapshots are in `iterations/length-matched`, with iteration-zero, intermediate and completed images for each sample. The per-bus lengths and skew are included in the snapshot JSON and debugger statistics.
 

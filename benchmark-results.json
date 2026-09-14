@@ -236,7 +236,7 @@
     "attempts": 1,
     "routedLanes": 0,
     "solveMilliseconds": 1,
-    "milliseconds": 5
+    "milliseconds": 4
   },
   {
     "file": "tests/fixtures/ddr_left_io_right-raw.json",
@@ -475,7 +475,7 @@
     "attempts": 1,
     "routedLanes": 0,
     "solveMilliseconds": 1,
-    "milliseconds": 6
+    "milliseconds": 5
   },
   {
     "file": "tests/fixtures/ddr_right_io_left-raw.json",
@@ -714,7 +714,7 @@
     "attempts": 1,
     "routedLanes": 0,
     "solveMilliseconds": 1,
-    "milliseconds": 5
+    "milliseconds": 4
   },
   {
     "file": "tests/fixtures/ddr_top_io_bottom-raw.json",
@@ -952,8 +952,8 @@
     "iterations": 1,
     "attempts": 1,
     "routedLanes": 0,
-    "solveMilliseconds": 2,
-    "milliseconds": 8
+    "solveMilliseconds": 1,
+    "milliseconds": 5
   },
   {
     "file": "tests/fixtures/two-fanouts/ddr_bottom_io_top.json",
@@ -1202,8 +1202,8 @@
     "iterations": 111,
     "attempts": 1,
     "routedLanes": 33,
-    "solveMilliseconds": 287,
-    "milliseconds": 353
+    "solveMilliseconds": 268,
+    "milliseconds": 341
   },
   {
     "file": "tests/fixtures/two-fanouts/ddr_left_io_right.json",
@@ -1452,8 +1452,8 @@
     "iterations": 36,
     "attempts": 1,
     "routedLanes": 33,
-    "solveMilliseconds": 106,
-    "milliseconds": 156
+    "solveMilliseconds": 86,
+    "milliseconds": 134
   },
   {
     "file": "tests/fixtures/two-fanouts/ddr_right_io_left.json",
@@ -1702,8 +1702,8 @@
     "iterations": 36,
     "attempts": 1,
     "routedLanes": 33,
-    "solveMilliseconds": 121,
-    "milliseconds": 180
+    "solveMilliseconds": 107,
+    "milliseconds": 164
   },
   {
     "file": "tests/fixtures/two-fanouts/ddr_top_io_bottom.json",
@@ -1952,7 +1952,7 @@
     "iterations": 36,
     "attempts": 1,
     "routedLanes": 33,
-    "solveMilliseconds": 74,
-    "milliseconds": 116
+    "solveMilliseconds": 54,
+    "milliseconds": 90
   }
 ]

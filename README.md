@@ -89,7 +89,7 @@ interconnects must also pass independent combined-copper DRC.
 **Current result: 4/4 full interconnects (132/132 signals), with combined-copper
 DRC and length matching passing.** All four core circuit builds complete with zero circuit errors.
 All three logical DDR groups in every sample request a 0.1 mm maximum skew. The measured total copper skew is below 0.000001 mm in all 12 groups (numerical precision); the previous routing-only samples had up to 24.7 mm skew.
-The measured solves take 74–287 ms on the development machine; the benchmark
+The measured solves take 54–268 ms on the development machine; the benchmark
 records solve time and time including output DRC separately.
 
 FanoutSolver receives compatible handoff layers and winding guidance. The left
@@ -100,7 +100,7 @@ the SoC ball positions or rotation. Every fixed path is a real saved solver
 output; generated coordinates are never edited. These are routing checks, not
 complete DDR timing closure or equal-transition-count claims for fixed fanouts.
 
-Each sample runs in a separate process, with the solver's ordinary 200,000
+Samples run one at a time in separate processes to avoid timing interference, with the solver's ordinary 200,000
 iteration budget and a one-second benchmark deadline. Override the deadline with
 `./benchmark.sh --timeout-seconds 2`. Timeouts and partial paths are failures.
 Results are written to `benchmark-results.json`; a failed positive sample makes
