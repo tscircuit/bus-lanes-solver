@@ -13,6 +13,26 @@ export function windingOrders(connections: Connection[]): Connection[][] {
       orders.push(order)
     }
   }
+  // Sweep perpendicular to the channel direction, independently on each layer.
+  // This preserves the boundary winding of facing terminal fields before
+  // considering alternate seams for less regular geometries.
+  const direction = connections.reduce(
+    (v, c) => ({
+      x: v.x + c.pointsToConnect[1].x - c.pointsToConnect[0].x,
+      y: v.y + c.pointsToConnect[1].y - c.pointsToConnect[0].y,
+    }),
+    { x: 0, y: 0 },
+  )
+  const transverse = (c: Connection) =>
+    -direction.y * c.pointsToConnect[0].x + direction.x * c.pointsToConnect[0].y
+  const sweep = [...connections].sort(
+    (a, b) =>
+      a.pointsToConnect[0].layer.localeCompare(b.pointsToConnect[0].layer) ||
+      transverse(a) - transverse(b) ||
+      a.name.localeCompare(b.name),
+  )
+  add(sweep)
+  add([...sweep].reverse())
   add(connections)
   for (const endpoint of [1, 0]) {
     const center = connections.reduce(

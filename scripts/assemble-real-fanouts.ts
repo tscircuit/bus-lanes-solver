@@ -17,6 +17,7 @@ for (const profile of process.argv.slice(2)) {
     marginMm: 6,
     fanoutGenerator: "@tscircuit/fanout-solver@0.0.78",
     provenance: {},
+    allowViaInPad: records.every((r) => r.input.allowViaInPad === true),
   }
   for (const [index, side] of ["soc", "ram"].entries()) {
     const record = records[index],

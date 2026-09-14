@@ -2,6 +2,7 @@ import { validateRoutedCopperDrc } from "@tscircuit/fanout-solver"
 import type { SimpleRouteJson, Trace } from "../lib"
 type Bounds = SimpleRouteJson["bounds"]
 export interface FanoutMetadata {
+  allowViaInPad?: boolean
   kind: string
   marginMm: number
   socRegion: Bounds
@@ -119,11 +120,13 @@ export function validateTwoFanoutSample(
 
     return {
       ...c,
-      pointsToConnect: paths.map((t) =>
-        t.route[0].route_type === "wire" && t.route[0].layer === "top"
-          ? t.route[0]
-          : t.route.at(-1)!,
-      ),
+      pointsToConnect: paths.map((t, index) => {
+        const exit = c.pointsToConnect[index]
+        const first = t.route[0]
+        return Math.hypot(first.x - exit.x, first.y - exit.y) < 1e-7
+          ? t.route.at(-1)!
+          : first
+      }),
     }
   })
   // Fixed fanouts are independently checked against real component pads and
@@ -131,6 +134,7 @@ export function validateTwoFanoutSample(
   const fixedInput = {
     ...input,
     connections: originalConnections,
+    allowViaInPad: meta.allowViaInPad === true,
     obstacles: input.obstacles.filter(
       (o) => (o as { componentId?: string }).componentId,
     ),

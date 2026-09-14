@@ -1,0 +1,32 @@
+{
+  "iteration": 30,
+  "stats": {
+    "phase": "route",
+    "algorithm": "octilinear_visibility",
+    "attempt": 0,
+    "lane": 14,
+    "totalLanes": 33,
+    "vertices": 644,
+    "expandedVertices": 1,
+    "frontier": 107,
+    "failureCode": null,
+    "traceLengthsMm": [
+      { "name": "source_trace_26", "length": 18 },
+      { "name": "source_trace_27", "length": 18 },
+      { "name": "source_trace_13", "length": 18 },
+      { "name": "source_trace_9", "length": 18 },
+      { "name": "source_trace_30", "length": 18 },
+      { "name": "source_trace_19", "length": 18 },
+      { "name": "source_trace_7", "length": 18 },
+      { "name": "source_trace_3", "length": 18 },
+      { "name": "source_trace_14", "length": 18 },
+      { "name": "source_trace_10", "length": 18 },
+      { "name": "source_trace_31", "length": 18 },
+      { "name": "source_trace_16", "length": 18 },
+      { "name": "source_trace_20", "length": 18 },
+      { "name": "source_trace_4", "length": 18 }
+    ]
+  },
+  "solved": false,
+  "error": null
+}

@@ -60,7 +60,7 @@ test("cannot cross a blocking wall and leaves input untouched", () => {
     },
   ]
   const before = JSON.stringify(j)
-  const s = new BusLanesSolver(j, { gridStep: 0.5 })
+  const s = new BusLanesSolver(j)
   s.solve()
   expect(s.failed).toBe(true)
   expect(s.failureCode).toBe("no_planar_route")
@@ -98,7 +98,7 @@ test("routes around an obstacle on the same layer", () => {
       connectedTo: [],
     },
   ]
-  const s = new BusLanesSolver(j, { gridStep: 0.25 })
+  const s = new BusLanesSolver(j)
   s.solve()
   expect(s.solved).toBe(true)
   expect(s.traces[0].route.some((p) => Math.abs(p.y) > 1)).toBe(true)

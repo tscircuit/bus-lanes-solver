@@ -79,6 +79,5 @@ export interface SimpleRouteJson {
 }
 export interface SolverOptions {
   maxLaneIterations?: number
-  gridStep?: number
   maxSearchIterations?: number
 }

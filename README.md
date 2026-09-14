@@ -5,13 +5,13 @@ Step-based, via-free bus routing for `SimpleRouteJson`, with `BaseSolver` and `G
 ```ts
 import { BusLanesSolver } from "@tscircuit/bus-lanes-solver"
 
-const solver = new BusLanesSolver(simpleRouteJson, { gridStep: 0.05 })
+const solver = new BusLanesSolver(simpleRouteJson)
 solver.solve()
 if (solver.failed) throw new Error(solver.error!)
 const routed = solver.getOutput()
 ```
 
-Each connection must have exactly two terminals on the same fixed layer. The solver never emits vias, changes terminal layers, or falls back to a multilayer router. Existing copper and obstacles remain fixed. Geometric winding sweeps, seam rotations and reverse searches choose lane order; planar congestion, crossed lane orders, unsupported constraints, and exhausted search budgets produce explicit failures. A grid-search failure is not a mathematical proof that no continuous planar solution exists.
+Each connection must have exactly two terminals on the same fixed layer. The solver never emits vias, changes terminal layers, or falls back to a multilayer router. Existing copper and obstacles remain fixed. Geometric winding sweeps, seam rotations and reverse searches choose lane order; planar congestion, crossed lane orders, unsupported constraints, and exhausted search budgets produce explicit failures. A bounded visibility-graph search failure is not a proof that no continuous planar solution exists.
 
 ## Constraints
 
@@ -86,13 +86,16 @@ exact exits, and independent fixed-copper DRC. Exit-layer mismatches are reporte
 as routing failures, not repaired or removed from the denominator. Complete
 interconnects must also pass independent combined-copper DRC.
 
-**Current result: 0/4 full interconnects.** Left has 28 mismatched exit layers;
-right, top, and bottom exhaust the search budget. All eight package fanouts
-are complete and DRC-clean. These failures replace the misleading 4/4 score
-obtained by manually aligning exits. The dataset does not claim DDR timing
-closure or equal transition counts across every signal.
+**Current verified result: 1/4 full interconnects.** Right routes all 33 lanes in
+69 vector iterations and passes independent combined-copper DRC. Its RAM
+fanout was regenerated through FanoutSolver's `connectionExitTargets` API using
+the actual SoC exits and layers. No generated route coordinates were edited.
+The remaining original samples are retained as failures: left has incompatible
+handoff layers, and top/bottom have unresolved fanout winding/congestion.
+This is not complete DDR timing closure or equal transition counts across the
+fixed fanouts.
 
-Each sample runs in a separate process, with the solver's ordinary 5,000,000
+Each sample runs in a separate process, with the solver's ordinary 200,000
 iteration budget and a 60-second benchmark deadline. Override the deadline with
 `./benchmark.sh --timeout-seconds 120`. Timeouts and partial paths are failures.
 Results are written to `benchmark-results.json`; a failed positive sample makes
@@ -106,8 +109,12 @@ The older 12 carrier-prefix cases remain available with `--legacy`; they are
 excluded from the default score and Cosmos pages. The prior grid-generated,
 aligned two-fanout data is superseded as well.
 
-The automatic solver starts at 0.1 mm, then retries at 0.025 mm using source/target
-winding sweeps, reversed sweeps and seam rotations, searching each order from
-both ends. This draws on [fanout-solver's winding alternatives](https://github.com/tscircuit/fanout-solver/blob/main/lib/route-via-minimal-winding.ts).
-`maxLaneIterations` bounds each search (30,000 by default), and
-`maxSearchIterations` bounds the whole solve (5,000,000). Exhaustion is an error.
+The router uses a continuous octilinear visibility graph built from offset
+copper geometry. Lane ordering starts with layer-separated transverse winding
+sweeps and retains alternate seams. `maxLaneIterations` bounds vertex expansions
+per lane (4,000 by default); `maxSearchIterations` bounds the whole solve
+(200,000). There is no grid resolution option.
+
+See the [visual iteration audit](./docs/vector-routing.md) for inspected baseline
+and replacement snapshots. Cosmos includes a staggered obstacle channel in
+addition to all four real AM62L captures.

@@ -32,7 +32,7 @@ and [props PR #851](https://github.com/tscircuit/props/pull/851).
 bun scripts/generate-two-fanouts.ts
 # Capture the actual phase SRJ before attempting its interconnect routing.
 bun scripts/capture-two-fanout-phases.tsx ../../work/bus-lanes-core --capture-only
-# Count complete interconnect solves; currently exits nonzero (0/4).
+# Count complete interconnect solves; currently exits nonzero (1/4 verified).
 ./benchmark.sh
 ```
 

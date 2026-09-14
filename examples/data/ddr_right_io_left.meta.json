@@ -19,10 +19,10 @@
     },
     "ram": {
       "file": "examples/fanout-solver-outputs/ddr_right_io_left-ram.json",
-      "sha256": "2bcbb50f6b0509608cf09d1a1338ee223a9a04b2710deb7bf78e1acc2f34a349",
-      "inputSha256": "ab0f6e0c75884cae304d1e443bd917a4cf1f07bf7c7db1f240252f94e0f3df73",
-      "optionsSha256": "399ec638c17eec37d835f6a44d557da9a0f4c59180fa3aa749dcd47a388a9be2",
-      "tracesSha256": "bfe00418075af292ba73285b9ea5cf1b0dca29137a62c2cc6016d206765a7b48",
+      "sha256": "b161c90d1506850cadd78d430d8798a1ebb14cc2c35f1e1dacf3da10d101deb3",
+      "inputSha256": "2e85ee58134e3286600c0c217aaf27c51276686c674c19452a7ae026b6ffd95d",
+      "optionsSha256": "76d60446f5bd0bb93061de10a5556b51e9244d3d08f09e7342a3bb005e04669f",
+      "tracesSha256": "d58ac813a820836c7faa24ce777c5aee9fdf7f42fbbbde31cf0270513e16cfb7",
       "validation": {
         "valid": true,
         "checkedConnectionCount": 33,
@@ -31,6 +31,7 @@
       }
     }
   },
+  "allowViaInPad": true,
   "socRegion": {
     "minX": -20.12,
     "maxX": 20.12,

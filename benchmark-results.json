@@ -6,11 +6,11 @@
     "expectedRejection": true,
     "solved": false,
     "failureCode": "layer_change_required",
-    "error": "source_trace_80: inner2 → top; fan out both endpoints onto a common fixed layer first",
+    "error": "source_trace_80: inner2 → top; fanout handoff layers must agree",
     "iterations": 1,
     "attempts": 1,
     "routedLanes": 0,
-    "milliseconds": 6
+    "milliseconds": 4
   },
   {
     "file": "tests/fixtures/ddr_left_io_right-raw.json",
@@ -19,7 +19,7 @@
     "expectedRejection": true,
     "solved": false,
     "failureCode": "layer_change_required",
-    "error": "source_trace_80: inner2 → top; fan out both endpoints onto a common fixed layer first",
+    "error": "source_trace_80: inner2 → top; fanout handoff layers must agree",
     "iterations": 1,
     "attempts": 1,
     "routedLanes": 0,
@@ -32,7 +32,7 @@
     "expectedRejection": true,
     "solved": false,
     "failureCode": "layer_change_required",
-    "error": "source_trace_80: inner2 → top; fan out both endpoints onto a common fixed layer first",
+    "error": "source_trace_80: inner2 → top; fanout handoff layers must agree",
     "iterations": 1,
     "attempts": 1,
     "routedLanes": 0,
@@ -45,15 +45,15 @@
     "expectedRejection": true,
     "solved": false,
     "failureCode": "layer_change_required",
-    "error": "source_trace_80: inner2 → top; fan out both endpoints onto a common fixed layer first",
+    "error": "source_trace_80: inner2 → top; fanout handoff layers must agree",
     "iterations": 1,
     "attempts": 1,
     "routedLanes": 0,
-    "milliseconds": 4
+    "milliseconds": 7
   },
   {
     "file": "tests/fixtures/two-fanouts/ddr_bottom_io_top.json",
-    "timedOut": false,
+    "timedOut": true,
     "timeoutSeconds": 60,
     "dataset": {
       "marginMm": 17.76,
@@ -68,12 +68,12 @@
     },
     "expectedRejection": false,
     "solved": false,
-    "failureCode": "search_budget_exhausted",
-    "error": "BusLanesSolver ran out of iterations",
-    "iterations": 5000000,
-    "attempts": 106,
-    "routedLanes": 3,
-    "milliseconds": 46287
+    "failureCode": null,
+    "error": null,
+    "iterations": 64902,
+    "attempts": 36,
+    "routedLanes": 13,
+    "milliseconds": 60001
   },
   {
     "file": "tests/fixtures/two-fanouts/ddr_left_io_right.json",
@@ -93,7 +93,7 @@
     "expectedRejection": false,
     "solved": false,
     "failureCode": "layer_change_required",
-    "error": "source_trace_2: top → inner6; fan out both endpoints onto a common fixed layer first",
+    "error": "source_trace_2: top → inner6; fanout handoff layers must agree",
     "iterations": 1,
     "attempts": 1,
     "routedLanes": 0,
@@ -115,17 +115,17 @@
       "verifiedPaths": 66
     },
     "expectedRejection": false,
-    "solved": false,
-    "failureCode": "search_budget_exhausted",
-    "error": "BusLanesSolver ran out of iterations",
-    "iterations": 5000000,
-    "attempts": 106,
-    "routedLanes": 4,
-    "milliseconds": 47502
+    "solved": true,
+    "failureCode": null,
+    "error": null,
+    "iterations": 69,
+    "attempts": 1,
+    "routedLanes": 33,
+    "milliseconds": 182
   },
   {
     "file": "tests/fixtures/two-fanouts/ddr_top_io_bottom.json",
-    "timedOut": false,
+    "timedOut": true,
     "timeoutSeconds": 60,
     "dataset": {
       "marginMm": 17.76,
@@ -140,11 +140,11 @@
     },
     "expectedRejection": false,
     "solved": false,
-    "failureCode": "search_budget_exhausted",
-    "error": "BusLanesSolver ran out of iterations",
-    "iterations": 5000000,
-    "attempts": 103,
-    "routedLanes": 5,
-    "milliseconds": 45053
+    "failureCode": null,
+    "error": null,
+    "iterations": 93137,
+    "attempts": 39,
+    "routedLanes": 9,
+    "milliseconds": 60001
   }
 ]

@@ -1,65 +1,44 @@
-import { layerColor } from "./layer-colors"
-import { MinHeap } from "./min-heap"
-import { windingOrders } from "./winding-orders"
 import { BaseSolver } from "@tscircuit/solver-utils"
 import type { GraphicsObject } from "graphics-debug"
 import type {
   SimpleRouteJson,
   SolverOptions,
   Connection,
-  Point,
   Trace,
+  Point,
   Wire,
 } from "./types"
-import { distance, segmentDistance, length, simplify } from "./geometry"
+import {
+  fixedCopper,
+  routeCopper,
+  VectorScene,
+  type Copper,
+} from "./vector-scene"
+import { VectorVisibilitySearch } from "./vector-visibility"
+import { length, distance, simplify } from "./geometry"
+import { windingOrders } from "./winding-orders"
 import { resolveBusWidth } from "./impedance"
-interface Segment {
-  a: Point
-  b: Point
-  radius: number
-  layer: string
-  owners: string[]
-  rect?: { center: Point; width: number; height: number }
-}
-interface SearchNode extends Point {
-  id: string
-  g: number
-  f: number
-  parent?: SearchNode
-}
-
-/** Via-free, ordered bus routing in board XY (mm, +Y up). Each step expands one
- * search node or performs one validation/tuning operation; no hidden solve(). */
+import { layerColor } from "./layer-colors"
+/** Routes on an implicit clearance-offset visibility graph in board-world mm.
+ * Every step expands a geometric vertex or commits a complete lane. */
 export class BusLanesSolver extends BaseSolver {
-  input: SimpleRouteJson
-  options: SolverOptions
+  readonly input: SimpleRouteJson
+  readonly options: SolverOptions
   phase = "validate"
-  traces: Trace[] = []
   failureCode: string | null = null
-  private connections: Connection[] = []
+  traces: Trace[] = []
   private widths = new Map<string, number>()
-  private segments: Segment[] = []
-  private spatial = new Map<string, Segment[]>()
-  private segmentKeys = new Set<string>()
-  private attempt = 0
+  private fixed: Copper[] = []
   private orders: Connection[][] = []
-  private laneExpansions = 0
-  private fixedSegments: Segment[] = []
+  private attempt = 0
   private lane = 0
-  private open = new MinHeap<SearchNode>()
-  private best = new Map<string, number>()
-  private current?: SearchNode
-  private expansions = 0
-  private tuning = 0
+  private search?: VectorVisibilitySearch
+  private bestPartial: Trace[] = []
   constructor(input: SimpleRouteJson, options: SolverOptions = {}) {
     super()
     this.input = structuredClone(input)
     this.options = options
-    this.MAX_ITERATIONS = options.maxSearchIterations ?? 5000000
-  }
-  tryFinalAcceptance() {
-    if (!this.failed)
-      this.fail("search_budget_exhausted", "Bus lane search budget exhausted")
+    this.MAX_ITERATIONS = options.maxSearchIterations ?? 200000
   }
   getConstructorParams() {
     return [this.input, this.options]
@@ -77,116 +56,17 @@ export class BusLanesSolver extends BaseSolver {
     this.failed = true
     this.phase = "failed"
   }
-  private addSegment(segment: Segment) {
-    const key = JSON.stringify(segment)
-    if (this.segmentKeys.has(key)) return
-    this.segmentKeys.add(key)
-    this.segments.push(segment)
-    const r = segment.radius + this.input.minTraceWidth + this.clearance
-    for (
-      let x = Math.floor(Math.min(segment.a.x, segment.b.x) - r);
-      x <= Math.ceil(Math.max(segment.a.x, segment.b.x) + r);
-      x++
-    )
-      for (
-        let y = Math.floor(Math.min(segment.a.y, segment.b.y) - r);
-        y <= Math.ceil(Math.max(segment.a.y, segment.b.y) + r);
-        y++
-      ) {
-        const key = `${segment.layer}:${x}:${y}`,
-          bucket = this.spatial.get(key) ?? []
-        bucket.push(segment)
-        this.spatial.set(key, bucket)
-      }
-  }
-  private get clearance() {
-    return (
-      this.input.minTraceToPadEdgeClearance ??
-      this.input.defaultObstacleMargin ??
-      0.075
-    )
-  }
-  private canEdge(edge: [Point, Point], connection: Connection) {
-    const layer = connection.pointsToConnect[0].layer,
-      width = this.widths.get(connection.name)!,
-      margin = width / 2 + (this.input.minBoardEdgeClearance ?? 0),
-      b = this.input.bounds
-    if (
-      edge.some(
-        (p) =>
-          p.x < b.minX + margin - 1e-9 ||
-          p.x > b.maxX - margin + 1e-9 ||
-          p.y < b.minY + margin - 1e-9 ||
-          p.y > b.maxY - margin + 1e-9,
+  tryFinalAcceptance() {
+    if (!this.solved)
+      this.fail(
+        "search_budget_exhausted",
+        "Vector visibility search budget exhausted",
       )
-    )
-      return false
-    const owned = new Set(
-      [
-        connection.name,
-        connection.source_trace_id,
-        ...connection.pointsToConnect.flatMap((p) => [
-          p.pointId,
-          p.pcb_port_id,
-        ]),
-      ].filter(Boolean),
-    )
-    const candidates = new Set<Segment>()
-    const r = width / 2 + this.clearance
-    for (
-      let x = Math.floor(Math.min(edge[0].x, edge[1].x) - r);
-      x <= Math.ceil(Math.max(edge[0].x, edge[1].x) + r);
-      x++
-    )
-      for (
-        let y = Math.floor(Math.min(edge[0].y, edge[1].y) - r);
-        y <= Math.ceil(Math.max(edge[0].y, edge[1].y) + r);
-        y++
-      )
-        for (const s of this.spatial.get(`${layer}:${x}:${y}`) ?? [])
-          candidates.add(s)
-    for (const s of candidates) {
-      if (s.owners.some((owner) => owned.has(owner))) continue
-      if (s.rect) {
-        const o = s.rect,
-          x0 = o.center.x - o.width / 2,
-          x1 = o.center.x + o.width / 2,
-          y0 = o.center.y - o.height / 2,
-          y1 = o.center.y + o.height / 2,
-          corners = [
-            { x: x0, y: y0 },
-            { x: x1, y: y0 },
-            { x: x1, y: y1 },
-            { x: x0, y: y1 },
-          ]
-        if (
-          edge.some((p) => p.x >= x0 && p.x <= x1 && p.y >= y0 && p.y <= y1) ||
-          corners.some(
-            (p, i) =>
-              segmentDistance(edge, [p, corners[(i + 1) % 4]]) < r - 1e-8,
-          )
-        )
-          return false
-        continue
-      }
-      if (segmentDistance(edge, [s.a, s.b]) < s.radius + r - 1e-8) return false
-    }
-    return true
   }
   private initialize() {
     const input = this.input
-    if (
-      input.outline?.length &&
-      !input.outline.every(
-        (p) =>
-          [input.bounds.minX, input.bounds.maxX].includes(p.x) &&
-          [input.bounds.minY, input.bounds.maxY].includes(p.y),
-      )
-    ) {
-      this.fail(
-        "unsupported_outline",
-        "bus_lanes currently requires rectangular bounds without a custom outline",
-      )
+    if (input.outline?.length) {
+      this.fail("unsupported_outline", "Custom board outlines are unsupported")
       return
     }
     if (
@@ -196,21 +76,18 @@ export class BusLanesSolver extends BaseSolver {
     ) {
       this.fail(
         "unsupported_coupling",
-        "Coupled-pair geometry is not supported; do not silently discard traceGap/maxUncoupledLength",
+        "Coupled differential geometry is not supported",
       )
       return
     }
     const names = new Set<string>()
     for (const c of input.connections) {
-      if (names.has(c.name)) {
-        this.fail("invalid_input", `Duplicate connection ${c.name}`)
-        return
-      }
+      if (names.has(c.name)) throw Error(`Duplicate connection ${c.name}`)
       names.add(c.name)
       if (c.pointsToConnect.length !== 2) {
         this.fail(
           "invalid_terminals",
-          `${c.name}: bus_lanes requires exactly two terminals`,
+          `${c.name}: exactly two terminals required`,
         )
         return
       }
@@ -218,480 +95,326 @@ export class BusLanesSolver extends BaseSolver {
       if (a.layers || b.layers || a.layer !== b.layer) {
         this.fail(
           "layer_change_required",
-          `${c.name}: ${a.layer} → ${b.layer}; fan out both endpoints onto a common fixed layer first`,
+          `${c.name}: ${a.layer} → ${b.layer}; a common fixed layer is required; fanout handoff layers must agree`,
         )
         return
       }
-      if (![a.x, a.y, b.x, b.y].every(Number.isFinite)) {
-        this.fail("invalid_input", `${c.name}: non-finite coordinates`)
-        return
-      }
+      if (![a.x, a.y, b.x, b.y].every(Number.isFinite))
+        throw Error("Nonfinite terminal")
       this.widths.set(
         c.name,
         c.nominalTraceWidth ?? c.width ?? input.minTraceWidth,
       )
     }
     const claimed = new Set<string>()
-    for (const bus of input.buses ?? []) {
-      for (const name of bus.connectionNames) {
+    for (const b of input.buses ?? [])
+      for (const name of b.connectionNames) {
         const c = input.connections.find((c) => c.name === name)
         if (!c || claimed.has(name))
-          throw Error(
-            `${bus.busId}: missing or multiply assigned connection ${name}`,
-          )
+          throw Error(`Missing or duplicated bus member ${name}`)
         claimed.add(name)
         const layer = c.pointsToConnect[0].layer
-        if (bus.allowedLayers && !bus.allowedLayers.includes(layer))
-          throw Error(`${bus.busId}: ${layer} is not allowed`)
-        const width = resolveBusWidth(bus, layer)
+        if (b.allowedLayers && !b.allowedLayers.includes(layer))
+          throw Error(`${b.busId}: forbidden layer ${layer}`)
+        const width = resolveBusWidth(b, layer)
         if (width !== undefined) this.widths.set(name, width)
       }
-    }
-    for (const [name, width] of this.widths)
-      if (!Number.isFinite(width) || width < input.minTraceWidth || width <= 0)
-        throw Error(`${name}: invalid trace width`)
-    this.connections = [
-      ...(input.buses ?? []).flatMap((bus) =>
-        bus.connectionNames.map(
-          (name) => input.connections.find((c) => c.name === name)!,
-        ),
-      ),
-      ...input.connections.filter((c) => !claimed.has(c.name)),
-    ]
-    this.orders = windingOrders(this.connections)
-    for (const segment of this.inputSegments()) this.addSegment(segment)
-    // Reserve every terminal before choosing a winding order. An early lane
-    // must never occupy another lane's only attachment point.
-    for (const c of this.connections)
+    for (const width of this.widths.values())
+      if (!Number.isFinite(width) || width <= 0 || width < input.minTraceWidth)
+        throw Error("Invalid trace width")
+    this.fixed = fixedCopper(input)
+    for (const c of input.connections)
       for (const p of c.pointsToConnect)
-        this.addSegment({
+        this.fixed.push({
           a: p,
           b: p,
-          radius: this.widths.get(c.name)! / 2,
           layer: p.layer,
+          radius: this.widths.get(c.name)! / 2,
           owners: [c.name],
         })
-    this.fixedSegments = [...this.segments]
-    this.phase = "route"
-    this.startLane()
-  }
-  /** Fixed input geometry is available without advancing the solver. */
-  private *inputSegments(): Generator<Segment> {
-    const input = this.input
-    for (const o of input.obstacles) {
-      const a = { x: o.center.x - o.width / 2, y: o.center.y },
-        b = { x: o.center.x + o.width / 2, y: o.center.y }
-      // The segment/radius bounds index the rectangle; canEdge performs the
-      // exact rectangle clearance test.
-      for (const layer of o.layers)
-        yield {
-          a,
-          b,
-          radius: o.height / 2,
-          layer,
-          owners: o.connectedTo,
-          rect: o,
-        }
+    this.orders = windingOrders(input.connections)
+    if (!input.connections.length) {
+      this.solved = true
+      this.phase = "solved"
+      return
     }
-    const layers = Array.from({ length: input.layerCount }, (_, i) =>
-      i === 0 ? "top" : i === input.layerCount - 1 ? "bottom" : `inner${i}`,
-    )
-    for (const t of input.traces ?? [])
-      for (let i = 0; i < t.route.length; i++) {
-        const p = t.route[i]
-        if (p.route_type === "via") {
-          const lo = layers.indexOf(p.from_layer),
-            hi = layers.indexOf(p.to_layer)
-          for (const layer of p.layers ??
-            layers.slice(Math.min(lo, hi), Math.max(lo, hi) + 1))
-            yield {
-              a: p,
-              b: p,
-              radius: (p.via_diameter ?? 0.3) / 2,
-              layer,
-              owners: [t.connection_name ?? "", t.source_trace_id ?? ""],
-            }
-        } else if (p.route_type === "wire") {
-          const q = t.route[i + 1]
-          if (q?.route_type === "wire" && q.layer === p.layer)
-            yield {
-              a: p,
-              b: q,
-              radius: p.width / 2,
-              layer: p.layer,
-              owners: [t.connection_name ?? "", t.source_trace_id ?? ""],
-            }
-        } else throw Error("Unsupported previous-route primitive")
-      }
-  }
-  private retry() {
-    this.attempt++
-    if (this.attempt >= this.orders.length * 2) return false
-    this.connections = this.orders[Math.floor(this.attempt / 2)].map((c) => ({
-      ...c,
-      pointsToConnect:
-        this.attempt % 2 === 1
-          ? [...c.pointsToConnect].reverse()
-          : c.pointsToConnect,
-    }))
-    this.traces = []
-    this.segments = []
-    this.spatial.clear()
-    this.segmentKeys.clear()
-    for (const segment of this.fixedSegments) this.addSegment(segment)
-    this.lane = 0
-    this.tuning = 0
     this.phase = "route"
     this.startLane()
-    return true
+  }
+  private scene(c: Connection) {
+    return new VectorScene(this.input, c, this.widths.get(c.name)!, [
+      ...this.fixed,
+      ...this.traces.flatMap(routeCopper),
+    ])
   }
   private startLane() {
-    this.laneExpansions = 0
-    this.open = new MinHeap<SearchNode>()
-    this.best.clear()
-    this.current = undefined
-    if (this.lane >= this.connections.length) {
+    if (this.lane === this.input.connections.length) {
       this.phase = "match"
       return
     }
-    const c = this.connections[this.lane],
-      p = c.pointsToConnect[0],
-      goal = c.pointsToConnect[1]
-    const start = { x: p.x, y: p.y, id: "0:0", g: 0, f: distance(p, goal) }
-    this.open.push(start)
-    this.best.set(start.id, 0)
+    const c = this.orders[this.attempt][this.lane],
+      [a, b] = c.pointsToConnect
+    this.search = new VectorVisibilitySearch(this.scene(c), a, b)
   }
-  private commit(path: Point[]) {
-    const c = this.connections[this.lane],
-      route = simplify(path).map((p) => ({
-        ...p,
-        route_type: "wire" as const,
-        layer: c.pointsToConnect[0].layer,
-        width: this.widths.get(c.name)!,
-      }))
-    const t: Trace = {
-      type: "pcb_trace",
-      pcb_trace_id: `bus_lanes_${this.lane}`,
-      connection_name: c.name,
-      source_trace_id: c.source_trace_id,
-      route,
-    }
-    this.traces.push(t)
-    for (let i = 1; i < route.length; i++)
-      this.addSegment({
-        a: route[i - 1],
-        b: route[i],
-        radius: route[i].width / 2,
-        layer: route[i].layer,
-        owners: [c.name],
-      })
-    this.lane++
-    this.startLane()
-  }
-  private search() {
-    const c = this.connections[this.lane],
-      [start, goal] = c.pointsToConnect,
-      step = this.options.gridStep ?? (this.attempt === 0 ? 0.1 : 0.025)
-    if (
-      !this.open.length ||
-      this.laneExpansions >= (this.options.maxLaneIterations ?? 30000)
-    ) {
-      if (this.retry()) return
+  private retry() {
+    if (this.traces.length > this.bestPartial.length)
+      this.bestPartial = structuredClone(this.traces)
+    this.attempt++
+    if (this.attempt >= this.orders.length) {
+      this.traces = this.bestPartial
       this.fail(
         "no_planar_route",
-        `${c.name}: no same-layer route found at ${step} mm resolution; vias are forbidden`,
+        "No collision-free routing found in the vector visibility graph",
       )
       return
     }
-    const current = this.open.pop()
-    if (current.g > (this.best.get(current.id) ?? Infinity)) return
-    this.current = current
-    this.expansions++
-    this.laneExpansions++
-    const dx = goal.x - current.x,
-      dy = goal.y - current.y
-    // Exact endpoint attachment is permitted only along orthogonal or 45° lines.
-    const aligned =
-      Math.abs(dx) < 1e-8 ||
-      Math.abs(dy) < 1e-8 ||
-      Math.abs(Math.abs(dx) - Math.abs(dy)) < 1e-8
-    if (aligned && this.canEdge([current, goal], c)) {
-      const path: Point[] = [goal]
-      for (let n: SearchNode | undefined = current; n; n = n.parent)
-        path.push({ x: n.x, y: n.y })
-      this.commit(path.reverse())
-      return
-    }
-    for (const [x, y] of [
-      [1, 0],
-      [-1, 0],
-      [0, 1],
-      [0, -1],
-      [1, 1],
-      [1, -1],
-      [-1, 1],
-      [-1, -1],
-    ]) {
-      const ix = Math.round((current.x - start.x) / step) + x,
-        iy = Math.round((current.y - start.y) / step) + y,
-        p = { x: start.x + ix * step, y: start.y + iy * step },
-        id = `${ix}:${iy}`,
-        g = current.g + step * Math.hypot(x, y)
-      if (
-        (this.best.get(id) ?? Infinity) <= g ||
-        !this.canEdge([current, p], c)
-      )
-        continue
-      this.best.set(id, g)
-      this.open.push({
-        ...p,
-        id,
-        g,
-        f: g + 1.2 * distance(p, goal),
-        parent: current,
+    this.traces = []
+    this.lane = 0
+    this.startLane()
+  }
+  private route() {
+    const s = this.search!
+    s.step()
+    if (s.solved) {
+      const c = this.orders[this.attempt][this.lane]
+      this.traces.push({
+        type: "pcb_trace",
+        pcb_trace_id: `bus_lane_${c.name}`,
+        connection_name: c.name,
+        source_trace_id: c.source_trace_id ?? c.name,
+        route: s.result.map((p) => ({
+          route_type: "wire",
+          x: p.x,
+          y: p.y,
+          layer: c.pointsToConnect[0].layer,
+          width: this.widths.get(c.name)!,
+        })),
       })
-    }
-    // Off-grid terminals get exact 45°/orthogonal finishing elbows, never a snap.
-    for (const p of [
-      { x: goal.x, y: current.y },
-      { x: current.x, y: goal.y },
-    ])
-      if (
-        distance(current, p) > 1e-8 &&
-        this.canEdge([current, p], c) &&
-        this.canEdge([p, goal], c)
-      ) {
-        const path: Point[] = [goal, p]
-        for (let n: SearchNode | undefined = current; n; n = n.parent)
-          path.push({ x: n.x, y: n.y })
-        this.commit(path.reverse())
-        return
-      }
+      this.lane++
+      this.startLane()
+    } else if (
+      s.failed ||
+      s.expanded >= (this.options.maxLaneIterations ?? 4000)
+    )
+      this.retry()
   }
   private match() {
-    const groups = [
-      ...(this.input.buses ?? [])
-        .filter((b) => b.maxLengthSkew !== undefined)
-        .map((b) => ({
-          names: b.connectionNames,
-          tolerance: b.maxLengthSkew!,
-        })),
-      ...(this.input.differentialPairs ?? []).map((p) => ({
-        names: p.connectionNames,
-        tolerance: p.lengthTolerance,
-      })),
-    ]
-    if (this.tuning >= groups.length) {
-      this.phase = "validate_output"
-      return
-    }
-    const group = groups[this.tuning++]
-    const members = group.names.map(
-      (n) => this.traces.find((t) => t.connection_name === n)!,
+    const groups = (this.input.buses ?? [])
+      .filter((b) => b.maxLengthSkew !== undefined)
+      .map((b) => b.connectionNames)
+    groups.push(
+      ...(this.input.differentialPairs ?? []).map((p) => p.connectionNames),
     )
-    if (
-      members.some((t) => !t) ||
-      !Number.isFinite(group.tolerance) ||
-      group.tolerance < 0
+    const targets = new Map(
+      this.traces.map((t) => [t.connection_name!, length(t.route)]),
     )
-      throw Error("Invalid length matching group")
-    const target = Math.max(...members.map((t) => length(t.route)))
-    for (const trace of members) {
-      const delta = target - length(trace.route)
-      if (delta <= group.tolerance + 1e-8) continue
-      const c = this.connections.find((c) => c.name === trace.connection_name)!
-      let matched = false
-      const route = trace.route as Wire[]
-      for (let i = 1; i < route.length && !matched; i++) {
-        const a = route[i - 1],
-          b = route[i],
-          l = distance(a, b)
-        if (l < 4 * (a.width + this.clearance)) continue
-        const ux = (b.x - a.x) / l,
-          uy = (b.y - a.y) / l
-        for (const sign of [1, -1]) {
-          const p = { x: a.x + (ux * l) / 4, y: a.y + (uy * l) / 4 },
-            q = { x: a.x + (ux * l * 3) / 4, y: a.y + (uy * l * 3) / 4 },
-            h = (delta / 2) * sign,
-            pp = { x: p.x - uy * h, y: p.y + ux * h },
-            qq = { x: q.x - uy * h, y: q.y + ux * h }
-          const next = [...route.slice(0, i), p, pp, qq, q, ...route.slice(i)]
-          if (next.slice(1).some((p, j) => !this.canEdge([next[j], p], c)))
+    for (let pass = 0; pass < groups.length; pass++)
+      for (const names of groups) {
+        const target = Math.max(...names.map((n) => targets.get(n)!))
+        for (const n of names) targets.set(n, target)
+      }
+    for (const t of this.traces) {
+      const delta = targets.get(t.connection_name!)! - length(t.route)
+      if (delta < 1e-8) continue
+      const connection = this.input.connections.find(
+          (c) => c.name === t.connection_name,
+        )!,
+        scene = this.scene(connection)
+      let tuned = false
+      for (let i = 0; i < t.route.length - 1 && !tuned; i++) {
+        const a = t.route[i],
+          b = t.route[i + 1],
+          span = distance(a, b)
+        if (span < 0.01) continue
+        const ux = (b.x - a.x) / span,
+          uy = (b.y - a.y) / span
+        // Axis-aligned host segments yield exact horizontal/vertical/45° chamfers.
+        if (Math.abs(ux) > 1e-9 && Math.abs(uy) > 1e-9) continue
+        const w = span * 0.8,
+          c = Math.min(delta / 4, w / 8),
+          h = delta / 2 + 2 * c * (2 - Math.SQRT2)
+        for (const side of [1, -1]) {
+          const offset = span * 0.1,
+            at = (x: number, y: number) => ({
+              x: a.x + ux * x - uy * y * side,
+              y: a.y + uy * x + ux * y * side,
+            })
+          const bump = [
+            [0, 0],
+            [offset, 0],
+            [offset + c, c],
+            [offset + c, h - c],
+            [offset + 2 * c, h],
+            [offset + w - 2 * c, h],
+            [offset + w - c, h - c],
+            [offset + w - c, c],
+            [offset + w, 0],
+            [span, 0],
+          ].map(([x, y]) => at(x, y))
+          if (!scene.pathVisible(bump)) continue
+          const next = simplify([
+            ...t.route.slice(0, i),
+            ...bump,
+            ...t.route.slice(i + 2),
+          ])
+          if (Math.abs(length(next) - targets.get(t.connection_name!)!) > 1e-6)
             continue
-          let intersects = false
-          for (let j = 1; j < next.length; j++)
-            for (let k = j + 2; k < next.length; k++)
-              if (
-                segmentDistance(
-                  [next[j - 1], next[j]],
-                  [next[k - 1], next[k]],
-                ) <
-                a.width + this.clearance - 1e-8
-              )
-                intersects = true
-          if (intersects) continue
-          trace.route = next.map((p) => ({
+          t.route = next.map((p) => ({
             ...p,
             route_type: "wire",
-            layer: a.layer,
-            width: a.width,
+            width: this.widths.get(t.connection_name!)!,
+            layer: connection.pointsToConnect[0].layer,
           }))
-          for (let j = 1; j < next.length; j++)
-            this.addSegment({
-              a: next[j - 1],
-              b: next[j],
-              radius: a.width / 2,
-              layer: a.layer,
-              owners: [c.name],
-            })
-          matched = true
+          tuned = true
           break
         }
       }
-      if (!matched) {
+      if (!tuned) {
         this.fail(
           "length_matching_failed",
-          `${c.name}: cannot add ${delta.toFixed(3)} mm without a clearance violation`,
+          `${t.connection_name}: insufficient clearance for length tuning`,
         )
         return
       }
     }
+    this.phase = "validate_output"
+  }
+  private validateOutput() {
+    for (const c of this.input.connections) {
+      const t = this.traces.find((t) => t.connection_name === c.name)
+      if (!t) throw Error("Missing lane")
+      const scene = this.scene(c)
+      if (
+        distance(t.route[0], c.pointsToConnect[0]) > 1e-8 ||
+        distance(t.route.at(-1)!, c.pointsToConnect[1]) > 1e-8
+      )
+        throw Error("Broken lane endpoints")
+      for (let i = 1; i < t.route.length; i++) {
+        const a = t.route[i - 1],
+          b = t.route[i],
+          dx = Math.abs(a.x - b.x),
+          dy = Math.abs(a.y - b.y)
+        if (
+          a.route_type !== "wire" ||
+          b.route_type !== "wire" ||
+          a.layer !== b.layer
+        )
+          throw Error("Forbidden layer transition")
+        if (Math.min(dx, dy) > 1e-8 && Math.abs(dx - dy) > 1e-8)
+          throw Error("Non-octilinear segment")
+        if (!scene.visible(a, b))
+          throw Error("Final copper clearance violation")
+      }
+    }
+    this.phase = "solved"
+    this.solved = true
   }
   _step() {
     try {
       if (this.phase === "validate") this.initialize()
-      else if (this.phase === "route") this.search()
+      else if (this.phase === "route") this.route()
       else if (this.phase === "match") this.match()
-      else if (this.phase === "validate_output") {
-        for (const t of this.traces) {
-          const c = this.connections.find((c) => c.name === t.connection_name)!
-          for (let i = 1; i < t.route.length; i++) {
-            const a = t.route[i - 1],
-              b = t.route[i]
-            const dx = Math.abs(a.x - b.x),
-              dy = Math.abs(a.y - b.y)
-            if (Math.min(dx, dy) > 1e-8 && Math.abs(dx - dy) > 1e-8)
-              throw Error("Non-octilinear route")
-            if (!this.canEdge([a, b], c))
-              throw Error("Final route clearance violation")
-          }
-        }
-        for (const t of this.traces)
-          if (
-            t.route.some(
-              (p) =>
-                p.route_type !== "wire" ||
-                p.layer !== (t.route[0] as Wire).layer,
-            )
-          )
-            throw Error("No-layer-change invariant failed")
-        for (const group of this.input.buses ?? []) {
-          if (group.maxLengthSkew === undefined) continue
-          const lengths = group.connectionNames.map((n) =>
-            length(this.traces.find((t) => t.connection_name === n)!.route),
-          )
-          if (
-            Math.max(...lengths) - Math.min(...lengths) >
-            group.maxLengthSkew + 1e-7
-          )
-            throw Error(`${group.busId}: final skew exceeds tolerance`)
-        }
-        for (const pair of this.input.differentialPairs ?? []) {
-          const lengths = pair.connectionNames.map((n) =>
-            length(this.traces.find((t) => t.connection_name === n)!.route),
-          )
-          if (Math.abs(lengths[0] - lengths[1]) > pair.lengthTolerance + 1e-7)
-            throw Error("Final differential-pair skew exceeds tolerance")
-        }
-        this.phase = "solved"
-        this.solved = true
-      }
-    } catch (error) {
-      this.fail("constraint_error", String(error))
+      else if (this.phase === "validate_output") this.validateOutput()
+    } catch (e) {
+      this.fail("constraint_error", String(e))
     }
-    this.progress = this.connections.length
-      ? this.lane / this.connections.length
-      : 0
+    this.progress = this.lane / Math.max(1, this.input.connections.length)
     this.stats = {
       phase: this.phase,
+      algorithm: "octilinear_visibility",
       attempt: this.attempt,
       lane: this.lane,
-      totalLanes: this.connections.length,
-      expandedNodes: this.expansions,
-      frontier: this.open.length,
-      layer: this.connections[this.lane]?.pointsToConnect[0].layer,
+      totalLanes: this.input.connections.length,
+      vertices: this.search?.vertices.length ?? 0,
+      expandedVertices: this.search?.expanded ?? 0,
+      frontier: this.search?.open.length ?? 0,
+      failureCode: this.failureCode,
       traceLengthsMm: this.traces.map((t) => ({
         name: t.connection_name,
         length: length(t.route),
       })),
-      failureCode: this.failureCode,
     }
   }
   visualize(): GraphicsObject {
     const lines: any[] = [],
       points: any[] = [],
-      rects: any[] = []
-    const circles: any[] = []
-    for (const o of this.input.obstacles)
-      for (const copperLayer of o.layers)
+      rects: any[] = [],
+      circles: any[] = []
+    for (const c of fixedCopper(this.input)) {
+      if (c.rect) {
         rects.push({
-          center: o.center,
-          width: o.width,
-          height: o.height,
-          fill: `${layerColor(copperLayer)}30`,
-          stroke: layerColor(copperLayer),
-          layer: copperLayer,
+          center: {
+            x: (c.rect.minX + c.rect.maxX) / 2,
+            y: (c.rect.minY + c.rect.maxY) / 2,
+          },
+          width: c.rect.maxX - c.rect.minX,
+          height: c.rect.maxY - c.rect.minY,
+          layer: c.layer,
+          fill: `${layerColor(c.layer)}30`,
+          stroke: layerColor(c.layer),
         })
-    for (const s of this.inputSegments()) {
-      if (s.rect) continue
-      if (distance(s.a, s.b) < 1e-10) {
+        continue
+      }
+      if (distance(c.a, c.b) < 1e-9)
         circles.push({
-          center: s.a,
-          radius: s.radius,
+          center: c.a,
+          radius: c.radius,
+          layer: c.layer,
           fill: "transparent",
-          stroke: layerColor(s.layer),
-          layer: s.layer,
-          label: `Fixed via [${s.layer}]`,
+          stroke: layerColor(c.layer),
         })
-      } else
+      else
         lines.push({
-          points: [s.a, s.b],
-          strokeColor: layerColor(s.layer),
-          strokeWidth: Math.max(0.025, s.radius * 2),
-          layer: s.layer,
-          label: `Fixed fanout [${s.layer}]`,
+          points: [
+            { x: c.a.x, y: c.a.y },
+            { x: c.b.x, y: c.b.y },
+          ],
+          strokeWidth: c.radius * 2,
+          strokeColor: layerColor(c.layer),
+          layer: c.layer,
+          label: `Fixed fanout [${c.layer}]`,
         })
     }
-    this.traces.forEach((t) =>
+    for (const t of this.traces)
       lines.push({
-        points: t.route,
-        strokeColor: layerColor((t.route[0] as Wire).layer),
+        points: t.route.map(({ x, y }) => ({ x, y })),
         strokeWidth: (t.route[0] as Wire).width,
+        strokeColor: layerColor((t.route[0] as Wire).layer),
         layer: (t.route[0] as Wire).layer,
-        label: `Interconnect ${t.connection_name}`,
-      }),
-    )
-    for (const [i, connection] of this.input.connections.entries())
-      for (const [j, p] of connection.pointsToConnect.entries())
+        label: t.connection_name,
+      })
+    for (const c of this.input.connections)
+      for (const [i, p] of c.pointsToConnect.entries())
         points.push({
           ...p,
-          color: j ? "#d97706" : "#2563eb",
-          label: `${connection.name} ${j ? "target" : "source"} [${p.layer}]`,
+          color: i ? "#d97706" : "#2563eb",
+          label: `${c.name} ${i ? "target" : "source"} [${p.layer}]`,
         })
-    for (const p of this.open.values().slice(-500))
-      points.push({ x: p.x, y: p.y, color: "#67e8f9" })
-    if (this.current) {
-      const path = []
-      for (let n: SearchNode | undefined = this.current; n; n = n.parent)
-        path.push(n)
-      lines.push({ points: path, strokeColor: "#f43f5e", strokeWidth: 0.06 })
+    if (this.search && this.phase === "route") {
+      const layer =
+        this.orders[this.attempt][this.lane]?.pointsToConnect[0].layer
+      for (const edge of this.search.visibleEdges)
+        lines.push({
+          points: edge,
+          strokeWidth: 0.02,
+          strokeColor: "#67e8f980",
+          layer,
+        })
+      for (const n of this.search.open.values().slice(0, 80))
+        points.push({ ...this.search.vertices[n.id], color: "#06b6d4", layer })
+      lines.push({
+        points: this.search.currentPath(),
+        strokeColor: "#f43f5e",
+        strokeWidth: 0.09,
+        layer,
+      })
     }
     return {
+      title: `Vector bus lanes · ${this.phase}`,
       lines,
       points,
       rects,
       circles,
-      title: `Bus lanes · ${this.phase}${this.error ? ` · ${this.error}` : ""}`,
     }
   }
 }
