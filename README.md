@@ -89,7 +89,7 @@ interconnects must also pass independent combined-copper DRC.
 **Current result: 4/4 full interconnects (132/132 signals), with combined-copper
 DRC and length matching passing.** All four core circuit builds complete with zero circuit errors.
 All three logical DDR groups in every sample request a 0.1 mm maximum skew. The measured total copper skew is below 0.000001 mm in all 12 groups (numerical precision); the previous routing-only samples had up to 24.7 mm skew.
-The measured solves take 97–293 ms on the development machine; the benchmark
+The measured solves take 98–264 ms on the development machine; the benchmark
 records solve time and time including output DRC separately.
 
 FanoutSolver receives compatible handoff layers and winding guidance. The left
@@ -129,6 +129,6 @@ Future changes must be submitted through pull requests with reviewed visual snap
 
 ### Meander geometry
 
-Length tuning uses evenly pitched, chamfered serpentine lobes. Chamfers scale with lobe dimensions instead of a fixed microscopic corner cut. Returning arms retain at least three trace widths of center-to-center spacing (and the requested copper clearance). When the shortest lanes leave no room, the router opens an octilinear central corridor in winding order and rematches all affected bus lengths. Endpoints and fixed fanouts remain unchanged.
+Length tuning prioritizes long runs over short terminal approaches and centers evenly pitched, chamfered serpentine lobes along them. Lobe count scales with the required added length, spreading large corrections without turning small corrections into dense teeth. Chamfers scale with lobe dimensions instead of a fixed microscopic corner cut. Returning arms retain at least three trace widths of center-to-center spacing (and the requested copper clearance). When the shortest lanes leave no room, the router opens an octilinear central corridor in winding order and rematches all affected bus lengths. Endpoints and fixed fanouts remain unchanged.
 
-Snapshots include [individual layer views](./docs/iterations/smooth-meanders) as well as complete boards. All new carrier bends in the DDR samples are checked to turn by at most 45 degrees; length matching and combined-copper DRC remain mandatory.
+Snapshots include [individual layer views](./docs/iterations/distributed-meanders) as well as complete boards. All new carrier bends in the DDR samples are checked to turn by at most 45 degrees; length matching and combined-copper DRC remain mandatory.

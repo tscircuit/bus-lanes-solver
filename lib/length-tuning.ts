@@ -28,14 +28,30 @@ export function tuneLengths(
       input.minTraceToPadEdgeClearance ?? input.defaultObstacleMargin ?? 0.075
     const returnSpacing = Math.max(width + clearance, 3 * width)
     const pitch = 2 * (returnSpacing + 2 * width)
-    for (let i = 0; i < t.route.length - 1; i++) {
+    // Tune the long interior runs before considering short terminal approaches.
+    const segments = t.route
+      .slice(1)
+      .map((p, i) => ({ i, span: distance(t.route[i], p) }))
+      .sort((a, b) => b.span - a.span)
+    for (const { i } of segments) {
       const a = t.route[i],
         b = t.route[i + 1],
         span = distance(a, b)
       if (span < 0.01) continue
       const ux = (b.x - a.x) / span,
         uy = (b.y - a.y) / span
-      for (let teeth = 1; teeth <= Math.floor((span * 0.9) / pitch); teeth++) {
+      // Spread substantial deficits over several lobes without turning small
+      // corrections into dozens of microscopic teeth.
+      const maximumTeeth = Math.floor((span * 0.9) / pitch)
+      const preferredTeeth = Math.min(
+        maximumTeeth,
+        Math.max(2, Math.ceil(delta / (12 * width))),
+      )
+      const counts = Array.from({ length: maximumTeeth }, (_, i) => i + 1).sort(
+        (a, b) =>
+          Math.abs(a - preferredTeeth) - Math.abs(b - preferredTeeth) || b - a,
+      )
+      for (const teeth of counts) {
         for (const fraction of [0.9, 0.65, 0.4]) {
           const w = (span * fraction) / teeth
           if (w < pitch) continue
@@ -46,7 +62,7 @@ export function tuneLengths(
             (w / 2 - returnSpacing) / 2,
           )
           const h = delta / (2 * teeth) + 2 * c * (2 - Math.SQRT2)
-          for (const phase of [0, 0.5, 1])
+          for (const phase of [0.5, 0, 1])
             for (const side of [1, -1]) {
               const at = (x: number, y: number) => ({
                 x: a.x + ux * x - uy * y * side,

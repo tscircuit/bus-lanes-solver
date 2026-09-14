@@ -223,3 +223,59 @@ test("meander chamfers scale with the lobe instead of using tiny corner cuts", (
   expect(diagonals.length).toBeGreaterThanOrEqual(4)
   expect(Math.min(...diagonals)).toBeGreaterThan(0.4)
 })
+
+test("length tuning distributes lobes on the long run and preserves terminal approaches", async () => {
+  const { tuneLengths, tuningPathIsSelfClear } = await import(
+    "../lib/length-tuning"
+  )
+  const { length } = await import("../lib/geometry")
+  const j = input()
+  j.bounds = { minX: -10, maxX: 25, minY: -10, maxY: 10 }
+  j.connections = [
+    {
+      name: "a",
+      pointsToConnect: [
+        { x: 0, y: 0, layer: "top" },
+        { x: 16, y: 0, layer: "top" },
+      ],
+    },
+  ]
+  const route = [
+    [0, 0],
+    [1, 0],
+    [2, 1],
+    [14, 1],
+    [15, 0],
+    [16, 0],
+  ].map(([x, y]) => ({
+    x,
+    y,
+    route_type: "wire" as const,
+    layer: "top",
+    width: 0.1,
+  }))
+  const target = length(route) + 4
+  const [tuned] = tuneLengths(
+    j,
+    [
+      {
+        type: "pcb_trace",
+        pcb_trace_id: "a",
+        connection_name: "a",
+        route,
+      },
+    ],
+    new Map([["a", target]]),
+  )
+  expect(tuned.route.slice(0, 3)).toEqual(route.slice(0, 3))
+  expect(tuned.route.slice(-3)).toEqual(route.slice(-3))
+  expect(length(tuned.route)).toBeCloseTo(target, 7)
+  expect(tuningPathIsSelfClear(tuned.route, 0.3)).toBe(true)
+  const lobes = tuned.route.filter(
+    (p) => Math.abs(p.y - 1) > 1e-7 && p.x > 2 && p.x < 14,
+  )
+  expect(lobes.length).toBeGreaterThan(8)
+  expect(Math.min(...lobes.map((p) => p.x))).toBeLessThan(4)
+  expect(Math.max(...lobes.map((p) => p.x))).toBeGreaterThan(11)
+  expect(Math.max(...lobes.map((p) => Math.abs(p.y - 1)))).toBeLessThan(1)
+})

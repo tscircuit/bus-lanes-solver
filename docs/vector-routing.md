@@ -42,3 +42,13 @@ If tuning cannot fit between shortest paths, the router spreads the carrier lane
 The geometry follows conventional chamfered serpentine construction; the [TI high-speed interface layout guide](https://www.ti.com/lit/an/spraar7j/spraar7j.pdf) provides background on high-speed length matching and routing. The 3W returning-arm floor is this solver's geometric policy, not a substitute for stackup-specific delay or coupling analysis.
 
 Reviewed initial, intermediate, completed and individual-layer snapshots are in `iterations/smooth-meanders`. The purple inner4 bottom-facing image specifically shows the replacement for the jagged diagonal teeth. Regression checks cover proportional chamfers, returning-arm separation, a maximum 45-degree carrier turn, exact endpoint continuity, total copper skew and independent DRC.
+
+## Distributed tuning
+
+The tuner now considers longest carrier segments first, centers its first candidate, and chooses lobe count from the required added length. This removes the large terminal loops in the four DDR samples while retaining fallback placements when clearance requires them. It is a placement preference, not a guarantee that every route can be tuned in its center.
+
+Snapshots in `iterations/distributed-meanders` include initial, intermediate, complete and individual-layer views. The completed top-facing sample no longer has the long sideways loops at its lower handoff. Left/right use repeated lobes on the long horizontal runs; bottom uses the long diagonal corridor. Small corrections use fewer broad lobes. Fixed fanouts and pre-tuning iterations are unchanged.
+
+The benchmark passes all four full DDR samples (132 connections) and rejects all four mixed-layer negatives. Full solves measured 98–264 ms. All 12 bus groups retain under 0.000001 mm total planar copper skew, independent combined-copper DRC passes, and no layer transitions are added. A synthetic regression preserves both short terminal approaches and checks distributed interior lobes, exact length and returning-arm spacing.
+
+All 12 initial/intermediate PNGs are byte-identical to the reviewed smooth-meanders baseline. All four completed boards and inner4 detail views were inspected. Actual core builds produce zero circuit errors for all four orientations.

@@ -1,0 +1,275 @@
+{
+  "iteration": 36,
+  "stats": {
+    "busLengths": [
+      {
+        "busId": "RAM_BYTE0",
+        "toleranceMm": 0.1,
+        "skewMm": 4.263256414560601e-14,
+        "matched": true,
+        "lengths": [
+          {
+            "name": "source_trace_0",
+            "carrierLengthMm": 21.318886168514425,
+            "fixedLengthMm": 38.40126904127173,
+            "totalLengthMm": 59.72015520978616
+          },
+          {
+            "name": "source_trace_1",
+            "carrierLengthMm": 27.675506425852376,
+            "fixedLengthMm": 32.04464878393381,
+            "totalLengthMm": 59.720155209786185
+          },
+          {
+            "name": "source_trace_2",
+            "carrierLengthMm": 27.059435126006523,
+            "fixedLengthMm": 32.66072008377962,
+            "totalLengthMm": 59.72015520978614
+          },
+          {
+            "name": "source_trace_3",
+            "carrierLengthMm": 26.74080597590502,
+            "fixedLengthMm": 32.97934923388113,
+            "totalLengthMm": 59.72015520978615
+          },
+          {
+            "name": "source_trace_4",
+            "carrierLengthMm": 21.657805358372304,
+            "fixedLengthMm": 38.062349851413856,
+            "totalLengthMm": 59.72015520978616
+          },
+          {
+            "name": "source_trace_5",
+            "carrierLengthMm": 23.91276472605539,
+            "fixedLengthMm": 35.80739048373077,
+            "totalLengthMm": 59.72015520978616
+          },
+          {
+            "name": "source_trace_6",
+            "carrierLengthMm": 27.942277838481164,
+            "fixedLengthMm": 31.77787737130499,
+            "totalLengthMm": 59.72015520978616
+          },
+          {
+            "name": "source_trace_7",
+            "carrierLengthMm": 28.167358880657243,
+            "fixedLengthMm": 31.552796329128924,
+            "totalLengthMm": 59.72015520978617
+          },
+          {
+            "name": "source_trace_22",
+            "carrierLengthMm": 24.90003925018449,
+            "fixedLengthMm": 34.820115959601665,
+            "totalLengthMm": 59.72015520978616
+          },
+          {
+            "name": "source_trace_24",
+            "carrierLengthMm": 25.088419615167407,
+            "fixedLengthMm": 34.63173559461875,
+            "totalLengthMm": 59.72015520978616
+          },
+          {
+            "name": "source_trace_25",
+            "carrierLengthMm": 26.756186568133753,
+            "fixedLengthMm": 32.9639686416524,
+            "totalLengthMm": 59.72015520978616
+          }
+        ]
+      },
+      {
+        "busId": "RAM_BYTE1",
+        "toleranceMm": 0.1,
+        "skewMm": 7.105427357601002e-14,
+        "matched": true,
+        "lengths": [
+          {
+            "name": "source_trace_8",
+            "carrierLengthMm": 41.39710804225582,
+            "fixedLengthMm": 31.94568954794238,
+            "totalLengthMm": 73.3427975901982
+          },
+          {
+            "name": "source_trace_9",
+            "carrierLengthMm": 35.36010227374701,
+            "fixedLengthMm": 37.982695316451256,
+            "totalLengthMm": 73.34279759019827
+          },
+          {
+            "name": "source_trace_10",
+            "carrierLengthMm": 20.425078451539473,
+            "fixedLengthMm": 52.91771913865877,
+            "totalLengthMm": 73.34279759019824
+          },
+          {
+            "name": "source_trace_11",
+            "carrierLengthMm": 39.5299959784015,
+            "fixedLengthMm": 33.81280161179673,
+            "totalLengthMm": 73.34279759019823
+          },
+          {
+            "name": "source_trace_12",
+            "carrierLengthMm": 38.48289447988274,
+            "fixedLengthMm": 34.85990311031548,
+            "totalLengthMm": 73.34279759019822
+          },
+          {
+            "name": "source_trace_13",
+            "carrierLengthMm": 37.733325578450376,
+            "fixedLengthMm": 35.6094720117479,
+            "totalLengthMm": 73.34279759019827
+          },
+          {
+            "name": "source_trace_14",
+            "carrierLengthMm": 19.980976362049326,
+            "fixedLengthMm": 53.361821228148926,
+            "totalLengthMm": 73.34279759019824
+          },
+          {
+            "name": "source_trace_15",
+            "carrierLengthMm": 42.71492021889326,
+            "fixedLengthMm": 30.62787737130499,
+            "totalLengthMm": 73.34279759019824
+          },
+          {
+            "name": "source_trace_23",
+            "carrierLengthMm": 40.95715854859473,
+            "fixedLengthMm": 32.38563904160353,
+            "totalLengthMm": 73.34279759019826
+          },
+          {
+            "name": "source_trace_26",
+            "carrierLengthMm": 37.32791445038442,
+            "fixedLengthMm": 36.01488313981385,
+            "totalLengthMm": 73.34279759019827
+          },
+          {
+            "name": "source_trace_27",
+            "carrierLengthMm": 38.20720377226569,
+            "fixedLengthMm": 35.13559381793253,
+            "totalLengthMm": 73.34279759019822
+          }
+        ]
+      },
+      {
+        "busId": "RAM_CA",
+        "toleranceMm": 0.1,
+        "skewMm": 4.263256414560601e-14,
+        "matched": true,
+        "lengths": [
+          {
+            "name": "source_trace_16",
+            "carrierLengthMm": 20.77212426618194,
+            "fixedLengthMm": 46.34602338040784,
+            "totalLengthMm": 67.11814764658979
+          },
+          {
+            "name": "source_trace_17",
+            "carrierLengthMm": 28.237102759588073,
+            "fixedLengthMm": 38.881044887001714,
+            "totalLengthMm": 67.11814764658979
+          },
+          {
+            "name": "source_trace_18",
+            "carrierLengthMm": 28.201747420528747,
+            "fixedLengthMm": 38.91640022606103,
+            "totalLengthMm": 67.11814764658978
+          },
+          {
+            "name": "source_trace_19",
+            "carrierLengthMm": 25.110147497418044,
+            "fixedLengthMm": 42.00800014917175,
+            "totalLengthMm": 67.11814764658979
+          },
+          {
+            "name": "source_trace_20",
+            "carrierLengthMm": 32.149282398485894,
+            "fixedLengthMm": 34.968865248103896,
+            "totalLengthMm": 67.11814764658979
+          },
+          {
+            "name": "source_trace_21",
+            "carrierLengthMm": 28.54923479394407,
+            "fixedLengthMm": 38.56891285264574,
+            "totalLengthMm": 67.1181476465898
+          },
+          {
+            "name": "source_trace_28",
+            "carrierLengthMm": 31.983468326818745,
+            "fixedLengthMm": 35.134679319771045,
+            "totalLengthMm": 67.11814764658979
+          },
+          {
+            "name": "source_trace_29",
+            "carrierLengthMm": 30.994990695733694,
+            "fixedLengthMm": 36.12315695085607,
+            "totalLengthMm": 67.11814764658976
+          },
+          {
+            "name": "source_trace_30",
+            "carrierLengthMm": 31.816006206572855,
+            "fixedLengthMm": 35.302141440016925,
+            "totalLengthMm": 67.11814764658978
+          },
+          {
+            "name": "source_trace_31",
+            "carrierLengthMm": 24.033814741765063,
+            "fixedLengthMm": 43.08433290482473,
+            "totalLengthMm": 67.11814764658979
+          },
+          {
+            "name": "source_trace_32",
+            "carrierLengthMm": 24.44641025728354,
+            "fixedLengthMm": 42.67173738930625,
+            "totalLengthMm": 67.11814764658979
+          }
+        ]
+      }
+    ],
+    "phase": "solved",
+    "algorithm": "octilinear_visibility",
+    "attempt": 0,
+    "lane": 33,
+    "totalLanes": 33,
+    "vertices": 2,
+    "expandedVertices": 1,
+    "frontier": 1,
+    "failureCode": null,
+    "traceLengthsMm": [
+      { "name": "source_trace_13", "length": 37.733325578450376 },
+      { "name": "source_trace_27", "length": 38.20720377226569 },
+      { "name": "source_trace_26", "length": 37.32791445038442 },
+      { "name": "source_trace_9", "length": 35.36010227374701 },
+      { "name": "source_trace_30", "length": 31.816006206572855 },
+      { "name": "source_trace_19", "length": 25.110147497418044 },
+      { "name": "source_trace_7", "length": 28.167358880657243 },
+      { "name": "source_trace_3", "length": 26.74080597590502 },
+      { "name": "source_trace_14", "length": 19.980976362049326 },
+      { "name": "source_trace_10", "length": 20.425078451539473 },
+      { "name": "source_trace_16", "length": 20.77212426618194 },
+      { "name": "source_trace_31", "length": 24.033814741765063 },
+      { "name": "source_trace_20", "length": 32.149282398485894 },
+      { "name": "source_trace_4", "length": 21.657805358372304 },
+      { "name": "source_trace_0", "length": 21.318886168514425 },
+      { "name": "source_trace_22", "length": 24.90003925018449 },
+      { "name": "source_trace_15", "length": 42.71492021889326 },
+      { "name": "source_trace_11", "length": 39.5299959784015 },
+      { "name": "source_trace_21", "length": 28.54923479394407 },
+      { "name": "source_trace_5", "length": 23.91276472605539 },
+      { "name": "source_trace_32", "length": 24.44641025728354 },
+      { "name": "source_trace_25", "length": 26.756186568133753 },
+      { "name": "source_trace_24", "length": 25.088419615167407 },
+      { "name": "source_trace_1", "length": 27.675506425852376 },
+      { "name": "source_trace_17", "length": 28.237102759588073 },
+      { "name": "source_trace_23", "length": 40.95715854859473 },
+      { "name": "source_trace_8", "length": 41.39710804225582 },
+      { "name": "source_trace_12", "length": 38.48289447988274 },
+      { "name": "source_trace_29", "length": 30.994990695733694 },
+      { "name": "source_trace_28", "length": 31.983468326818745 },
+      { "name": "source_trace_18", "length": 28.201747420528747 },
+      { "name": "source_trace_6", "length": 27.942277838481164 },
+      { "name": "source_trace_2", "length": 27.059435126006523 }
+    ]
+  },
+  "solved": true,
+  "error": null
+}
