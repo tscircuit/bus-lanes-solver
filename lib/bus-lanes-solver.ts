@@ -15,9 +15,11 @@ import {
   type Copper,
 } from "./vector-scene"
 import { VectorVisibilitySearch } from "./vector-visibility"
-import { length, distance, simplify } from "./geometry"
+import { length, distance } from "./geometry"
 import { windingOrders } from "./winding-orders"
 import { resolveBusWidth } from "./impedance"
+import { fixedRouteLength, busLengthReports } from "./route-lengths"
+import { tuneLengths } from "./length-tuning"
 import { layerColor } from "./layer-colors"
 /** Routes on an implicit clearance-offset visibility graph in board-world mm.
  * Every step expands a geometric vertex or commits a complete lane. */
@@ -106,6 +108,12 @@ export class BusLanesSolver extends BaseSolver {
         c.nominalTraceWidth ?? c.width ?? input.minTraceWidth,
       )
     }
+    for (const b of input.buses ?? [])
+      if (
+        b.maxLengthSkew !== undefined &&
+        (!Number.isFinite(b.maxLengthSkew) || b.maxLengthSkew < 0)
+      )
+        throw Error("Invalid maximum length skew")
     const claimed = new Set<string>()
     for (const b of input.buses ?? [])
       for (const name of b.connectionNames) {
@@ -206,76 +214,21 @@ export class BusLanesSolver extends BaseSolver {
       ...(this.input.differentialPairs ?? []).map((p) => p.connectionNames),
     )
     const targets = new Map(
-      this.traces.map((t) => [t.connection_name!, length(t.route)]),
+      this.traces.map((t) => [
+        t.connection_name!,
+        length(t.route) + fixedRouteLength(this.input, t.connection_name!),
+      ]),
     )
     for (let pass = 0; pass < groups.length; pass++)
       for (const names of groups) {
         const target = Math.max(...names.map((n) => targets.get(n)!))
         for (const n of names) targets.set(n, target)
       }
-    for (const t of this.traces) {
-      const delta = targets.get(t.connection_name!)! - length(t.route)
-      if (delta < 1e-8) continue
-      const connection = this.input.connections.find(
-          (c) => c.name === t.connection_name,
-        )!,
-        scene = this.scene(connection)
-      let tuned = false
-      for (let i = 0; i < t.route.length - 1 && !tuned; i++) {
-        const a = t.route[i],
-          b = t.route[i + 1],
-          span = distance(a, b)
-        if (span < 0.01) continue
-        const ux = (b.x - a.x) / span,
-          uy = (b.y - a.y) / span
-        // Axis-aligned host segments yield exact horizontal/vertical/45° chamfers.
-        if (Math.abs(ux) > 1e-9 && Math.abs(uy) > 1e-9) continue
-        const w = span * 0.8,
-          c = Math.min(delta / 4, w / 8),
-          h = delta / 2 + 2 * c * (2 - Math.SQRT2)
-        for (const side of [1, -1]) {
-          const offset = span * 0.1,
-            at = (x: number, y: number) => ({
-              x: a.x + ux * x - uy * y * side,
-              y: a.y + uy * x + ux * y * side,
-            })
-          const bump = [
-            [0, 0],
-            [offset, 0],
-            [offset + c, c],
-            [offset + c, h - c],
-            [offset + 2 * c, h],
-            [offset + w - 2 * c, h],
-            [offset + w - c, h - c],
-            [offset + w - c, c],
-            [offset + w, 0],
-            [span, 0],
-          ].map(([x, y]) => at(x, y))
-          if (!scene.pathVisible(bump)) continue
-          const next = simplify([
-            ...t.route.slice(0, i),
-            ...bump,
-            ...t.route.slice(i + 2),
-          ])
-          if (Math.abs(length(next) - targets.get(t.connection_name!)!) > 1e-6)
-            continue
-          t.route = next.map((p) => ({
-            ...p,
-            route_type: "wire",
-            width: this.widths.get(t.connection_name!)!,
-            layer: connection.pointsToConnect[0].layer,
-          }))
-          tuned = true
-          break
-        }
-      }
-      if (!tuned) {
-        this.fail(
-          "length_matching_failed",
-          `${t.connection_name}: insufficient clearance for length tuning`,
-        )
-        return
-      }
+    try {
+      this.traces = tuneLengths(this.input, this.traces, targets)
+    } catch (e) {
+      this.fail("length_matching_failed", String(e))
+      return
     }
     this.phase = "validate_output"
   }
@@ -306,6 +259,12 @@ export class BusLanesSolver extends BaseSolver {
           throw Error("Final copper clearance violation")
       }
     }
+    if (
+      busLengthReports(this.input, this.traces).some(
+        (b) => b.toleranceMm !== null && !b.matched,
+      )
+    )
+      throw Error("Final bus length skew violation")
     this.phase = "solved"
     this.solved = true
   }
@@ -320,6 +279,7 @@ export class BusLanesSolver extends BaseSolver {
     }
     this.progress = this.lane / Math.max(1, this.input.connections.length)
     this.stats = {
+      busLengths: busLengthReports(this.input, this.traces),
       phase: this.phase,
       algorithm: "octilinear_visibility",
       attempt: this.attempt,

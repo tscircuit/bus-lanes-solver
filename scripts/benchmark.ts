@@ -1,3 +1,4 @@
+import { busLengthReports } from "../lib/route-lengths"
 import { validateFanoutProvenance } from "./validate-fanout-provenance"
 import { validateTwoFanoutSample } from "./validate-two-fanout-sample"
 import { Glob } from "bun"
@@ -112,7 +113,13 @@ for (const file of files) {
   timedOut ||= solveMilliseconds > timeoutSeconds * 1000
   if (JSON.stringify(input) !== before) throw Error("Benchmark input mutated")
   const negative = file.endsWith("-raw.json")
+  const busLengths = busLengthReports(input, solver.traces)
+  const lengthMatchingValid =
+    !dataset ||
+    (busLengths.length === 3 &&
+      busLengths.every((b) => b.toleranceMm !== null && b.matched))
   const valid =
+    lengthMatchingValid &&
     !timedOut &&
     solver.solved &&
     solver.traces.length === input.connections.length &&
@@ -150,6 +157,8 @@ for (const file of files) {
     timeoutSeconds,
     dataset,
     provenance,
+    busLengths,
+    lengthMatchingValid,
     expectedRejection: negative,
     solved: valid,
     failureCode: solver.failureCode,

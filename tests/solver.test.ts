@@ -134,3 +134,77 @@ test("reserves unrouted terminals instead of letting an earlier lane occupy them
   }
   expect(JSON.stringify(j)).toBe(before)
 })
+
+test("matching includes both immutable fixed fanouts, not just the carrier", () => {
+  const j = input()
+  j.traces = [
+    {
+      name: "a",
+      points: [
+        [-1, 0],
+        [0, 0],
+      ],
+    },
+    {
+      name: "a",
+      points: [
+        [10, 0],
+        [11, 0],
+      ],
+    },
+    {
+      name: "b",
+      points: [
+        [-1, 2],
+        [0, 2],
+      ],
+    },
+    {
+      name: "b",
+      points: [
+        [8, 2],
+        [11, 2],
+      ],
+    },
+  ].map((t, i) => ({
+    type: "pcb_trace",
+    pcb_trace_id: `fixed_${i}`,
+    source_trace_id: t.name,
+    route: t.points.map(([x, y]) => ({
+      route_type: "wire",
+      x,
+      y,
+      layer: "top",
+      width: 0.1,
+    })),
+  }))
+  // Equal total length to begin with, despite different carrier lengths.
+  const before = JSON.stringify(j.traces)
+  const s = new BusLanesSolver(j)
+  s.solve()
+  expect(s.solved).toBe(true)
+  expect(s.stats.busLengths[0].skewMm).toBeLessThan(1e-7)
+  expect(
+    s.stats.busLengths[0].lengths.map((l: any) => l.totalLengthMm),
+  ).toEqual([12, 12])
+  expect(JSON.stringify(s.getOutput().traces.slice(0, 4))).toBe(before)
+  // Increase the fixed length on b; the carrier on a must grow to compensate.
+  j.traces[2].route[0].x = -2
+  const compensated = new BusLanesSolver(j)
+  compensated.solve()
+  expect(compensated.solved).toBe(true)
+  expect(compensated.stats.busLengths[0].skewMm).toBeLessThan(1e-7)
+  expect(
+    compensated.stats.busLengths[0].lengths[0].carrierLengthMm,
+  ).toBeCloseTo(11, 7)
+})
+
+test("invalid skew tolerances are rejected", () => {
+  for (const tolerance of [-1, NaN, Infinity]) {
+    const j = input()
+    j.buses![0].maxLengthSkew = tolerance
+    const s = new BusLanesSolver(j)
+    s.solve()
+    expect(s.failed).toBe(true)
+  }
+})

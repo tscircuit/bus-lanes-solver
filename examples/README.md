@@ -40,3 +40,5 @@ Capture-only intentionally stops at the autorouting event; its partial circuit
 is not a successful board build. The solver benchmark consumes the captured SRJ.
 Provenance checks compare every fixed path to its original output with floating-point
 coordinate tolerance, preserving widths, layer spans, and connectivity.
+
+Each logical DDR bus requests `maxLengthSkew={0.1}`. Matching includes the immutable fanout copper and new carriers; the benchmark checks all three groups in every orientation.

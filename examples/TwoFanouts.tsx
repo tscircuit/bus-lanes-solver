@@ -114,6 +114,7 @@ export function TwoFanouts({ input, metadata }: { input: any; metadata: any }) {
           connections={b.connectionNames}
           routingPhaseIndex={0}
           pcbAllowedLayers={b.allowedLayers}
+          maxLengthSkew={b.maxLengthSkew}
         />
       ))}
     </board>

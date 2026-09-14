@@ -16,13 +16,13 @@ Each connection must have exactly two terminals on the same fixed layer. The sol
 ## Constraints
 
 - `buses[].connectionNames`: connections belonging to the bus, in routing order.
-- `buses[].maxLengthSkew`: maximum difference in routed lengths, in millimeters. The solver adds clearance-checked tuning detours and verifies the final result.
+- `buses[].maxLengthSkew`: maximum difference in total planar copper lengths, in millimeters, including fixed traces associated by `source_trace_id` or `connection_name`. The solver adds clearance-checked tuning detours and verifies the final result.
 - `buses[].targetImpedance`: desired single-ended impedance in ohms.
 - `buses[].impedanceProfile`: `{ layer, points: [{ traceWidth, impedance }] }`, with widths in millimeters and impedances in ohms. Supply a table computed for your actual stackup by a field solver or fabricator. Widths must increase as impedance decreases. The solver interpolates within the table, never extrapolates or assumes a stackup. An explicit `traceWidth` must agree with the target.
 - `buses[].allowedLayers`: must contain the fixed terminal layer.
 - `differentialPairs[].lengthTolerance`: supported as a routed-length constraint. Coupled-pair `traceGap` and `maxUncoupledLength` constraints are explicitly rejected; this solver does not yet enforce coupled-pair geometry.
 
-Matching here applies to the routes produced by this phase. It does not include package delays or fixed fanout delays. A width table is a geometry model, not signal-integrity qualification. No undocumented impedance or delay defaults are supplied.
+Matching includes both fixed fanouts and the routes produced by this phase. It measures XY copper length; via depth, layer-dependent propagation velocity, and package delays are not inferred. A width table is a geometry model, not signal-integrity qualification. No undocumented impedance or delay defaults are supplied.
 
 ## tscircuit integration
 
@@ -87,8 +87,9 @@ as routing failures, not repaired or removed from the denominator. Complete
 interconnects must also pass independent combined-copper DRC.
 
 **Current result: 4/4 full interconnects (132/132 signals), with combined-copper
-DRC passing.** All four core circuit builds complete with zero circuit errors.
-The measured solves take 7–103 ms on the development machine; the benchmark
+DRC and length matching passing.** All four core circuit builds complete with zero circuit errors.
+All three logical DDR groups in every sample request a 0.1 mm maximum skew. The measured total copper skew is below 0.000001 mm in all 12 groups (numerical precision); the previous routing-only samples had up to 24.7 mm skew.
+The measured solves take 74–287 ms on the development machine; the benchmark
 records solve time and time including output DRC separately.
 
 FanoutSolver receives compatible handoff layers and winding guidance. The left
@@ -123,3 +124,5 @@ per lane (4,000 by default); `maxSearchIterations` bounds the whole solve
 See the [visual iteration audit](./docs/vector-routing.md) for inspected baseline
 and replacement snapshots. Cosmos includes a staggered obstacle channel in
 addition to all four real AM62L captures.
+
+Future changes must be submitted through pull requests with reviewed visual snapshots for all four DDR samples. See [AGENTS.md](./AGENTS.md).

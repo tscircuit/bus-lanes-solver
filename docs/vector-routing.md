@@ -22,3 +22,13 @@ The original fanout inputs explicitly enable `allowViaInPad`. That fabrication a
 ## Limits
 
 A visibility-graph search failure is not a proof of planar impossibility. The router has bounded winding retries. Length tuning uses collision-checked chamfered detours; impedance uses a caller-provided width/impedance calibration. Neither is an electromagnetic simulation or complete DDR timing closure. Coupled differential geometry is rejected rather than silently ignored.
+
+## Length-matched samples
+
+The routing-only baseline above did not request length matching. Including both fixed fanouts exposed up to 24.7 mm of skew. The current examples request 0.1 mm maximum skew for RAM_BYTE0, RAM_BYTE1 and RAM_CA. All 12 groups now measure less than 0.000001 mm total planar copper skew, while retaining the exact fixed fanouts. Package delay, via depth and layer-dependent propagation velocity are outside this geometric measurement.
+
+The tuner generates continuous chamfered accordion patterns on axial or diagonal carrier segments. It revisits a blocked lane after other lanes have moved, checks other-net and returning-arm clearance, and validates the final total lengths. Candidates are generated lazily; the full solves measured 74–287 ms, or 116–353 ms including independent output DRC. All four actual core builds finish without circuit errors.
+
+Current snapshots are in `iterations/length-matched`, with iteration-zero, intermediate and completed images for each sample. The per-bus lengths and skew are included in the snapshot JSON and debugger statistics.
+
+Visual review: iteration-zero and intermediate images retain the same separated, layer-colored fanouts. Completed left, top and right images add accordion sections and larger outer tuning loops where fixed fanout lengths differ most. Bottom places tuning along the diagonal channel. These loops are visible length compensation; the unchanged routing-only images remain available for comparison.

@@ -2,7 +2,7 @@ import { BusLanesSolver } from "../lib"
 import { channelInput } from "../examples/vector-channel"
 import { getPngFromLogString } from "graphics-debug"
 import { mkdir } from "node:fs/promises"
-const directory = "docs/iterations/fast-routing"
+const directory = process.argv[2] ?? "docs/iterations/length-matched"
 await mkdir(directory, { recursive: true })
 const cases: any[] = [["obstacle-channel", channelInput()]]
 for (const profile of [
