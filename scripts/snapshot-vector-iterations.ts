@@ -5,7 +5,7 @@ import {
   getPngBufferFromGraphicsObject,
 } from "graphics-debug"
 import { mkdir } from "node:fs/promises"
-const directory = process.argv[2] ?? "docs/iterations/smooth-meanders"
+const directory = process.argv[2] ?? "docs/iterations/skew-tolerances"
 await mkdir(directory, { recursive: true })
 const cases: any[] = [["obstacle-channel", channelInput()]]
 for (const profile of [

@@ -16,10 +16,6 @@ export interface Connection {
   nominalTraceWidth?: number
   width?: number
 }
-export interface ImpedanceProfile {
-  layer: string
-  points: Array<{ traceWidth: number; impedance: number }>
-}
 export interface Bus {
   busId: string
   name?: string
@@ -27,8 +23,6 @@ export interface Bus {
   maxLengthSkew?: number
   traceWidth?: number
   allowedLayers?: string[]
-  targetImpedance?: number
-  impedanceProfile?: ImpedanceProfile
 }
 export interface Wire extends Point {
   route_type: "wire"

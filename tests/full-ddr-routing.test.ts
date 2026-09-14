@@ -27,7 +27,7 @@ test("all complete DDR phases route without transitions and pass combined copper
     for (const report of reports) {
       expect(report.toleranceMm).toBe(0.1)
       expect(report.matched).toBe(true)
-      expect(report.skewMm!).toBeLessThan(0.000001)
+      expect(report.skewMm!).toBeLessThanOrEqual(report.toleranceMm! + 1e-7)
       const totals = report.lengths.map(({ name }) => {
         const copper = [
           ...meta.fixedFanoutTraces.filter(
@@ -49,7 +49,9 @@ test("all complete DDR phases route without transitions and pass combined copper
           0,
         )
       })
-      expect(Math.max(...totals) - Math.min(...totals)).toBeLessThan(0.000001)
+      expect(Math.max(...totals) - Math.min(...totals)).toBeLessThanOrEqual(
+        report.toleranceMm! + 1e-7,
+      )
     }
     for (const trace of solver.traces)
       expect(tuningPathIsSelfClear(trace.route, 0.225)).toBe(true)

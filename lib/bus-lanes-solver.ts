@@ -17,8 +17,12 @@ import {
 import { VectorVisibilitySearch } from "./vector-visibility"
 import { length, distance } from "./geometry"
 import { windingOrders } from "./winding-orders"
-import { resolveBusWidth } from "./impedance"
-import { fixedRouteLength, busLengthReports } from "./route-lengths"
+import {
+  lengthConstraints,
+  minimumLengthTargets,
+  pairLengthReports,
+} from "./route-lengths"
+import { busLengthReports } from "./route-lengths"
 import { spreadTuningLanes } from "./spread-tuning-lanes"
 import { tuneLengths } from "./length-tuning"
 import { layerColor } from "./layer-colors"
@@ -115,6 +119,16 @@ export class BusLanesSolver extends BaseSolver {
         (!Number.isFinite(b.maxLengthSkew) || b.maxLengthSkew < 0)
       )
         throw Error("Invalid maximum length skew")
+    for (const { names: members, tolerance } of lengthConstraints(input)) {
+      if (!Number.isFinite(tolerance) || tolerance < 0)
+        throw Error("Invalid maximum length skew")
+      if (
+        members.length < 1 ||
+        new Set(members).size !== members.length ||
+        members.some((n) => !names.has(n))
+      )
+        throw Error("Invalid length matching members")
+    }
     const claimed = new Set<string>()
     for (const b of input.buses ?? [])
       for (const name of b.connectionNames) {
@@ -125,7 +139,7 @@ export class BusLanesSolver extends BaseSolver {
         const layer = c.pointsToConnect[0].layer
         if (b.allowedLayers && !b.allowedLayers.includes(layer))
           throw Error(`${b.busId}: forbidden layer ${layer}`)
-        const width = resolveBusWidth(b, layer)
+        const width = b.traceWidth
         if (width !== undefined) this.widths.set(name, width)
       }
     for (const width of this.widths.values())
@@ -208,12 +222,6 @@ export class BusLanesSolver extends BaseSolver {
       this.retry()
   }
   private match() {
-    const groups = (this.input.buses ?? [])
-      .filter((b) => b.maxLengthSkew !== undefined)
-      .map((b) => b.connectionNames)
-    groups.push(
-      ...(this.input.differentialPairs ?? []).map((p) => p.connectionNames),
-    )
     const original = this.traces
     const input = this.input
     function* candidates() {
@@ -226,17 +234,7 @@ export class BusLanesSolver extends BaseSolver {
     }
     let error: unknown
     for (const candidate of candidates()) {
-      const targets = new Map(
-        candidate.map((t) => [
-          t.connection_name!,
-          length(t.route) + fixedRouteLength(input, t.connection_name!),
-        ]),
-      )
-      for (let pass = 0; pass < groups.length; pass++)
-        for (const names of groups) {
-          const target = Math.max(...names.map((n) => targets.get(n)!))
-          for (const n of names) targets.set(n, target)
-        }
+      const targets = minimumLengthTargets(input, candidate)
       try {
         this.traces = tuneLengths(input, candidate, targets)
         this.phase = "validate_output"
@@ -276,9 +274,10 @@ export class BusLanesSolver extends BaseSolver {
       }
     }
     if (
-      busLengthReports(this.input, this.traces).some(
-        (b) => b.toleranceMm !== null && !b.matched,
-      )
+      [
+        ...busLengthReports(this.input, this.traces),
+        ...pairLengthReports(this.input, this.traces),
+      ].some((b) => b.toleranceMm !== null && !b.matched)
     )
       throw Error("Final bus length skew violation")
     this.phase = "solved"
@@ -296,6 +295,7 @@ export class BusLanesSolver extends BaseSolver {
     this.progress = this.lane / Math.max(1, this.input.connections.length)
     this.stats = {
       busLengths: busLengthReports(this.input, this.traces),
+      pairLengths: pairLengthReports(this.input, this.traces),
       phase: this.phase,
       algorithm: "octilinear_visibility",
       attempt: this.attempt,
