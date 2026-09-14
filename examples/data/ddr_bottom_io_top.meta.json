@@ -1,15 +1,15 @@
 {
   "profile": "ddr_bottom_io_top",
-  "kind": "independent-fanouts",
+  "kind": "coordinated-fanouts",
   "marginMm": 6,
   "fanoutGenerator": "@tscircuit/fanout-solver@0.0.78",
   "provenance": {
     "soc": {
       "file": "examples/fanout-solver-outputs/ddr_bottom_io_top-soc.json",
-      "sha256": "12f8ea131f501ec8a5e1e3ad590191dbf32ce6dbd0ddf981a38e7cd888f3d03e",
-      "inputSha256": "03c28a70d52895a1537ae1c44977ed486188c4e2b17419f89cebde692a182510",
-      "optionsSha256": "1265963d41d42090471947d847cf9a7f9ef6b50bbfc6c6fae1468c3a9821bdc6",
-      "tracesSha256": "7fe1758ee3438a1e5464088a1c2fbdd40ea4ec83408d79febb1ac8b230ae3e0d",
+      "sha256": "9833d900fd8c5e391d3f0096d32fb9d84c4a9cce19dac36d69e5f7d579cf1979",
+      "inputSha256": "d8aa797546cbf9b87cec5dd4de169b47dc8a5055ae3fe42bfae0feff0c6c5877",
+      "optionsSha256": "67c0106cbe0a8bdb8d7f70b714066127ea157512ea300c72c3ad02f4813de193",
+      "tracesSha256": "8909698ed1509eba4022174690b7fb3dfde239b514f0bdf3a7c9d542c3497e8d",
       "validation": {
         "valid": true,
         "checkedConnectionCount": 33,
@@ -31,6 +31,7 @@
       }
     }
   },
+  "allowViaInPad": true,
   "socRegion": {
     "minX": -20.12,
     "maxX": 20.12,

@@ -1,15 +1,15 @@
 {
   "profile": "ddr_left_io_right",
-  "kind": "independent-fanouts",
+  "kind": "coordinated-fanouts",
   "marginMm": 6,
   "fanoutGenerator": "@tscircuit/fanout-solver@0.0.78",
   "provenance": {
     "soc": {
       "file": "examples/fanout-solver-outputs/ddr_left_io_right-soc.json",
-      "sha256": "08e2973e1ac5aa631bcae9a2b2da2137d0c651b4f345d76e74f6dffc9b73c462",
+      "sha256": "2fe2ce0db46063546a80bcdfd827dbfcc12d012d1d21c1e48fa4556fb8397ddd",
       "inputSha256": "8c460c796a6b90128bece887b474055ca091e527617da97e7a1268ebdc061c82",
-      "optionsSha256": "e05d8b695f3d3f596f0f91394a2ac518568739bcb1cd35ff71f293e3b8e501fc",
-      "tracesSha256": "433c227c632862e337e3d4c1420ee706b2b2d9d9076237b39a97fad81b2f6016",
+      "optionsSha256": "5f90da8de77d407ab371c2d2467043a8b49f335181870626d6009206010bd64a",
+      "tracesSha256": "4f970d2097e8b23d2e957a86d7d805f2f41f5fb2fed385211976499bfc5c55c5",
       "validation": {
         "valid": true,
         "checkedConnectionCount": 33,
@@ -19,10 +19,10 @@
     },
     "ram": {
       "file": "examples/fanout-solver-outputs/ddr_left_io_right-ram.json",
-      "sha256": "fa7938d406f3c43638d7b3d888eec99e53f732663c5dc0a8be66954d7348f7a1",
-      "inputSha256": "ed6ac354e6c11a9b4116db8a16f7fa81297d32d87d4252c05fce9e2f033849db",
-      "optionsSha256": "25bd105d50f630e89a31458f833d8752fec6365e1ae4468ddaa85ed689328542",
-      "tracesSha256": "beae61eb1f501ab293a147c1d2398d5b3917d7bc018d0fdc2ed12ff63a9e7748",
+      "sha256": "2b9af5f704f713fe47fc35d6fe720f4830ba988e2f6d206ae271b3928f2bad03",
+      "inputSha256": "f0d3ffe4c8673218a267c29e72709c6d35d6442f538c6f3a861c568e11af4de4",
+      "optionsSha256": "720fa2665f2b4e95e2687644e8c2c7514b0c7c27b45c958b86ab7cd9516ef135",
+      "tracesSha256": "3a01ee33a049f42b51b6073a44c73cded11c44169a5be58dd23a95f82167b628",
       "validation": {
         "valid": true,
         "checkedConnectionCount": 33,
@@ -31,6 +31,7 @@
       }
     }
   },
+  "allowViaInPad": true,
   "socRegion": {
     "minX": -20.12,
     "maxX": 20.12,

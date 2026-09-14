@@ -67,3 +67,19 @@ test("finds an off-lattice narrow opening using obstacle vertices", () => {
     0.04,
   )
 })
+
+test("clear channels avoid constructing an obstacle visibility graph", () => {
+  const input = channelInput()
+  input.obstacles = Array.from({ length: 1000 }, (_, i) => ({
+    center: { x: 100 + i, y: 100 },
+    width: 0.2,
+    height: 0.2,
+    layers: ["top"],
+    connectedTo: [],
+  }))
+  const solver = new BusLanesSolver(input)
+  solver.solve()
+  expect(solver.solved).toBe(true)
+  expect(solver.stats.vertices).toBe(2)
+  expect(solver.stats.attempt).toBe(0)
+})

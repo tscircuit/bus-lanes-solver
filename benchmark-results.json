@@ -2,107 +2,63 @@
   {
     "file": "tests/fixtures/ddr_bottom_io_top-raw.json",
     "timedOut": false,
-    "timeoutSeconds": 60,
+    "timeoutSeconds": 1,
     "expectedRejection": true,
     "solved": false,
     "failureCode": "layer_change_required",
-    "error": "source_trace_80: inner2 → top; fanout handoff layers must agree",
+    "error": "source_trace_80: inner2 → top; a common fixed layer is required; fanout handoff layers must agree",
     "iterations": 1,
     "attempts": 1,
     "routedLanes": 0,
-    "milliseconds": 4
+    "solveMilliseconds": 1,
+    "milliseconds": 5
   },
   {
     "file": "tests/fixtures/ddr_left_io_right-raw.json",
     "timedOut": false,
-    "timeoutSeconds": 60,
+    "timeoutSeconds": 1,
     "expectedRejection": true,
     "solved": false,
     "failureCode": "layer_change_required",
-    "error": "source_trace_80: inner2 → top; fanout handoff layers must agree",
+    "error": "source_trace_80: inner2 → top; a common fixed layer is required; fanout handoff layers must agree",
     "iterations": 1,
     "attempts": 1,
     "routedLanes": 0,
-    "milliseconds": 4
+    "solveMilliseconds": 0,
+    "milliseconds": 6
   },
   {
     "file": "tests/fixtures/ddr_right_io_left-raw.json",
     "timedOut": false,
-    "timeoutSeconds": 60,
+    "timeoutSeconds": 1,
     "expectedRejection": true,
     "solved": false,
     "failureCode": "layer_change_required",
-    "error": "source_trace_80: inner2 → top; fanout handoff layers must agree",
+    "error": "source_trace_80: inner2 → top; a common fixed layer is required; fanout handoff layers must agree",
     "iterations": 1,
     "attempts": 1,
     "routedLanes": 0,
-    "milliseconds": 5
+    "solveMilliseconds": 1,
+    "milliseconds": 6
   },
   {
     "file": "tests/fixtures/ddr_top_io_bottom-raw.json",
     "timedOut": false,
-    "timeoutSeconds": 60,
+    "timeoutSeconds": 1,
     "expectedRejection": true,
     "solved": false,
     "failureCode": "layer_change_required",
-    "error": "source_trace_80: inner2 → top; fanout handoff layers must agree",
+    "error": "source_trace_80: inner2 → top; a common fixed layer is required; fanout handoff layers must agree",
     "iterations": 1,
     "attempts": 1,
     "routedLanes": 0,
-    "milliseconds": 7
+    "solveMilliseconds": 0,
+    "milliseconds": 4
   },
   {
     "file": "tests/fixtures/two-fanouts/ddr_bottom_io_top.json",
-    "timedOut": true,
-    "timeoutSeconds": 60,
-    "dataset": {
-      "marginMm": 17.76,
-      "fanoutTraces": 66,
-      "signals": 33,
-      "mismatchedExitLayers": 0,
-      "fixedCopperDrcErrors": 0
-    },
-    "provenance": {
-      "generator": "@tscircuit/fanout-solver@0.0.78",
-      "verifiedPaths": 66
-    },
-    "expectedRejection": false,
-    "solved": false,
-    "failureCode": null,
-    "error": null,
-    "iterations": 64902,
-    "attempts": 36,
-    "routedLanes": 13,
-    "milliseconds": 60001
-  },
-  {
-    "file": "tests/fixtures/two-fanouts/ddr_left_io_right.json",
     "timedOut": false,
-    "timeoutSeconds": 60,
-    "dataset": {
-      "marginMm": 17.76,
-      "fanoutTraces": 66,
-      "signals": 33,
-      "mismatchedExitLayers": 28,
-      "fixedCopperDrcErrors": 0
-    },
-    "provenance": {
-      "generator": "@tscircuit/fanout-solver@0.0.78",
-      "verifiedPaths": 66
-    },
-    "expectedRejection": false,
-    "solved": false,
-    "failureCode": "layer_change_required",
-    "error": "source_trace_2: top → inner6; fanout handoff layers must agree",
-    "iterations": 1,
-    "attempts": 1,
-    "routedLanes": 0,
-    "milliseconds": 1
-  },
-  {
-    "file": "tests/fixtures/two-fanouts/ddr_right_io_left.json",
-    "timedOut": false,
-    "timeoutSeconds": 60,
+    "timeoutSeconds": 1,
     "dataset": {
       "marginMm": 17.76,
       "fanoutTraces": 66,
@@ -118,15 +74,16 @@
     "solved": true,
     "failureCode": null,
     "error": null,
-    "iterations": 69,
+    "iterations": 111,
     "attempts": 1,
     "routedLanes": 33,
-    "milliseconds": 182
+    "solveMilliseconds": 103,
+    "milliseconds": 127
   },
   {
-    "file": "tests/fixtures/two-fanouts/ddr_top_io_bottom.json",
-    "timedOut": true,
-    "timeoutSeconds": 60,
+    "file": "tests/fixtures/two-fanouts/ddr_left_io_right.json",
+    "timedOut": false,
+    "timeoutSeconds": 1,
     "dataset": {
       "marginMm": 17.76,
       "fanoutTraces": 66,
@@ -139,12 +96,63 @@
       "verifiedPaths": 66
     },
     "expectedRejection": false,
-    "solved": false,
+    "solved": true,
     "failureCode": null,
     "error": null,
-    "iterations": 93137,
-    "attempts": 39,
-    "routedLanes": 9,
-    "milliseconds": 60001
+    "iterations": 36,
+    "attempts": 1,
+    "routedLanes": 33,
+    "solveMilliseconds": 10,
+    "milliseconds": 34
+  },
+  {
+    "file": "tests/fixtures/two-fanouts/ddr_right_io_left.json",
+    "timedOut": false,
+    "timeoutSeconds": 1,
+    "dataset": {
+      "marginMm": 17.76,
+      "fanoutTraces": 66,
+      "signals": 33,
+      "mismatchedExitLayers": 0,
+      "fixedCopperDrcErrors": 0
+    },
+    "provenance": {
+      "generator": "@tscircuit/fanout-solver@0.0.78",
+      "verifiedPaths": 66
+    },
+    "expectedRejection": false,
+    "solved": true,
+    "failureCode": null,
+    "error": null,
+    "iterations": 36,
+    "attempts": 1,
+    "routedLanes": 33,
+    "solveMilliseconds": 7,
+    "milliseconds": 40
+  },
+  {
+    "file": "tests/fixtures/two-fanouts/ddr_top_io_bottom.json",
+    "timedOut": false,
+    "timeoutSeconds": 1,
+    "dataset": {
+      "marginMm": 17.76,
+      "fanoutTraces": 66,
+      "signals": 33,
+      "mismatchedExitLayers": 0,
+      "fixedCopperDrcErrors": 0
+    },
+    "provenance": {
+      "generator": "@tscircuit/fanout-solver@0.0.78",
+      "verifiedPaths": 66
+    },
+    "expectedRejection": false,
+    "solved": true,
+    "failureCode": null,
+    "error": null,
+    "iterations": 36,
+    "attempts": 1,
+    "routedLanes": 33,
+    "solveMilliseconds": 8,
+    "milliseconds": 42
   }
 ]

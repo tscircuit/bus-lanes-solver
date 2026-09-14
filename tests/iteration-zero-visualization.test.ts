@@ -3,7 +3,7 @@ import { BusLanesSolver } from "../lib"
 
 test("AM62L fixed copper is visible at iteration zero and unchanged after a routing attempt", async () => {
   const input = await Bun.file(
-    new URL("./fixtures/two-fanouts/ddr_left_io_right.json", import.meta.url),
+    new URL("./fixtures/two-fanouts/ddr_right_io_left.json", import.meta.url),
   ).json()
   const solver = new BusLanesSolver(input)
   const initial = solver.visualize()
@@ -22,7 +22,7 @@ test("AM62L fixed copper is visible at iteration zero and unchanged after a rout
   expect(solver.traces).toEqual([])
   expect(solver.visualize()).toEqual(initial)
   solver.solve()
-  expect(solver.failed).toBe(true)
+  expect(solver.solved).toBe(true)
   expect(fixedLines(solver.visualize())).toEqual(fixedLines(initial))
   expect(solver.visualize().rects).toEqual(initial.rects)
 })

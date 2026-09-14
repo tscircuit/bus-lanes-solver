@@ -86,18 +86,22 @@ exact exits, and independent fixed-copper DRC. Exit-layer mismatches are reporte
 as routing failures, not repaired or removed from the denominator. Complete
 interconnects must also pass independent combined-copper DRC.
 
-**Current verified result: 1/4 full interconnects.** Right routes all 33 lanes in
-69 vector iterations and passes independent combined-copper DRC. Its RAM
-fanout was regenerated through FanoutSolver's `connectionExitTargets` API using
-the actual SoC exits and layers. No generated route coordinates were edited.
-The remaining original samples are retained as failures: left has incompatible
-handoff layers, and top/bottom have unresolved fanout winding/congestion.
-This is not complete DDR timing closure or equal transition counts across the
-fixed fanouts.
+**Current result: 4/4 full interconnects (132/132 signals), with combined-copper
+DRC passing.** All four core circuit builds complete with zero circuit errors.
+The measured solves take 7–103 ms on the development machine; the benchmark
+records solve time and time including output DRC separately.
+
+FanoutSolver receives compatible handoff layers and winding guidance. The left
+case locks successful SoC layer assignments, guides the strobe-pair order, and
+uses a RAM corner bank for the remaining data group. Bottom escapes the SoC's
+left-side ball field before turning toward its bottom boundary. Neither changes
+the SoC ball positions or rotation. Every fixed path is a real saved solver
+output; generated coordinates are never edited. These are routing checks, not
+complete DDR timing closure or equal-transition-count claims for fixed fanouts.
 
 Each sample runs in a separate process, with the solver's ordinary 200,000
-iteration budget and a 60-second benchmark deadline. Override the deadline with
-`./benchmark.sh --timeout-seconds 120`. Timeouts and partial paths are failures.
+iteration budget and a one-second benchmark deadline. Override the deadline with
+`./benchmark.sh --timeout-seconds 2`. Timeouts and partial paths are failures.
 Results are written to `benchmark-results.json`; a failed positive sample makes
 the command exit nonzero. Four original mixed-layer negatives are counted separately.
 
@@ -111,7 +115,8 @@ aligned two-fanout data is superseded as well.
 
 The router uses a continuous octilinear visibility graph built from offset
 copper geometry. Lane ordering starts with layer-separated transverse winding
-sweeps and retains alternate seams. `maxLaneIterations` bounds vertex expansions
+sweeps, routes the outside of a bend first, and retains alternate seams. Clear
+analytic paths skip visibility-graph construction entirely. `maxLaneIterations` bounds vertex expansions
 per lane (4,000 by default); `maxSearchIterations` bounds the whole solve
 (200,000). There is no grid resolution option.
 

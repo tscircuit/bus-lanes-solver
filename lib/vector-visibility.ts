@@ -15,7 +15,13 @@ export function connectors(a: Point, b: Point): Point[][] {
     Math.abs(Math.abs(dx) - Math.abs(dy)) < 1e-10
   )
     return [[a, b]]
+  const lead = (Math.max(Math.abs(dx), Math.abs(dy)) - d) / 2
+  const centered =
+    Math.abs(dx) > Math.abs(dy)
+      ? [a, { x: a.x + sx * lead, y: a.y }, { x: b.x - sx * lead, y: b.y }, b]
+      : [a, { x: a.x, y: a.y + sy * lead }, { x: b.x, y: b.y - sy * lead }, b]
   return [
+    centered,
     [a, { x: a.x + sx * d, y: a.y + sy * d }, b],
     [a, { x: b.x - sx * d, y: b.y - sy * d }, b],
     [a, { x: a.x, y: b.y }, b],
@@ -37,6 +43,7 @@ export class VectorVisibilitySearch {
   failed = false
   solved = false
   result: Point[] = []
+  private geometryLoaded = false
   current?: Label
   visibleEdges: Point[][] = []
   constructor(
@@ -44,11 +51,36 @@ export class VectorVisibilitySearch {
     readonly start: Point,
     readonly end: Point,
   ) {
-    this.vertices = [start, end, ...scene.vertices()]
+    this.vertices = [start, end]
     this.open.push({ id: 0, g: 0, f: distance(start, end) })
     this.best.set(0, 0)
   }
   step() {
+    if (!this.geometryLoaded) {
+      this.geometryLoaded = true
+      // A clear analytic octilinear shortest path cannot be improved by a
+      // visibility search. Avoid constructing unrelated package geometry.
+      const lowerBound =
+        Math.max(
+          Math.abs(this.end.x - this.start.x),
+          Math.abs(this.end.y - this.start.y),
+        ) +
+        (Math.SQRT2 - 1) *
+          Math.min(
+            Math.abs(this.end.x - this.start.x),
+            Math.abs(this.end.y - this.start.y),
+          )
+      for (const path of connectors(this.start, this.end)) {
+        if (length(path) > lowerBound + 1e-9 || !this.scene.pathVisible(path))
+          continue
+        this.visibleEdges = [path]
+        this.result = simplify(path)
+        this.solved = true
+        this.expanded = 1
+        return
+      }
+      this.vertices.push(...this.scene.vertices())
+    }
     if (!this.open.length) {
       this.failed = true
       return

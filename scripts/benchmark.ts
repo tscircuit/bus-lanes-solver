@@ -8,7 +8,7 @@ const workerFile = process.argv.includes("--worker")
 const timeoutSeconds = Number(
   process.argv.includes("--timeout-seconds")
     ? process.argv[process.argv.indexOf("--timeout-seconds") + 1]
-    : 60,
+    : 1,
 )
 if (!Number.isFinite(timeoutSeconds) || timeoutSeconds <= 0)
   throw Error("Invalid timeout")
@@ -108,9 +108,12 @@ for (const file of files) {
     }
     solver.step()
   }
+  const solveMilliseconds = performance.now() - start
+  timedOut ||= solveMilliseconds > timeoutSeconds * 1000
   if (JSON.stringify(input) !== before) throw Error("Benchmark input mutated")
   const negative = file.endsWith("-raw.json")
   const valid =
+    !timedOut &&
     solver.solved &&
     solver.traces.length === input.connections.length &&
     input.connections.every((c) => {
@@ -154,6 +157,7 @@ for (const file of files) {
     iterations: solver.iterations,
     attempts: Number(solver.stats.attempt ?? 0) + 1,
     routedLanes: solver.traces.length,
+    solveMilliseconds: Math.round(solveMilliseconds),
     milliseconds: Math.round(performance.now() - start),
   }
   reports.push(report)

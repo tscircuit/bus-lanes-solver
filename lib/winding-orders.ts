@@ -31,6 +31,39 @@ export function windingOrders(connections: Connection[]): Connection[][] {
       transverse(a) - transverse(b) ||
       a.name.localeCompare(b.name),
   )
+  // On facing parallel boundaries, route the outside of the bend first.
+  // Otherwise an inside lane's diagonal can consume its neighbor's approach.
+  const span = (endpoint: number, axis: "x" | "y") =>
+    Math.max(...connections.map((c) => c.pointsToConnect[endpoint][axis])) -
+    Math.min(...connections.map((c) => c.pointsToConnect[endpoint][axis]))
+  const transverseAxis =
+    span(0, "x") < 1e-7 && span(1, "x") < 1e-7
+      ? "y"
+      : span(0, "y") < 1e-7 && span(1, "y") < 1e-7
+        ? "x"
+        : undefined
+  if (transverseAxis) {
+    const drift = connections.reduce(
+      (s, c) =>
+        s +
+        c.pointsToConnect[1][transverseAxis] -
+        c.pointsToConnect[0][transverseAxis],
+      0,
+    )
+    if (Math.abs(drift) > 1e-7)
+      add(
+        [...connections].sort(
+          (a, b) =>
+            a.pointsToConnect[0].layer.localeCompare(
+              b.pointsToConnect[0].layer,
+            ) ||
+            -Math.sign(drift) *
+              (a.pointsToConnect[0][transverseAxis] -
+                b.pointsToConnect[0][transverseAxis]) ||
+            a.name.localeCompare(b.name),
+        ),
+      )
+  }
   add(sweep)
   add([...sweep].reverse())
   add(connections)

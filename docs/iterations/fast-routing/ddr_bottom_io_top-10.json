@@ -1,0 +1,19 @@
+{
+  "iteration": 10,
+  "stats": {
+    "phase": "route",
+    "algorithm": "octilinear_visibility",
+    "attempt": 0,
+    "lane": 1,
+    "totalLanes": 33,
+    "vertices": 305,
+    "expandedVertices": 8,
+    "frontier": 130,
+    "failureCode": null,
+    "traceLengthsMm": [
+      { "name": "source_trace_9", "length": 27.71084412271571 }
+    ]
+  },
+  "solved": false,
+  "error": null
+}

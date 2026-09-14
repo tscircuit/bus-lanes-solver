@@ -13,7 +13,7 @@ for (const profile of process.argv.slice(2)) {
   input.traces = []
   const meta: any = {
     profile,
-    kind: "independent-fanouts",
+    kind: "coordinated-fanouts",
     marginMm: 6,
     fanoutGenerator: "@tscircuit/fanout-solver@0.0.78",
     provenance: {},

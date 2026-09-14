@@ -12,17 +12,16 @@ boundary; copper-containing regions have 17.76 mm between them. The chip is not
 rotated to change the DDR orientation.
 
 Every record in `fanout-solver-outputs` contains the real package solver's input,
-options, and output. Each package is solved independently. Physical escape groups
-contain individual signals or complete differential pairs; the downstream phase
-restores the two byte groups and command/address group and routes all 33 signals
-together. Escape guidance uses each package's own pad tracks, not the opposite
-fanout's exits. No route vertices or terminal coordinates are edited afterward.
+options, and output. Each package is solved separately, with compatible handoff
+layers and winding order established through `connectionExitTargets`. Escape
+bands and local directions provide room for the required ordering inside each
+fanout. The downstream phase restores the two byte groups and command/address
+group and routes all 33 signals together. No generated route vertices are edited.
 
-The saved recipes use fanout-solver 0.0.78. All eight fanouts are complete and
-pass independent copper DRC. They are diagnostic routing fixtures: the left
-case's independently selected layers disagree on 28 handoffs, and the other
-three interconnects currently exhaust the bus solver's search budget. Full DDR
-timing closure and equal transition counts are not established.
+The saved recipes use fanout-solver 0.0.78. All eight fanouts reproduce exactly;
+all four complete interconnects pass combined-copper DRC and complete core builds
+with zero circuit errors. The interconnect solver adds no vias. Timing closure
+and transition counts inside the fixed package fanouts are separate concerns.
 
 These circuits require [core PR #3939](https://github.com/tscircuit/core/pull/3939)
 and [props PR #851](https://github.com/tscircuit/props/pull/851).
@@ -30,13 +29,13 @@ and [props PR #851](https://github.com/tscircuit/props/pull/851).
 ```sh
 # Re-run the real package solver with the recorded inputs and options.
 bun scripts/generate-two-fanouts.ts
-# Capture the actual phase SRJ before attempting its interconnect routing.
-bun scripts/capture-two-fanout-phases.tsx ../../work/bus-lanes-core --capture-only
-# Count complete interconnect solves; currently exits nonzero (1/4 verified).
+# Build the full circuits and capture their actual bus_lanes phase inputs.
+bun scripts/capture-two-fanout-phases.tsx ../../work/bus-lanes-core
+# Require all four full interconnects to solve within one second each.
 ./benchmark.sh
 ```
 
-Omit `--capture-only` to let the full circuit routing finish and record its errors.
+Use `--capture-only` only when collecting a failing input without completing its build.
 Capture-only intentionally stops at the autorouting event; its partial circuit
 is not a successful board build. The solver benchmark consumes the captured SRJ.
 Provenance checks compare every fixed path to its original output with floating-point
