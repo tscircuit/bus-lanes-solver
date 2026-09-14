@@ -208,3 +208,18 @@ test("invalid skew tolerances are rejected", () => {
     expect(s.failed).toBe(true)
   }
 })
+
+test("meander chamfers scale with the lobe instead of using tiny corner cuts", () => {
+  const s = new BusLanesSolver(input())
+  s.solve()
+  expect(s.solved).toBe(true)
+  const tuned = s.traces.find((t) => t.connection_name === "b")!
+  const diagonals = tuned.route.slice(1).flatMap((p, i) => {
+    const q = tuned.route[i],
+      dx = Math.abs(p.x - q.x),
+      dy = Math.abs(p.y - q.y)
+    return dx > 1e-7 && dy > 1e-7 ? [Math.hypot(dx, dy)] : []
+  })
+  expect(diagonals.length).toBeGreaterThanOrEqual(4)
+  expect(Math.min(...diagonals)).toBeGreaterThan(0.4)
+})

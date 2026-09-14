@@ -32,3 +32,13 @@ The tuner generates continuous chamfered accordion patterns on axial or diagonal
 Current snapshots are in `iterations/length-matched`, with iteration-zero, intermediate and completed images for each sample. The per-bus lengths and skew are included in the snapshot JSON and debugger statistics.
 
 Visual review: iteration-zero and intermediate images retain the same separated, layer-colored fanouts. Completed left, top and right images add accordion sections and larger outer tuning loops where fixed fanout lengths differ most. Bottom places tuning along the diagonal channel. These loops are visible length compensation; the unchanged routing-only images remain available for comparison.
+
+## Smooth serpentine geometry
+
+The initial length tuner used 0.01 mm corner cuts. That made the meanders look square and forced dense teeth between nearly adjacent carrier lanes. The replacement uses lobe-proportional chamfers, a nonzero crown between the two upper chamfers, constant pitch within each tuning section, and at least 3W center-to-center separation between returning arms. There is no fallback to microscopic corner cuts.
+
+If tuning cannot fit between shortest paths, the router spreads the carrier lanes in a central corridor while preserving winding and every fixed handoff point. New transitions remain horizontal, vertical or 45 degrees. It recomputes bus targets after spreading, so added corridor length cannot invalidate matching. This changes only interconnect routes, not the saved fanouts or chip placement.
+
+The geometry follows conventional chamfered serpentine construction; the [TI high-speed interface layout guide](https://www.ti.com/lit/an/spraar7j/spraar7j.pdf) provides background on high-speed length matching and routing. The 3W returning-arm floor is this solver's geometric policy, not a substitute for stackup-specific delay or coupling analysis.
+
+Reviewed initial, intermediate, completed and individual-layer snapshots are in `iterations/smooth-meanders`. The purple inner4 bottom-facing image specifically shows the replacement for the jagged diagonal teeth. Regression checks cover proportional chamfers, returning-arm separation, a maximum 45-degree carrier turn, exact endpoint continuity, total copper skew and independent DRC.

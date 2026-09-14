@@ -19,6 +19,7 @@ import { length, distance } from "./geometry"
 import { windingOrders } from "./winding-orders"
 import { resolveBusWidth } from "./impedance"
 import { fixedRouteLength, busLengthReports } from "./route-lengths"
+import { spreadTuningLanes } from "./spread-tuning-lanes"
 import { tuneLengths } from "./length-tuning"
 import { layerColor } from "./layer-colors"
 /** Routes on an implicit clearance-offset visibility graph in board-world mm.
@@ -213,24 +214,39 @@ export class BusLanesSolver extends BaseSolver {
     groups.push(
       ...(this.input.differentialPairs ?? []).map((p) => p.connectionNames),
     )
-    const targets = new Map(
-      this.traces.map((t) => [
-        t.connection_name!,
-        length(t.route) + fixedRouteLength(this.input, t.connection_name!),
-      ]),
-    )
-    for (let pass = 0; pass < groups.length; pass++)
-      for (const names of groups) {
-        const target = Math.max(...names.map((n) => targets.get(n)!))
-        for (const n of names) targets.set(n, target)
+    const original = this.traces
+    const input = this.input
+    function* candidates() {
+      yield original
+      const width = Math.max(...original.map((t) => (t.route[0] as Wire).width))
+      for (const multiplier of [16, 24, 28, 32]) {
+        const spread = spreadTuningLanes(input, original, width * multiplier)
+        if (spread) yield spread
       }
-    try {
-      this.traces = tuneLengths(this.input, this.traces, targets)
-    } catch (e) {
-      this.fail("length_matching_failed", String(e))
-      return
     }
-    this.phase = "validate_output"
+    let error: unknown
+    for (const candidate of candidates()) {
+      const targets = new Map(
+        candidate.map((t) => [
+          t.connection_name!,
+          length(t.route) + fixedRouteLength(input, t.connection_name!),
+        ]),
+      )
+      for (let pass = 0; pass < groups.length; pass++)
+        for (const names of groups) {
+          const target = Math.max(...names.map((n) => targets.get(n)!))
+          for (const n of names) targets.set(n, target)
+        }
+      try {
+        this.traces = tuneLengths(input, candidate, targets)
+        this.phase = "validate_output"
+        return
+      } catch (e) {
+        error = e
+      }
+    }
+    this.fail("length_matching_failed", String(error))
+    return
   }
   private validateOutput() {
     for (const c of this.input.connections) {

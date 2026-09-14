@@ -1,0 +1,275 @@
+{
+  "iteration": 36,
+  "stats": {
+    "busLengths": [
+      {
+        "busId": "RAM_BYTE0",
+        "toleranceMm": 0.1,
+        "skewMm": 7.105427357601002e-14,
+        "matched": true,
+        "lengths": [
+          {
+            "name": "source_trace_0",
+            "carrierLengthMm": 38.7291641777139,
+            "fixedLengthMm": 36.06693592668127,
+            "totalLengthMm": 74.79610010439517
+          },
+          {
+            "name": "source_trace_1",
+            "carrierLengthMm": 19.34276807464606,
+            "fixedLengthMm": 55.45333202974915,
+            "totalLengthMm": 74.79610010439521
+          },
+          {
+            "name": "source_trace_2",
+            "carrierLengthMm": 18.86078755930659,
+            "fixedLengthMm": 55.93531254508862,
+            "totalLengthMm": 74.79610010439521
+          },
+          {
+            "name": "source_trace_3",
+            "carrierLengthMm": 19.563478752764702,
+            "fixedLengthMm": 55.2326213516305,
+            "totalLengthMm": 74.79610010439521
+          },
+          {
+            "name": "source_trace_4",
+            "carrierLengthMm": 34.64632146523933,
+            "fixedLengthMm": 40.14977863915588,
+            "totalLengthMm": 74.79610010439521
+          },
+          {
+            "name": "source_trace_5",
+            "carrierLengthMm": 20.59423993722218,
+            "fixedLengthMm": 54.201860167173024,
+            "totalLengthMm": 74.79610010439521
+          },
+          {
+            "name": "source_trace_6",
+            "carrierLengthMm": 22.175001121679685,
+            "fixedLengthMm": 52.62109898271552,
+            "totalLengthMm": 74.79610010439521
+          },
+          {
+            "name": "source_trace_7",
+            "carrierLengthMm": 25.11200689018857,
+            "fixedLengthMm": 49.68409321420664,
+            "totalLengthMm": 74.79610010439521
+          },
+          {
+            "name": "source_trace_22",
+            "carrierLengthMm": 37.99632146523936,
+            "fixedLengthMm": 36.799778639155875,
+            "totalLengthMm": 74.79610010439524
+          },
+          {
+            "name": "source_trace_24",
+            "carrierLengthMm": 20.73418943088336,
+            "fixedLengthMm": 54.061910673511846,
+            "totalLengthMm": 74.79610010439521
+          },
+          {
+            "name": "source_trace_25",
+            "carrierLengthMm": 20.18314866687479,
+            "fixedLengthMm": 54.61295143752042,
+            "totalLengthMm": 74.79610010439521
+          }
+        ]
+      },
+      {
+        "busId": "RAM_BYTE1",
+        "toleranceMm": 0.1,
+        "skewMm": 7.105427357601002e-15,
+        "matched": true,
+        "lengths": [
+          {
+            "name": "source_trace_8",
+            "carrierLengthMm": 22.139037238859043,
+            "fixedLengthMm": 39.14317692135768,
+            "totalLengthMm": 61.282214160216725
+          },
+          {
+            "name": "source_trace_9",
+            "carrierLengthMm": 22.340509101435202,
+            "fixedLengthMm": 38.94170505878152,
+            "totalLengthMm": 61.282214160216725
+          },
+          {
+            "name": "source_trace_10",
+            "carrierLengthMm": 19.963553839265145,
+            "fixedLengthMm": 41.31866032095158,
+            "totalLengthMm": 61.282214160216725
+          },
+          {
+            "name": "source_trace_11",
+            "carrierLengthMm": 18.94908774519789,
+            "fixedLengthMm": 42.33312641501884,
+            "totalLengthMm": 61.282214160216725
+          },
+          {
+            "name": "source_trace_12",
+            "carrierLengthMm": 18.69969741063887,
+            "fixedLengthMm": 42.582516749577856,
+            "totalLengthMm": 61.282214160216725
+          },
+          {
+            "name": "source_trace_13",
+            "carrierLengthMm": 19.79198096401133,
+            "fixedLengthMm": 41.490233196205395,
+            "totalLengthMm": 61.282214160216725
+          },
+          {
+            "name": "source_trace_14",
+            "carrierLengthMm": 20.01796942699358,
+            "fixedLengthMm": 41.264244733223144,
+            "totalLengthMm": 61.282214160216725
+          },
+          {
+            "name": "source_trace_15",
+            "carrierLengthMm": 18.988427573418058,
+            "fixedLengthMm": 42.29378658679867,
+            "totalLengthMm": 61.282214160216725
+          },
+          {
+            "name": "source_trace_23",
+            "carrierLengthMm": 19.428377067079225,
+            "fixedLengthMm": 41.85383709313749,
+            "totalLengthMm": 61.28221416021672
+          },
+          {
+            "name": "source_trace_26",
+            "carrierLengthMm": 19.11061011411286,
+            "fixedLengthMm": 42.171604046103866,
+            "totalLengthMm": 61.282214160216725
+          },
+          {
+            "name": "source_trace_27",
+            "carrierLengthMm": 19.19449359059604,
+            "fixedLengthMm": 42.087720569620686,
+            "totalLengthMm": 61.282214160216725
+          }
+        ]
+      },
+      {
+        "busId": "RAM_CA",
+        "toleranceMm": 0.1,
+        "skewMm": 4.263256414560601e-14,
+        "matched": true,
+        "lengths": [
+          {
+            "name": "source_trace_16",
+            "carrierLengthMm": 38.632590180780454,
+            "fixedLengthMm": 42.5911999953932,
+            "totalLengthMm": 81.22379017617365
+          },
+          {
+            "name": "source_trace_17",
+            "carrierLengthMm": 18.559188309203677,
+            "fixedLengthMm": 62.664601866969974,
+            "totalLengthMm": 81.22379017617365
+          },
+          {
+            "name": "source_trace_18",
+            "carrierLengthMm": 40.40349474438847,
+            "fixedLengthMm": 40.82029543178518,
+            "totalLengthMm": 81.22379017617365
+          },
+          {
+            "name": "source_trace_19",
+            "carrierLengthMm": 35.23022737991939,
+            "fixedLengthMm": 45.993562796254224,
+            "totalLengthMm": 81.22379017617362
+          },
+          {
+            "name": "source_trace_20",
+            "carrierLengthMm": 29.963098833543768,
+            "fixedLengthMm": 51.260691342629876,
+            "totalLengthMm": 81.22379017617365
+          },
+          {
+            "name": "source_trace_21",
+            "carrierLengthMm": 41.58122292025697,
+            "fixedLengthMm": 39.64256725591669,
+            "totalLengthMm": 81.22379017617365
+          },
+          {
+            "name": "source_trace_28",
+            "carrierLengthMm": 30.498023074035533,
+            "fixedLengthMm": 50.72576710213813,
+            "totalLengthMm": 81.22379017617367
+          },
+          {
+            "name": "source_trace_29",
+            "carrierLengthMm": 31.71934341759518,
+            "fixedLengthMm": 49.50444675857848,
+            "totalLengthMm": 81.22379017617367
+          },
+          {
+            "name": "source_trace_30",
+            "carrierLengthMm": 27.884895499341997,
+            "fixedLengthMm": 53.33889467683164,
+            "totalLengthMm": 81.22379017617364
+          },
+          {
+            "name": "source_trace_31",
+            "carrierLengthMm": 37.32548339959387,
+            "fixedLengthMm": 43.898306776579744,
+            "totalLengthMm": 81.22379017617362
+          },
+          {
+            "name": "source_trace_32",
+            "carrierLengthMm": 24.516652224137047,
+            "fixedLengthMm": 56.707137952036604,
+            "totalLengthMm": 81.22379017617365
+          }
+        ]
+      }
+    ],
+    "phase": "solved",
+    "algorithm": "octilinear_visibility",
+    "attempt": 0,
+    "lane": 33,
+    "totalLanes": 33,
+    "vertices": 2,
+    "expandedVertices": 1,
+    "frontier": 1,
+    "failureCode": null,
+    "traceLengthsMm": [
+      { "name": "source_trace_3", "length": 19.563478752764702 },
+      { "name": "source_trace_30", "length": 27.884895499341997 },
+      { "name": "source_trace_7", "length": 25.11200689018857 },
+      { "name": "source_trace_13", "length": 19.79198096401133 },
+      { "name": "source_trace_26", "length": 19.11061011411286 },
+      { "name": "source_trace_27", "length": 19.19449359059604 },
+      { "name": "source_trace_19", "length": 35.23022737991939 },
+      { "name": "source_trace_9", "length": 22.340509101435202 },
+      { "name": "source_trace_16", "length": 38.632590180780454 },
+      { "name": "source_trace_0", "length": 38.7291641777139 },
+      { "name": "source_trace_22", "length": 37.99632146523936 },
+      { "name": "source_trace_4", "length": 34.64632146523933 },
+      { "name": "source_trace_31", "length": 37.32548339959387 },
+      { "name": "source_trace_14", "length": 20.01796942699358 },
+      { "name": "source_trace_10", "length": 19.963553839265145 },
+      { "name": "source_trace_20", "length": 29.963098833543768 },
+      { "name": "source_trace_17", "length": 18.559188309203677 },
+      { "name": "source_trace_1", "length": 19.34276807464606 },
+      { "name": "source_trace_24", "length": 20.73418943088336 },
+      { "name": "source_trace_25", "length": 20.18314866687479 },
+      { "name": "source_trace_5", "length": 20.59423993722218 },
+      { "name": "source_trace_15", "length": 18.988427573418058 },
+      { "name": "source_trace_32", "length": 24.516652224137047 },
+      { "name": "source_trace_11", "length": 18.94908774519789 },
+      { "name": "source_trace_21", "length": 41.58122292025697 },
+      { "name": "source_trace_2", "length": 18.86078755930659 },
+      { "name": "source_trace_6", "length": 22.175001121679685 },
+      { "name": "source_trace_28", "length": 30.498023074035533 },
+      { "name": "source_trace_29", "length": 31.71934341759518 },
+      { "name": "source_trace_23", "length": 19.428377067079225 },
+      { "name": "source_trace_8", "length": 22.139037238859043 },
+      { "name": "source_trace_12", "length": 18.69969741063887 },
+      { "name": "source_trace_18", "length": 40.40349474438847 }
+    ]
+  },
+  "solved": true,
+  "error": null
+}

@@ -26,7 +26,8 @@ export function tuneLengths(
     }
     const clearance =
       input.minTraceToPadEdgeClearance ?? input.defaultObstacleMargin ?? 0.075
-    const pitch = 2 * (width + clearance + 0.025)
+    const returnSpacing = Math.max(width + clearance, 3 * width)
+    const pitch = 2 * (returnSpacing + 2 * width)
     for (let i = 0; i < t.route.length - 1; i++) {
       const a = t.route[i],
         b = t.route[i + 1],
@@ -38,7 +39,12 @@ export function tuneLengths(
         for (const fraction of [0.9, 0.65, 0.4]) {
           const w = (span * fraction) / teeth
           if (w < pitch) continue
-          const c = Math.min(delta / (8 * teeth), 0.01, w / 8)
+          // Size the 45° chamfers from the lobe, leaving a nonzero crown.
+          const c = Math.min(
+            delta / (2 * teeth),
+            w / 10,
+            (w / 2 - returnSpacing) / 2,
+          )
           const h = delta / (2 * teeth) + 2 * c * (2 - Math.SQRT2)
           for (const phase of [0, 0.5, 1])
             for (const side of [1, -1]) {
@@ -79,7 +85,7 @@ export function tuneLengths(
                 ) > 1e-6
               )
                 continue
-              if (!tuningPathIsSelfClear(next, width + clearance)) continue
+              if (!tuningPathIsSelfClear(next, returnSpacing)) continue
               yield {
                 ...t,
                 route: next.map((p) => ({

@@ -52,7 +52,20 @@ test("all complete DDR phases route without transitions and pass combined copper
       expect(Math.max(...totals) - Math.min(...totals)).toBeLessThan(0.000001)
     }
     for (const trace of solver.traces)
-      expect(tuningPathIsSelfClear(trace.route, 0.15)).toBe(true)
+      expect(tuningPathIsSelfClear(trace.route, 0.225)).toBe(true)
+    for (const trace of solver.traces)
+      for (let i = 1; i < trace.route.length - 1; i++) {
+        const a = trace.route[i - 1],
+          b = trace.route[i],
+          c = trace.route[i + 1]
+        const ab = Math.hypot(b.x - a.x, b.y - a.y),
+          bc = Math.hypot(c.x - b.x, c.y - b.y)
+        expect(ab).toBeGreaterThan(1e-8)
+        expect(bc).toBeGreaterThan(1e-8)
+        const cosine =
+          ((b.x - a.x) * (c.x - b.x) + (b.y - a.y) * (c.y - b.y)) / (ab * bc)
+        expect(cosine).toBeGreaterThanOrEqual(Math.SQRT1_2 - 1e-7)
+      }
     expect(
       solver.traces.every((t) => t.route.every((p) => p.route_type === "wire")),
     ).toBe(true)

@@ -1,8 +1,11 @@
 import { BusLanesSolver } from "../lib"
 import { channelInput } from "../examples/vector-channel"
-import { getPngFromLogString } from "graphics-debug"
+import {
+  getPngFromLogString,
+  getPngBufferFromGraphicsObject,
+} from "graphics-debug"
 import { mkdir } from "node:fs/promises"
-const directory = process.argv[2] ?? "docs/iterations/length-matched"
+const directory = process.argv[2] ?? "docs/iterations/smooth-meanders"
 await mkdir(directory, { recursive: true })
 const cases: any[] = [["obstacle-channel", channelInput()]]
 for (const profile of [
@@ -47,4 +50,19 @@ for (const [name, input] of cases) {
     )
   }
   if (!solver.solved) throw Error(`${name}: ${solver.error}`)
+  if (name.startsWith("ddr_"))
+    for (const layer of ["inner2", "inner4", "inner6", "bottom"]) {
+      const graphics = solver.visualize()
+      const lines = graphics.lines?.filter(
+        (line) =>
+          line.layer === layer && line.label?.startsWith("source_trace_"),
+      )
+      await Bun.write(
+        `${directory}/${name}-${layer}.png`,
+        await getPngBufferFromGraphicsObject(
+          { lines },
+          { pngWidth: 1000, pngHeight: 1000, includeTextLabels: false },
+        ),
+      )
+    }
 }
