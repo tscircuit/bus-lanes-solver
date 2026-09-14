@@ -6,6 +6,6 @@ export default (
     url={url}
     metadataUrl={metadataUrl}
     title="AM62L / ddr top io bottom"
-    description="Actual DDR_INTERCONNECT phase input: 33 signals between real FanoutSolver SoC and RAM outputs, with a 17.76 mm gap between their enclosing regions. All carrier traces are absent at iteration 0. All copper is colored by layer; the bus_lanes phase adds only the interconnect between the fanouts."
+    description="33 DDR signals · 66 real FanoutSolver paths · 17.76 mm gap · fixed-copper DRC passes"
   />
 )

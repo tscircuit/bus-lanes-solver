@@ -22,8 +22,8 @@ export function FixtureView({
       <header
         style={{
           borderBottom: "1px solid #cbd5e1",
-          paddingBottom: 16,
-          marginBottom: 16,
+          paddingBottom: 8,
+          marginBottom: 8,
         }}
       >
         <small style={{ letterSpacing: 2 }}>TSCIRCUIT / BUS LANES</small>
@@ -31,24 +31,15 @@ export function FixtureView({
         <p style={{ maxWidth: 1000, lineHeight: 1.6 }}>{description}</p>
         {metadata && (
           <p style={{ fontWeight: 600, color: "#b45309" }}>
-            Latest full-interconnect benchmark: 0/4.{" "}
+            Interconnect benchmark: 0/4.{" "}
             {input.connections.filter(
               (c) => c.pointsToConnect[0].layer !== c.pointsToConnect[1].layer,
             ).length
               ? `${input.connections.filter((c) => c.pointsToConnect[0].layer !== c.pointsToConnect[1].layer).length} handoffs disagree on layer in this case.`
-              : "This case exhausts the bus-routing search budget."}{" "}
-            The fixed package fanouts pass DRC; this is an unresolved
-            interconnect input.
+              : "This case exhausts the search budget."}{" "}
           </p>
         )}
-        <p>
-          Blue: source terminals · Amber: fixed destinations · Cyan: search
-          frontier · Pink: current candidate · Colored lines: committed lanes
-        </p>
-        <p>
-          Fixed fanouts and new interconnects use the same copper-layer colors.
-          Via rings mark layer transitions.
-        </p>
+        <p>Fixed and new copper share layer colors; rings mark vias.</p>
         <div
           style={{
             display: "flex",
