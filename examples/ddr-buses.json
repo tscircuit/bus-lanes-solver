@@ -15,7 +15,8 @@
       "source_trace_104",
       "source_trace_105"
     ],
-    "allowedLayers": ["top", "inner2", "inner4", "inner6", "bottom"]
+    "allowedLayers": ["top", "inner2", "inner4", "inner6", "bottom"],
+    "maxLengthSkew": 0.1
   },
   {
     "busId": "RAM_BYTE1",
@@ -33,7 +34,8 @@
       "source_trace_106",
       "source_trace_107"
     ],
-    "allowedLayers": ["top", "inner2", "inner4", "inner6", "bottom"]
+    "allowedLayers": ["top", "inner2", "inner4", "inner6", "bottom"],
+    "maxLengthSkew": 0.1
   },
   {
     "busId": "RAM_CA",
@@ -51,6 +53,7 @@
       "source_trace_111",
       "source_trace_112"
     ],
-    "allowedLayers": ["top", "inner2", "inner4", "inner6", "bottom"]
+    "allowedLayers": ["top", "inner2", "inner4", "inner6", "bottom"],
+    "maxLengthSkew": 0.1
   }
 ]

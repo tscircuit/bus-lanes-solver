@@ -1,3 +1,4 @@
+import { busLengthReports } from "../lib/route-lengths"
 import { validateFanoutProvenance } from "./validate-fanout-provenance"
 import { validateTwoFanoutSample } from "./validate-two-fanout-sample"
 import { Glob } from "bun"
@@ -36,36 +37,36 @@ if (!legacy && !workerFile) {
   }
 }
 if (!workerFile) {
-  const reports = await Promise.all(
-    files.map(async (file) => {
-      const child = Bun.spawn(
-        [
-          process.execPath,
-          import.meta.path,
-          "--worker",
-          file,
-          "--timeout-seconds",
-          String(timeoutSeconds),
-          ...(legacy ? ["--legacy"] : []),
-        ],
-        { stdout: "pipe", stderr: "pipe" },
-      )
-      const [stdout, stderr] = await Promise.all([
-        new Response(child.stdout).text(),
-        new Response(child.stderr).text(),
-      ])
-      await child.exited
-      const serialized = stdout
-        .split("\n")
-        .find((line) => line.startsWith("REPORT "))
-      if (!serialized) throw Error(`${file}: ${stderr || stdout}`)
-      const report = JSON.parse(serialized.slice(7))
-      console.log(
-        `${report.expectedRejection ? (report.failureCode === "layer_change_required" ? "REJECT OK" : "REJECT FAIL") : report.solved ? "PASS" : "FAIL"} ${file.split("/").at(-1)} ${report.routedLanes}/33 ${report.timedOut ? "timeout" : (report.failureCode ?? "")}`,
-      )
-      return report
-    }),
-  )
+  // Keep per-sample wall-clock measurements free from competing workers.
+  const reports = []
+  for (const file of files) {
+    const child = Bun.spawn(
+      [
+        process.execPath,
+        import.meta.path,
+        "--worker",
+        file,
+        "--timeout-seconds",
+        String(timeoutSeconds),
+        ...(legacy ? ["--legacy"] : []),
+      ],
+      { stdout: "pipe", stderr: "pipe" },
+    )
+    const [stdout, stderr] = await Promise.all([
+      new Response(child.stdout).text(),
+      new Response(child.stderr).text(),
+    ])
+    await child.exited
+    const serialized = stdout
+      .split("\n")
+      .find((line) => line.startsWith("REPORT "))
+    if (!serialized) throw Error(`${file}: ${stderr || stdout}`)
+    const report = JSON.parse(serialized.slice(7))
+    console.log(
+      `${report.expectedRejection ? (report.failureCode === "layer_change_required" ? "REJECT OK" : "REJECT FAIL") : report.solved ? "PASS" : "FAIL"} ${file.split("/").at(-1)} ${report.routedLanes}/33 ${report.timedOut ? "timeout" : (report.failureCode ?? "")}`,
+    )
+    reports.push(report)
+  }
   await Bun.write(
     legacy ? "legacy-benchmark-results.json" : "benchmark-results.json",
     JSON.stringify(reports, null, 2) + "\n",
@@ -112,7 +113,13 @@ for (const file of files) {
   timedOut ||= solveMilliseconds > timeoutSeconds * 1000
   if (JSON.stringify(input) !== before) throw Error("Benchmark input mutated")
   const negative = file.endsWith("-raw.json")
+  const busLengths = busLengthReports(input, solver.traces)
+  const lengthMatchingValid =
+    !dataset ||
+    (busLengths.length === 3 &&
+      busLengths.every((b) => b.toleranceMm !== null && b.matched))
   const valid =
+    lengthMatchingValid &&
     !timedOut &&
     solver.solved &&
     solver.traces.length === input.connections.length &&
@@ -150,6 +157,8 @@ for (const file of files) {
     timeoutSeconds,
     dataset,
     provenance,
+    busLengths,
+    lengthMatchingValid,
     expectedRejection: negative,
     solved: valid,
     failureCode: solver.failureCode,
