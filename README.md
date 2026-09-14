@@ -57,9 +57,11 @@ bun run build:site
 ```
 
 Cosmos shows four full AM62L DDR phase captures and a length/impedance example.
-Each AM62L page has two separate fanouts, 6 mm between their enclosing regions,
-and all 33 DDR signals waiting to be routed. Gray copper is fixed fanout copper;
-colored copper is the new interconnect. The SoC remains unrotated.
+Each AM62L page has two separate, real `FanoutSolver` outputs and all 33 DDR
+signals waiting to be routed. The enclosing regions are 17.76 mm apart, with a
+4 mm transverse package offset. Fixed and newly routed copper share stable
+layer colors; all layers are present at iteration zero, including via rings.
+The SoC remains unrotated.
 
 ```sh
 bun test
@@ -72,22 +74,37 @@ The repository follows the [handbook bootstrapping guide](https://github.com/tsc
 
 ## DDR benchmark
 
-`./benchmark.sh` measures the four **full fanout-to-fanout DDR phases**. Before
-routing, it checks both fanouts' coverage, their 6 mm separation, exact endpoints,
-matching exit layers, absence of pre-routed carrier traces, and independent fixed
-copper DRC. It then verifies complete via-free routing and independent DRC of the combined
-fanout and interconnect copper, and writes
-`benchmark-results.json`. Any invalid sample or unsolved connection fails the run.
+`./benchmark.sh` measures four complete DDR interconnect inputs captured from
+an actual `bus_lanes` phase. Every sample contains 66 fixed paths produced by
+`@tscircuit/fanout-solver@0.0.78`. Input/options/output records are committed in
+[`examples/fanout-solver-outputs`](./examples/fanout-solver-outputs). Tests rerun
+all eight package fanouts and compare the generated paths.
 
-The actual tscircuit compositions are in [`examples`](./examples/README.md).
-Each uses two `<fanout pcbTracePaths={...}>` components followed by
-`<autoroutingphase autorouter="bus_lanes" />`. The phase receives exact preserved
-traces; it does not use rectangular approximations of diagonal fanout copper.
+Before routing, the benchmark verifies record hashes, original output geometry,
+continuous wire/via joins, 33 paths per package, at least 6 mm region separation,
+exact exits, and independent fixed-copper DRC. Exit-layer mismatches are reported
+as routing failures, not repaired or removed from the denominator. Complete
+interconnects must also pass independent combined-copper DRC.
 
-The old 12 carrier-prefix cases are retained only as legacy regressions:
-`./benchmark.sh --legacy`. They are excluded from the default score and Cosmos
-pages. The [historical audit](./DATASET-AUDIT.md) explains their limitations.
-Four raw mixed-layer captures remain negative tests and are counted separately.
+**Current result: 0/4 full interconnects.** Left has 28 mismatched exit layers;
+right, top, and bottom exhaust the search budget. All eight package fanouts
+are complete and DRC-clean. These failures replace the misleading 4/4 score
+obtained by manually aligning exits. The dataset does not claim DDR timing
+closure or equal transition counts across every signal.
+
+Each sample runs in a separate process, with the solver's ordinary 5,000,000
+iteration budget and a 60-second benchmark deadline. Override the deadline with
+`./benchmark.sh --timeout-seconds 120`. Timeouts and partial paths are failures.
+Results are written to `benchmark-results.json`; a failed positive sample makes
+the command exit nonzero. Four original mixed-layer negatives are counted separately.
+
+The [tscircuit examples](./examples/README.md) load these exact fanouts and use
+`<autoroutingphase autorouter="bus_lanes" />`. Capturing the input is separate
+from solving it, so a failed router cannot hide the input that caused it.
+
+The older 12 carrier-prefix cases remain available with `--legacy`; they are
+excluded from the default score and Cosmos pages. The prior grid-generated,
+aligned two-fanout data is superseded as well.
 
 The automatic solver starts at 0.1 mm, then retries at 0.025 mm using source/target
 winding sweeps, reversed sweeps and seam rotations, searching each order from

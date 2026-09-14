@@ -1,3 +1,4 @@
+import { layerColor } from "./layer-colors"
 import { MinHeap } from "./min-heap"
 import { windingOrders } from "./winding-orders"
 import { BaseSolver } from "@tscircuit/solver-utils"
@@ -26,14 +27,7 @@ interface SearchNode extends Point {
   f: number
   parent?: SearchNode
 }
-const colors = [
-  "#2563eb",
-  "#e11d48",
-  "#059669",
-  "#9333ea",
-  "#d97706",
-  "#0891b2",
-]
+
 /** Via-free, ordered bus routing in board XY (mm, +Y up). Each step expands one
  * search node or performs one validation/tuning operation; no hidden solve(). */
 export class BusLanesSolver extends BaseSolver {
@@ -637,33 +631,44 @@ export class BusLanesSolver extends BaseSolver {
     const lines: any[] = [],
       points: any[] = [],
       rects: any[] = []
-    const c = this.connections[this.lane],
-      layer =
-        c?.pointsToConnect[0].layer ??
-        this.input.connections[0]?.pointsToConnect[0]?.layer
-    for (const o of this.input.obstacles.filter((o) =>
-      o.layers.includes(layer),
-    ))
-      rects.push({
-        center: o.center,
-        width: o.width,
-        height: o.height,
-        fill: "#cbd5e1",
-        stroke: "#64748b",
-      })
+    const circles: any[] = []
+    for (const o of this.input.obstacles)
+      for (const copperLayer of o.layers)
+        rects.push({
+          center: o.center,
+          width: o.width,
+          height: o.height,
+          fill: `${layerColor(copperLayer)}30`,
+          stroke: layerColor(copperLayer),
+          layer: copperLayer,
+        })
     for (const s of this.inputSegments()) {
-      if (s.layer !== layer) continue
-      lines.push({
-        points: [s.a, s.b],
-        strokeColor: "#94a3b8",
-        strokeWidth: Math.max(0.025, s.radius * 2),
-      })
+      if (s.rect) continue
+      if (distance(s.a, s.b) < 1e-10) {
+        circles.push({
+          center: s.a,
+          radius: s.radius,
+          fill: "transparent",
+          stroke: layerColor(s.layer),
+          layer: s.layer,
+          label: `Fixed via [${s.layer}]`,
+        })
+      } else
+        lines.push({
+          points: [s.a, s.b],
+          strokeColor: layerColor(s.layer),
+          strokeWidth: Math.max(0.025, s.radius * 2),
+          layer: s.layer,
+          label: `Fixed fanout [${s.layer}]`,
+        })
     }
-    this.traces.forEach((t, i) =>
+    this.traces.forEach((t) =>
       lines.push({
         points: t.route,
-        strokeColor: colors[i % colors.length],
+        strokeColor: layerColor((t.route[0] as Wire).layer),
         strokeWidth: (t.route[0] as Wire).width,
+        layer: (t.route[0] as Wire).layer,
+        label: `Interconnect ${t.connection_name}`,
       }),
     )
     for (const [i, connection] of this.input.connections.entries())
@@ -685,6 +690,7 @@ export class BusLanesSolver extends BaseSolver {
       lines,
       points,
       rects,
+      circles,
       title: `Bus lanes · ${this.phase}${this.error ? ` · ${this.error}` : ""}`,
     }
   }

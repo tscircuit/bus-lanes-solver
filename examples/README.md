@@ -1,42 +1,43 @@
-# Two-fanout AM62L examples
+# Two-fanout AM62L routing examples
 
-Each circuit loads two independent pad-to-exit fanouts and routes all 33 DDR
-connections through an explicit phase:
+Each circuit loads exact `FanoutSolver` paths for the SoC and RAM, then requests:
 
 ```tsx
-<autoroutingphase
-  name="DDR_INTERCONNECT"
-  phaseIndex={0}
-  autorouter="bus_lanes"
-/>
+<autoroutingphase name="DDR_INTERCONNECT" phaseIndex={0} autorouter="bus_lanes" />
 ```
 
-`TwoFanouts.tsx` contains the complete board. The SoC stays unrotated. The RAM
-fanout faces the SoC, with a 6 mm gap between the enclosing fanout regions.
-The top/bottom RAM placements are centered on the SoC exit field. The RAM routes
-are generated from package pads by the offline grid solver, with reserved exit
-approaches and paired layer-sequence constraints. Horizontal RAM fanouts use two
-transitions per signal; vertical RAM fanouts use three.
-They are not taken from a previously routed carrier.
+`TwoFanouts.tsx` contains the shared board. The packages are 58 mm apart along
+the DDR direction and offset 4 mm transversely. Each solver uses a 40 mm shared
+boundary; copper-containing regions have 17.76 mm between them. The chip is not
+rotated to change the DDR orientation.
 
-The carrier phase preserves 66 fixed fanout paths and creates 33 new routes.
-It never adds vias. The fixtures in `tests/fixtures/two-fanouts` are the actual
-SRJs captured at this phase, including exact fixed traces.
+Every record in `fanout-solver-outputs` contains the real package solver's input,
+options, and output. Each package is solved independently. Physical escape groups
+contain individual signals or complete differential pairs; the downstream phase
+restores the two byte groups and command/address group and routes all 33 signals
+together. Escape guidance uses each package's own pad tracks, not the opposite
+fanout's exits. No route vertices or terminal coordinates are edited afterward.
 
-These examples require the core/props `bus_lanes` integration:
-[core PR](https://github.com/tscircuit/core/pull/3939),
-[props PR](https://github.com/tscircuit/props/pull/851).
+The saved recipes use fanout-solver 0.0.78. All eight fanouts are complete and
+pass independent copper DRC. They are diagnostic routing fixtures: the left
+case's independently selected layers disagree on 28 handoffs, and the other
+three interconnects currently exhaust the bus solver's search budget. Full DDR
+timing closure and equal transition counts are not established.
 
-Regenerate the authoring data from the AM62L module's saved SoC fanouts and pad
-geometry, then build through a core checkout with those changes and dependencies:
+These circuits require [core PR #3939](https://github.com/tscircuit/core/pull/3939)
+and [props PR #851](https://github.com/tscircuit/props/pull/851).
 
 ```sh
-bun scripts/generate-two-fanouts.ts ../am62l-module
-bun scripts/capture-two-fanout-phases.tsx ../../work/bus-lanes-core
+# Re-run the real package solver with the recorded inputs and options.
+bun scripts/generate-two-fanouts.ts
+# Capture the actual phase SRJ before attempting its interconnect routing.
+bun scripts/capture-two-fanout-phases.tsx ../../work/bus-lanes-core --capture-only
+# Count complete interconnect solves; currently exits nonzero (0/4).
 ./benchmark.sh
 ```
 
-Generation uses 0.075 mm traces and clearance, 0.22 mm blind/buried vias, and a
-0.025 mm grid. Fixed copper is checked independently with fanout-solver's DRC;
-the captures also require zero core circuit errors. Full package/fanout electrical
-delay matching is outside this routing benchmark.
+Omit `--capture-only` to let the full circuit routing finish and record its errors.
+Capture-only intentionally stops at the autorouting event; its partial circuit
+is not a successful board build. The solver benchmark consumes the captured SRJ.
+Provenance checks compare every fixed path to its original output with floating-point
+coordinate tolerance, preserving widths, layer spans, and connectivity.

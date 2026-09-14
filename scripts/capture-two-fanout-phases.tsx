@@ -10,8 +10,12 @@ if (!coreDir)
 const { Circuit } = await import(
   pathToFileURL(resolve(coreDir, "lib/index.ts")).href
 )
-for (const profile of process.argv.length > 3
-  ? process.argv.slice(3)
+const captureOnly = process.argv.includes("--capture-only")
+const selectedProfiles = process.argv
+  .slice(3)
+  .filter((a) => !a.startsWith("--"))
+for (const profile of selectedProfiles.length
+  ? selectedProfiles
   : [
       "ddr_left_io_right",
       "ddr_right_io_left",
@@ -25,6 +29,13 @@ for (const profile of process.argv.length > 3
   circuit.on("autorouting:start", (event: any) => {
     if (event.simpleRouteJson?.connections?.length === 33) {
       captures.push(structuredClone(event.simpleRouteJson))
+      if (event.simpleRouteJson.traces?.length === 66)
+        Bun.write(
+          `.cache/${profile}.phase-circuit.json`,
+          JSON.stringify(circuit.getCircuitJson()),
+        )
+      if (captureOnly && event.simpleRouteJson.traces?.length === 66)
+        throw Error("CAPTURE_ONLY_COMPLETE")
       Bun.write(
         `.cache/${profile}.pending-phase.json`,
         JSON.stringify(event.simpleRouteJson),
@@ -32,30 +43,41 @@ for (const profile of process.argv.length > 3
     }
   })
   circuit.add(<TwoFanouts input={input} metadata={metadata} />)
-  await circuit.renderUntilSettled()
+  try {
+    await circuit.renderUntilSettled()
+  } catch (e) {
+    if (!captureOnly || !captures.some((c) => c.traces?.length === 66)) throw e
+  }
   const json = circuit.getCircuitJson(),
     errors = json.filter((e: any) => e.type.includes("error"))
-  if (errors.length)
-    throw Error(`${profile}: ${JSON.stringify(errors.slice(0, 5))}`)
-  const phase = captures.at(-1)
   if (
-    !phase ||
-    phase.connections.some((c: any) =>
-      c.pointsToConnect.some((p: any) => p.layer === "top"),
+    !captureOnly &&
+    errors.some(
+      (e: any) =>
+        !["pcb_autorouting_error", "pcb_port_not_connected_error"].includes(
+          e.type,
+        ),
     )
   )
+    throw Error(
+      `${profile}: unexpected circuit error ${JSON.stringify(errors.slice(0, 5))}`,
+    )
+  const phase = captures.at(-1)
+  if (!phase || phase.traces?.length !== 66)
     throw Error("Expected 33 exit-to-exit DDR connections")
-  const fanouts = json.filter(
-    (e: any) =>
-      e.type === "pcb_trace" && e.pcb_trace_id.startsWith("saved_fanout"),
-  )
+  const fanouts = captureOnly
+    ? phase.traces
+    : json.filter(
+        (e: any) =>
+          e.type === "pcb_trace" && e.pcb_trace_id.startsWith("saved_fanout"),
+      )
   const carriers = json.filter(
     (e: any) =>
       e.type === "pcb_trace" && !e.pcb_trace_id.startsWith("saved_fanout"),
   )
   if (
     fanouts.length !== 66 ||
-    carriers.length !== 33 ||
+    (carriers.length !== 33 && errors.length === 0 && !captureOnly) ||
     carriers.some((t: any) => t.route.some((p: any) => p.route_type !== "wire"))
   )
     throw Error("Expected 66 fanout paths and 33 via-free carrier paths")
@@ -93,7 +115,11 @@ for (const profile of process.argv.length > 3
           !fanouts.some((f: any) => f.pcb_trace_id === t.pcb_trace_id),
       ).length,
       carrierOutputTraces: carriers.length,
-      circuitErrors: 0,
+      status: captureOnly ? "input_only" : "completed",
+      circuitErrors: captureOnly ? null : errors.length,
+      routingErrors: captureOnly
+        ? []
+        : errors.filter((e: any) => e.type === "pcb_autorouting_error"),
     },
     signalNames: Object.fromEntries(
       json
@@ -114,6 +140,6 @@ for (const profile of process.argv.length > 3
     JSON.stringify(json),
   )
   console.log(
-    `${profile}: captured actual bus_lanes input; 66 fanout paths, 33 carriers, zero circuit errors`,
+    `${profile}: captured actual bus_lanes input; 66 fanout paths, ${carriers.length} carriers, ${captureOnly ? "routing not run (input capture only)" : `${errors.length} circuit errors`}`,
   )
 }

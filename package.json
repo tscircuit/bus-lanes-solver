@@ -22,7 +22,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.2.4",
-    "@tscircuit/fanout-solver": "0.0.73",
+    "@tscircuit/fanout-solver": "0.0.78",
     "@types/bun": "latest",
     "@types/react": "^19",
     "@types/react-dom": "^19",

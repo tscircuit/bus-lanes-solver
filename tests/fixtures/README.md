@@ -1,8 +1,11 @@
-The default benchmark uses `two-fanouts/*.json`: actual SRJs captured from the
-DDR_INTERCONNECT phase of the circuits in `examples`. Both fanouts already exist;
-no carrier traces exist. Metadata contains fixed paths, enclosing regions, and
-build/DRC results. See `examples/README.md` for reproduction.
+# Routing fixtures
 
-The files directly in this directory are legacy captures. `*-raw.json` are
-mixed-layer negative tests; the byte/CA files reconstruct old carrier prefixes
-and are excluded from the default benchmark. See `DATASET-AUDIT.md`.
+`two-fanouts/` contains the four current AM62L phase inputs. Each contains 33 DDR
+connections and 66 paths from real fanout-solver 0.0.78 outputs. Provenance lives
+in `examples/fanout-solver-outputs`; the `.meta.json` files reference and hash it.
+These are captured inputs, not successful full-board builds. Current routing
+score is 0/4: 28 left-case handoffs disagree on layer; the other three exhaust
+the search budget. Fixed fanout copper passes independent DRC.
+
+The older root-level byte/CA prefix fixtures and raw negative captures remain
+for regression history. Prefix fixtures are excluded from the default score.

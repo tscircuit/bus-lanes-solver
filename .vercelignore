@@ -2,3 +2,6 @@ node_modules
 cosmos-export
 .git
 *.log
+
+.cache
+examples/fanout-solver-outputs

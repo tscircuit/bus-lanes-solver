@@ -2,306 +2,53 @@
   "profile": "ddr_top_io_bottom",
   "kind": "independent-fanouts",
   "marginMm": 6,
+  "fanoutGenerator": "@tscircuit/fanout-solver@0.0.78",
+  "provenance": {
+    "soc": {
+      "file": "examples/fanout-solver-outputs/ddr_top_io_bottom-soc.json",
+      "sha256": "4a285c0d2b44ba63e97b3ecca0440b324c1c2462d737758058dbb56162ecf449",
+      "inputSha256": "52735dcab8588cf470ec39b4a04e0892730eab2e8e3a94e335e0f50a80446cac",
+      "optionsSha256": "560e11b2df6b1530ba40661a0d24f68fedfeef95f6a7899c062bd2c5fba6fa6d",
+      "tracesSha256": "1a27282be780368acc1b8120adf7dc93b0506f09862507ab7bf552bb06567d57",
+      "validation": {
+        "valid": true,
+        "checkedConnectionCount": 33,
+        "brokenOutConnectionCount": 33,
+        "issues": []
+      }
+    },
+    "ram": {
+      "file": "examples/fanout-solver-outputs/ddr_top_io_bottom-ram.json",
+      "sha256": "c059b8f42ddc038513982b854e7977983137cf55c227720dd4b95e15ce53e222",
+      "inputSha256": "0b3ccaa0fb01125ec4bbf9721619caf8fa2888526c202bcef65ebf3500640449",
+      "optionsSha256": "9d265c0337a0235201d6f496d7cf22685808c8643d2a8e562f9c441df6db4ab7",
+      "tracesSha256": "c1dd15e81b4cd7b452d830f05b1e0049cb9c6217cb9bdcdb7226d29eeb4e0686",
+      "validation": {
+        "valid": true,
+        "checkedConnectionCount": 33,
+        "brokenOutConnectionCount": 33,
+        "issues": []
+      }
+    }
+  },
   "socRegion": {
-    "minX": -15.59,
-    "maxX": 5.827,
-    "minY": -20,
-    "maxY": 1.7000000000000017
-  },
-  "ramRegion": {
-    "minX": -31.5,
-    "maxX": 4.899999999999999,
-    "minY": 7.700000000000003,
-    "maxY": 44.1
-  },
-  "ramFanoutDrc": {
-    "valid": true,
-    "checkedTraceCount": 33,
-    "checkedSegmentCount": 244,
-    "checkedViaCount": 99,
-    "issues": []
-  },
-  "fixedCopperDrc": {
-    "valid": true,
-    "checkedTraceCount": 66,
-    "checkedSegmentCount": 975,
-    "checkedViaCount": 165,
-    "issues": []
-  },
-  "carrierTraceCount": 0,
-  "connectionCount": 33,
-  "ramLayerSequences": {
-    "source_trace_80": [
-      [
-        "top",
-        "inner4",
-        "bottom",
-        "inner2"
-      ]
-    ],
-    "source_trace_81": [
-      [
-        "top",
-        "inner4",
-        "bottom",
-        "inner2"
-      ]
-    ],
-    "source_trace_82": [
-      [
-        "top",
-        "inner4",
-        "bottom",
-        "inner2"
-      ]
-    ],
-    "source_trace_83": [
-      [
-        "top",
-        "inner4",
-        "bottom",
-        "inner2"
-      ]
-    ],
-    "source_trace_84": [
-      [
-        "top",
-        "inner4",
-        "bottom",
-        "inner2"
-      ]
-    ],
-    "source_trace_85": [
-      [
-        "top",
-        "inner4",
-        "bottom",
-        "inner2"
-      ]
-    ],
-    "source_trace_86": [
-      [
-        "top",
-        "inner4",
-        "bottom",
-        "inner2"
-      ]
-    ],
-    "source_trace_87": [
-      [
-        "top",
-        "inner4",
-        "bottom",
-        "inner2"
-      ]
-    ],
-    "source_trace_88": [
-      [
-        "top",
-        "inner4",
-        "bottom",
-        "inner2"
-      ]
-    ],
-    "source_trace_89": [
-      [
-        "top",
-        "inner4",
-        "bottom",
-        "inner2"
-      ]
-    ],
-    "source_trace_90": [
-      [
-        "top",
-        "inner4",
-        "bottom",
-        "inner2"
-      ]
-    ],
-    "source_trace_91": [
-      [
-        "top",
-        "inner4",
-        "bottom",
-        "inner2"
-      ]
-    ],
-    "source_trace_92": [
-      [
-        "top",
-        "inner4",
-        "bottom",
-        "inner2"
-      ]
-    ],
-    "source_trace_93": [
-      [
-        "top",
-        "inner4",
-        "bottom",
-        "inner2"
-      ]
-    ],
-    "source_trace_94": [
-      [
-        "top",
-        "inner4",
-        "bottom",
-        "inner2"
-      ]
-    ],
-    "source_trace_95": [
-      [
-        "top",
-        "inner4",
-        "bottom",
-        "inner2"
-      ]
-    ],
-    "source_trace_96": [
-      [
-        "top",
-        "inner2",
-        "bottom",
-        "inner4"
-      ]
-    ],
-    "source_trace_97": [
-      [
-        "top",
-        "inner2",
-        "bottom",
-        "inner4"
-      ]
-    ],
-    "source_trace_98": [
-      [
-        "top",
-        "inner2",
-        "bottom",
-        "inner4"
-      ]
-    ],
-    "source_trace_99": [
-      [
-        "top",
-        "inner2",
-        "bottom",
-        "inner4"
-      ]
-    ],
-    "source_trace_100": [
-      [
-        "top",
-        "inner2",
-        "bottom",
-        "inner4"
-      ]
-    ],
-    "source_trace_101": [
-      [
-        "top",
-        "inner2",
-        "bottom",
-        "inner4"
-      ]
-    ],
-    "source_trace_102": [
-      [
-        "top",
-        "inner4",
-        "bottom",
-        "inner2"
-      ]
-    ],
-    "source_trace_103": [
-      [
-        "top",
-        "inner4",
-        "bottom",
-        "inner2"
-      ]
-    ],
-    "source_trace_104": [
-      [
-        "top",
-        "inner4",
-        "bottom",
-        "inner2"
-      ]
-    ],
-    "source_trace_105": [
-      [
-        "top",
-        "inner4",
-        "bottom",
-        "inner2"
-      ]
-    ],
-    "source_trace_106": [
-      [
-        "top",
-        "inner4",
-        "bottom",
-        "inner2"
-      ]
-    ],
-    "source_trace_107": [
-      [
-        "top",
-        "inner4",
-        "bottom",
-        "inner2"
-      ]
-    ],
-    "source_trace_108": [
-      [
-        "top",
-        "inner2",
-        "bottom",
-        "inner4"
-      ]
-    ],
-    "source_trace_109": [
-      [
-        "top",
-        "inner2",
-        "bottom",
-        "inner4"
-      ]
-    ],
-    "source_trace_110": [
-      [
-        "top",
-        "inner2",
-        "bottom",
-        "inner4"
-      ]
-    ],
-    "source_trace_111": [
-      [
-        "top",
-        "inner2",
-        "bottom",
-        "inner4"
-      ]
-    ],
-    "source_trace_112": [
-      [
-        "top",
-        "inner2",
-        "bottom",
-        "inner4"
-      ]
-    ]
+    "minX": -20.12,
+    "maxX": 20.12,
+    "minY": -20.12,
+    "maxY": 20.12
   },
   "socCenter": {
     "x": 0,
-    "y": -9
+    "y": 0
+  },
+  "ramRegion": {
+    "minX": -16.12,
+    "maxX": 24.12,
+    "minY": 37.88,
+    "maxY": 78.12
   },
   "ramCenter": {
-    "x": -13.3,
-    "y": 25.900000000000002
+    "x": 4,
+    "y": 58
   }
 }

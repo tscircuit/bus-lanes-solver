@@ -2,273 +2,53 @@
   "profile": "ddr_left_io_right",
   "kind": "independent-fanouts",
   "marginMm": 6,
+  "fanoutGenerator": "@tscircuit/fanout-solver@0.0.78",
+  "provenance": {
+    "soc": {
+      "file": "examples/fanout-solver-outputs/ddr_left_io_right-soc.json",
+      "sha256": "08e2973e1ac5aa631bcae9a2b2da2137d0c651b4f345d76e74f6dffc9b73c462",
+      "inputSha256": "8c460c796a6b90128bece887b474055ca091e527617da97e7a1268ebdc061c82",
+      "optionsSha256": "e05d8b695f3d3f596f0f91394a2ac518568739bcb1cd35ff71f293e3b8e501fc",
+      "tracesSha256": "433c227c632862e337e3d4c1420ee706b2b2d9d9076237b39a97fad81b2f6016",
+      "validation": {
+        "valid": true,
+        "checkedConnectionCount": 33,
+        "brokenOutConnectionCount": 33,
+        "issues": []
+      }
+    },
+    "ram": {
+      "file": "examples/fanout-solver-outputs/ddr_left_io_right-ram.json",
+      "sha256": "fa7938d406f3c43638d7b3d888eec99e53f732663c5dc0a8be66954d7348f7a1",
+      "inputSha256": "ed6ac354e6c11a9b4116db8a16f7fa81297d32d87d4252c05fce9e2f033849db",
+      "optionsSha256": "25bd105d50f630e89a31458f833d8752fec6365e1ae4468ddaa85ed689328542",
+      "tracesSha256": "beae61eb1f501ab293a147c1d2398d5b3917d7bc018d0fdc2ed12ff63a9e7748",
+      "validation": {
+        "valid": true,
+        "checkedConnectionCount": 33,
+        "brokenOutConnectionCount": 33,
+        "issues": []
+      }
+    }
+  },
   "socRegion": {
-    "minX": -1.7,
-    "maxX": 14.827,
-    "minY": -11,
-    "maxY": 8.899999999999999
-  },
-  "ramRegion": {
-    "minX": -44.099999999999994,
-    "maxX": -7.699999999999999,
-    "minY": -18.2,
-    "maxY": 18.2
-  },
-  "ramFanoutDrc": {
-    "valid": true,
-    "checkedTraceCount": 33,
-    "checkedSegmentCount": 178,
-    "checkedViaCount": 66,
-    "issues": []
-  },
-  "fixedCopperDrc": {
-    "valid": true,
-    "checkedTraceCount": 66,
-    "checkedSegmentCount": 857,
-    "checkedViaCount": 132,
-    "issues": []
-  },
-  "carrierTraceCount": 0,
-  "connectionCount": 33,
-  "ramLayerSequences": {
-    "source_trace_80": [
-      [
-        "top",
-        "bottom",
-        "inner2"
-      ]
-    ],
-    "source_trace_81": [
-      [
-        "top",
-        "bottom",
-        "inner2"
-      ]
-    ],
-    "source_trace_82": [
-      [
-        "top",
-        "bottom",
-        "inner2"
-      ]
-    ],
-    "source_trace_83": [
-      [
-        "top",
-        "bottom",
-        "inner2"
-      ]
-    ],
-    "source_trace_84": [
-      [
-        "top",
-        "bottom",
-        "inner2"
-      ]
-    ],
-    "source_trace_85": [
-      [
-        "top",
-        "bottom",
-        "inner2"
-      ]
-    ],
-    "source_trace_86": [
-      [
-        "top",
-        "bottom",
-        "inner2"
-      ]
-    ],
-    "source_trace_87": [
-      [
-        "top",
-        "bottom",
-        "inner2"
-      ]
-    ],
-    "source_trace_88": [
-      [
-        "top",
-        "bottom",
-        "inner2"
-      ]
-    ],
-    "source_trace_89": [
-      [
-        "top",
-        "bottom",
-        "inner2"
-      ]
-    ],
-    "source_trace_90": [
-      [
-        "top",
-        "bottom",
-        "inner2"
-      ]
-    ],
-    "source_trace_91": [
-      [
-        "top",
-        "bottom",
-        "inner2"
-      ]
-    ],
-    "source_trace_92": [
-      [
-        "top",
-        "bottom",
-        "inner2"
-      ]
-    ],
-    "source_trace_93": [
-      [
-        "top",
-        "bottom",
-        "inner2"
-      ]
-    ],
-    "source_trace_94": [
-      [
-        "top",
-        "bottom",
-        "inner2"
-      ]
-    ],
-    "source_trace_95": [
-      [
-        "top",
-        "bottom",
-        "inner2"
-      ]
-    ],
-    "source_trace_96": [
-      [
-        "top",
-        "bottom",
-        "inner4"
-      ]
-    ],
-    "source_trace_97": [
-      [
-        "top",
-        "bottom",
-        "inner4"
-      ]
-    ],
-    "source_trace_98": [
-      [
-        "top",
-        "bottom",
-        "inner4"
-      ]
-    ],
-    "source_trace_99": [
-      [
-        "top",
-        "bottom",
-        "inner4"
-      ]
-    ],
-    "source_trace_100": [
-      [
-        "top",
-        "bottom",
-        "inner4"
-      ]
-    ],
-    "source_trace_101": [
-      [
-        "top",
-        "bottom",
-        "inner4"
-      ]
-    ],
-    "source_trace_102": [
-      [
-        "top",
-        "bottom",
-        "inner2"
-      ]
-    ],
-    "source_trace_103": [
-      [
-        "top",
-        "bottom",
-        "inner2"
-      ]
-    ],
-    "source_trace_104": [
-      [
-        "top",
-        "bottom",
-        "inner2"
-      ]
-    ],
-    "source_trace_105": [
-      [
-        "top",
-        "bottom",
-        "inner2"
-      ]
-    ],
-    "source_trace_106": [
-      [
-        "top",
-        "bottom",
-        "inner2"
-      ]
-    ],
-    "source_trace_107": [
-      [
-        "top",
-        "bottom",
-        "inner2"
-      ]
-    ],
-    "source_trace_108": [
-      [
-        "top",
-        "bottom",
-        "inner4"
-      ]
-    ],
-    "source_trace_109": [
-      [
-        "top",
-        "bottom",
-        "inner4"
-      ]
-    ],
-    "source_trace_110": [
-      [
-        "top",
-        "bottom",
-        "inner4"
-      ]
-    ],
-    "source_trace_111": [
-      [
-        "top",
-        "bottom",
-        "inner4"
-      ]
-    ],
-    "source_trace_112": [
-      [
-        "top",
-        "bottom",
-        "inner4"
-      ]
-    ]
+    "minX": -20.12,
+    "maxX": 20.12,
+    "minY": -20.12,
+    "maxY": 20.12
   },
   "socCenter": {
-    "x": 9,
+    "x": 0,
     "y": 0
   },
+  "ramRegion": {
+    "minX": -78.12,
+    "maxX": -37.88,
+    "minY": -16.12,
+    "maxY": 24.12
+  },
   "ramCenter": {
-    "x": -25.9,
-    "y": 0
+    "x": -58,
+    "y": 4
   }
 }

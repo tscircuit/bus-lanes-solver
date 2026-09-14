@@ -1,3 +1,4 @@
+import { layerColors } from "../lib/layer-colors"
 import { useState, useEffect } from "react"
 import { GenericSolverDebugger } from "@tscircuit/solver-utils/react"
 import { BusLanesSolver, type SimpleRouteJson } from "../lib"
@@ -28,10 +29,40 @@ export function FixtureView({
         <small style={{ letterSpacing: 2 }}>TSCIRCUIT / BUS LANES</small>
         <h1>{title}</h1>
         <p style={{ maxWidth: 1000, lineHeight: 1.6 }}>{description}</p>
+        {metadata && (
+          <p style={{ fontWeight: 600, color: "#b45309" }}>
+            Latest full-interconnect benchmark: 0/4.{" "}
+            {input.connections.filter(
+              (c) => c.pointsToConnect[0].layer !== c.pointsToConnect[1].layer,
+            ).length
+              ? `${input.connections.filter((c) => c.pointsToConnect[0].layer !== c.pointsToConnect[1].layer).length} handoffs disagree on layer in this case.`
+              : "This case exhausts the bus-routing search budget."}{" "}
+            The fixed package fanouts pass DRC; this is an unresolved
+            interconnect input.
+          </p>
+        )}
         <p>
           Blue: source terminals · Amber: fixed destinations · Cyan: search
           frontier · Pink: current candidate · Colored lines: committed lanes
         </p>
+        <p>
+          Fixed fanouts and new interconnects use the same copper-layer colors.
+          Via rings mark layer transitions.
+        </p>
+        <div
+          style={{
+            display: "flex",
+            gap: 12,
+            flexWrap: "wrap",
+            marginBottom: 12,
+          }}
+        >
+          {Object.entries(layerColors).map(([layer, color]) => (
+            <span key={layer} style={{ color }}>
+              <b>━</b> {layer}
+            </span>
+          ))}
+        </div>
         <label>
           Grid resolution{" "}
           <select

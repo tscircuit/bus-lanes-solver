@@ -1,0 +1,56 @@
+[
+  {
+    "busId": "RAM_BYTE0",
+    "name": "RAM_BYTE0",
+    "connectionNames": [
+      "source_trace_80",
+      "source_trace_81",
+      "source_trace_82",
+      "source_trace_83",
+      "source_trace_84",
+      "source_trace_85",
+      "source_trace_86",
+      "source_trace_87",
+      "source_trace_102",
+      "source_trace_104",
+      "source_trace_105"
+    ],
+    "allowedLayers": ["top", "inner2", "inner4", "inner6", "bottom"]
+  },
+  {
+    "busId": "RAM_BYTE1",
+    "name": "RAM_BYTE1",
+    "connectionNames": [
+      "source_trace_88",
+      "source_trace_89",
+      "source_trace_90",
+      "source_trace_91",
+      "source_trace_92",
+      "source_trace_93",
+      "source_trace_94",
+      "source_trace_95",
+      "source_trace_103",
+      "source_trace_106",
+      "source_trace_107"
+    ],
+    "allowedLayers": ["top", "inner2", "inner4", "inner6", "bottom"]
+  },
+  {
+    "busId": "RAM_CA",
+    "name": "RAM_CA",
+    "connectionNames": [
+      "source_trace_96",
+      "source_trace_97",
+      "source_trace_98",
+      "source_trace_99",
+      "source_trace_100",
+      "source_trace_101",
+      "source_trace_108",
+      "source_trace_109",
+      "source_trace_110",
+      "source_trace_111",
+      "source_trace_112"
+    ],
+    "allowedLayers": ["top", "inner2", "inner4", "inner6", "bottom"]
+  }
+]

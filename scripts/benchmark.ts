@@ -1,17 +1,30 @@
+import { validateFanoutProvenance } from "./validate-fanout-provenance"
 import { validateTwoFanoutSample } from "./validate-two-fanout-sample"
 import { Glob } from "bun"
 import { BusLanesSolver, type SimpleRouteJson } from "../lib"
+const workerFile = process.argv.includes("--worker")
+  ? process.argv[process.argv.indexOf("--worker") + 1]
+  : undefined
+const timeoutSeconds = Number(
+  process.argv.includes("--timeout-seconds")
+    ? process.argv[process.argv.indexOf("--timeout-seconds") + 1]
+    : 60,
+)
+if (!Number.isFinite(timeoutSeconds) || timeoutSeconds <= 0)
+  throw Error("Invalid timeout")
 const legacy = process.argv.includes("--legacy")
-const files = legacy
-  ? Array.from(new Glob("tests/fixtures/ddr_*.json").scanSync(".")).sort()
-  : [
-      ...Array.from(
-        new Glob("tests/fixtures/two-fanouts/ddr_*.json").scanSync("."),
-      ).filter((f) => !f.endsWith(".meta.json")),
-      ...Array.from(new Glob("tests/fixtures/ddr_*-raw.json").scanSync(".")),
-    ].sort()
+const files = workerFile
+  ? [workerFile]
+  : legacy
+    ? Array.from(new Glob("tests/fixtures/ddr_*.json").scanSync(".")).sort()
+    : [
+        ...Array.from(
+          new Glob("tests/fixtures/two-fanouts/ddr_*.json").scanSync("."),
+        ).filter((f) => !f.endsWith(".meta.json")),
+        ...Array.from(new Glob("tests/fixtures/ddr_*-raw.json").scanSync(".")),
+      ].sort()
 if (!files.length) throw Error("No DDR samples found")
-if (!legacy) {
+if (!legacy && !workerFile) {
   for (const profile of [
     "ddr_left_io_right",
     "ddr_right_io_left",
@@ -21,6 +34,53 @@ if (!legacy) {
     if (!files.includes(`tests/fixtures/two-fanouts/${profile}.json`))
       throw Error(`Missing full DDR phase: ${profile}`)
   }
+}
+if (!workerFile) {
+  const reports = await Promise.all(
+    files.map(async (file) => {
+      const child = Bun.spawn(
+        [
+          process.execPath,
+          import.meta.path,
+          "--worker",
+          file,
+          "--timeout-seconds",
+          String(timeoutSeconds),
+          ...(legacy ? ["--legacy"] : []),
+        ],
+        { stdout: "pipe", stderr: "pipe" },
+      )
+      const [stdout, stderr] = await Promise.all([
+        new Response(child.stdout).text(),
+        new Response(child.stderr).text(),
+      ])
+      await child.exited
+      const serialized = stdout
+        .split("\n")
+        .find((line) => line.startsWith("REPORT "))
+      if (!serialized) throw Error(`${file}: ${stderr || stdout}`)
+      const report = JSON.parse(serialized.slice(7))
+      console.log(
+        `${report.expectedRejection ? (report.failureCode === "layer_change_required" ? "REJECT OK" : "REJECT FAIL") : report.solved ? "PASS" : "FAIL"} ${file.split("/").at(-1)} ${report.routedLanes}/33 ${report.timedOut ? "timeout" : (report.failureCode ?? "")}`,
+      )
+      return report
+    }),
+  )
+  await Bun.write(
+    legacy ? "legacy-benchmark-results.json" : "benchmark-results.json",
+    JSON.stringify(reports, null, 2) + "\n",
+  )
+  const positives = reports.filter((r) => !r.expectedRejection),
+    negatives = reports.filter((r) => r.expectedRejection)
+  console.log(
+    `Full DDR phases solved: ${positives.filter((r) => r.solved).length}/${positives.length}; expected layer-change rejections: ${negatives.filter((r) => r.failureCode === "layer_change_required").length}/${negatives.length}`,
+  )
+  process.exit(
+    positives.some((r) => !r.solved) ||
+      negatives.some((r) => r.failureCode !== "layer_change_required")
+      ? 1
+      : 0,
+  )
 }
 const reports = []
 for (const file of files) {
@@ -32,10 +92,22 @@ for (const file of files) {
           await Bun.file(file.replace(".json", ".meta.json")).json(),
         )
       : undefined
+  const provenance = dataset
+    ? await validateFanoutProvenance(
+        await Bun.file(file.replace(".json", ".meta.json")).json(),
+      )
+    : undefined
   const before = JSON.stringify(input)
   const solver = new BusLanesSolver(input)
   const start = performance.now()
-  solver.solve()
+  let timedOut = false
+  while (!solver.solved && !solver.failed) {
+    if (performance.now() - start >= timeoutSeconds * 1000) {
+      timedOut = true
+      break
+    }
+    solver.step()
+  }
   if (JSON.stringify(input) !== before) throw Error("Benchmark input mutated")
   const negative = file.endsWith("-raw.json")
   const valid =
@@ -71,7 +143,10 @@ for (const file of files) {
   }
   const report = {
     file,
+    timedOut,
+    timeoutSeconds,
     dataset,
+    provenance,
     expectedRejection: negative,
     solved: valid,
     failureCode: solver.failureCode,
@@ -82,21 +157,8 @@ for (const file of files) {
     milliseconds: Math.round(performance.now() - start),
   }
   reports.push(report)
+  console.log("REPORT " + JSON.stringify(report))
   console.log(
     `${negative ? (solver.failureCode === "layer_change_required" ? "REJECT OK" : "REJECT FAIL") : valid ? "PASS" : "FAIL"} ${file.split("/").at(-1)} ${report.routedLanes}/${input.connections.length} lanes ${report.milliseconds}ms ${report.failureCode ?? ""}`,
   )
 }
-const positives = reports.filter((r) => !r.expectedRejection),
-  negatives = reports.filter((r) => r.expectedRejection)
-console.log(
-  `${legacy ? "Legacy carrier-prefix samples" : "Full two-fanout DDR phases"} solved: ${positives.filter((r) => r.solved).length}/${positives.length}; expected layer-change rejections: ${negatives.filter((r) => r.failureCode === "layer_change_required").length}/${negatives.length}`,
-)
-await Bun.write(
-  legacy ? "legacy-benchmark-results.json" : "benchmark-results.json",
-  `${JSON.stringify(reports, null, 2)}\n`,
-)
-if (
-  positives.some((r) => !r.solved) ||
-  negatives.some((r) => r.failureCode !== "layer_change_required")
-)
-  process.exitCode = 1

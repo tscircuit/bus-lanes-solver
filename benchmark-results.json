@@ -1,6 +1,8 @@
 [
   {
     "file": "tests/fixtures/ddr_bottom_io_top-raw.json",
+    "timedOut": false,
+    "timeoutSeconds": 60,
     "expectedRejection": true,
     "solved": false,
     "failureCode": "layer_change_required",
@@ -12,6 +14,8 @@
   },
   {
     "file": "tests/fixtures/ddr_left_io_right-raw.json",
+    "timedOut": false,
+    "timeoutSeconds": 60,
     "expectedRejection": true,
     "solved": false,
     "failureCode": "layer_change_required",
@@ -23,6 +27,8 @@
   },
   {
     "file": "tests/fixtures/ddr_right_io_left-raw.json",
+    "timedOut": false,
+    "timeoutSeconds": 60,
     "expectedRejection": true,
     "solved": false,
     "failureCode": "layer_change_required",
@@ -30,10 +36,12 @@
     "iterations": 1,
     "attempts": 1,
     "routedLanes": 0,
-    "milliseconds": 4
+    "milliseconds": 5
   },
   {
     "file": "tests/fixtures/ddr_top_io_bottom-raw.json",
+    "timedOut": false,
+    "timeoutSeconds": 60,
     "expectedRejection": true,
     "solved": false,
     "failureCode": "layer_change_required",
@@ -45,70 +53,98 @@
   },
   {
     "file": "tests/fixtures/two-fanouts/ddr_bottom_io_top.json",
+    "timedOut": false,
+    "timeoutSeconds": 60,
     "dataset": {
-      "marginMm": 5.999999999999999,
+      "marginMm": 17.76,
       "fanoutTraces": 66,
       "signals": 33,
+      "mismatchedExitLayers": 0,
       "fixedCopperDrcErrors": 0
     },
+    "provenance": {
+      "generator": "@tscircuit/fanout-solver@0.0.78",
+      "verifiedPaths": 66
+    },
     "expectedRejection": false,
-    "solved": true,
-    "failureCode": null,
-    "error": null,
-    "iterations": 36,
-    "attempts": 1,
-    "routedLanes": 33,
-    "milliseconds": 61
+    "solved": false,
+    "failureCode": "search_budget_exhausted",
+    "error": "BusLanesSolver ran out of iterations",
+    "iterations": 5000000,
+    "attempts": 106,
+    "routedLanes": 3,
+    "milliseconds": 46287
   },
   {
     "file": "tests/fixtures/two-fanouts/ddr_left_io_right.json",
+    "timedOut": false,
+    "timeoutSeconds": 60,
     "dataset": {
-      "marginMm": 5.999999999999999,
+      "marginMm": 17.76,
       "fanoutTraces": 66,
       "signals": 33,
+      "mismatchedExitLayers": 28,
       "fixedCopperDrcErrors": 0
     },
+    "provenance": {
+      "generator": "@tscircuit/fanout-solver@0.0.78",
+      "verifiedPaths": 66
+    },
     "expectedRejection": false,
-    "solved": true,
-    "failureCode": null,
-    "error": null,
-    "iterations": 36,
+    "solved": false,
+    "failureCode": "layer_change_required",
+    "error": "source_trace_2: top → inner6; fan out both endpoints onto a common fixed layer first",
+    "iterations": 1,
     "attempts": 1,
-    "routedLanes": 33,
-    "milliseconds": 45
+    "routedLanes": 0,
+    "milliseconds": 1
   },
   {
     "file": "tests/fixtures/two-fanouts/ddr_right_io_left.json",
+    "timedOut": false,
+    "timeoutSeconds": 60,
     "dataset": {
-      "marginMm": 5.999999999999999,
+      "marginMm": 17.76,
       "fanoutTraces": 66,
       "signals": 33,
+      "mismatchedExitLayers": 0,
       "fixedCopperDrcErrors": 0
     },
+    "provenance": {
+      "generator": "@tscircuit/fanout-solver@0.0.78",
+      "verifiedPaths": 66
+    },
     "expectedRejection": false,
-    "solved": true,
-    "failureCode": null,
-    "error": null,
-    "iterations": 36,
-    "attempts": 1,
-    "routedLanes": 33,
-    "milliseconds": 53
+    "solved": false,
+    "failureCode": "search_budget_exhausted",
+    "error": "BusLanesSolver ran out of iterations",
+    "iterations": 5000000,
+    "attempts": 106,
+    "routedLanes": 4,
+    "milliseconds": 47502
   },
   {
     "file": "tests/fixtures/two-fanouts/ddr_top_io_bottom.json",
+    "timedOut": false,
+    "timeoutSeconds": 60,
     "dataset": {
-      "marginMm": 6.000000000000001,
+      "marginMm": 17.76,
       "fanoutTraces": 66,
       "signals": 33,
+      "mismatchedExitLayers": 0,
       "fixedCopperDrcErrors": 0
     },
+    "provenance": {
+      "generator": "@tscircuit/fanout-solver@0.0.78",
+      "verifiedPaths": 66
+    },
     "expectedRejection": false,
-    "solved": true,
-    "failureCode": null,
-    "error": null,
-    "iterations": 36,
-    "attempts": 1,
-    "routedLanes": 33,
-    "milliseconds": 50
+    "solved": false,
+    "failureCode": "search_budget_exhausted",
+    "error": "BusLanesSolver ran out of iterations",
+    "iterations": 5000000,
+    "attempts": 103,
+    "routedLanes": 5,
+    "milliseconds": 45053
   }
 ]

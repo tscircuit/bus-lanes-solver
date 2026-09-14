@@ -2,273 +2,53 @@
   "profile": "ddr_right_io_left",
   "kind": "independent-fanouts",
   "marginMm": 6,
+  "fanoutGenerator": "@tscircuit/fanout-solver@0.0.78",
+  "provenance": {
+    "soc": {
+      "file": "examples/fanout-solver-outputs/ddr_right_io_left-soc.json",
+      "sha256": "bb8224b23676db42f7812b83a5c1fe0911de16922ca4b961511836b97cac8a38",
+      "inputSha256": "d8b81ab0f2c08323890e3f8e9ac8bbece21f64738bc9a3ed0a851d9b4502bd70",
+      "optionsSha256": "75cffa96e29592f5e191fc60baf4cbfcb6681f57b8fe10afa207a0a42f76755d",
+      "tracesSha256": "88e0f360cbfb1c864f401956644bc598f937865fd3368f5612127f719bff16e5",
+      "validation": {
+        "valid": true,
+        "checkedConnectionCount": 33,
+        "brokenOutConnectionCount": 33,
+        "issues": []
+      }
+    },
+    "ram": {
+      "file": "examples/fanout-solver-outputs/ddr_right_io_left-ram.json",
+      "sha256": "2bcbb50f6b0509608cf09d1a1338ee223a9a04b2710deb7bf78e1acc2f34a349",
+      "inputSha256": "ab0f6e0c75884cae304d1e443bd917a4cf1f07bf7c7db1f240252f94e0f3df73",
+      "optionsSha256": "399ec638c17eec37d835f6a44d557da9a0f4c59180fa3aa749dcd47a388a9be2",
+      "tracesSha256": "bfe00418075af292ba73285b9ea5cf1b0dca29137a62c2cc6016d206765a7b48",
+      "validation": {
+        "valid": true,
+        "checkedConnectionCount": 33,
+        "brokenOutConnectionCount": 33,
+        "issues": []
+      }
+    }
+  },
   "socRegion": {
-    "minX": -21.8,
-    "maxX": 1.7,
-    "minY": -13.649999999999999,
-    "maxY": 11.549999999999997
-  },
-  "ramRegion": {
-    "minX": 7.699999999999999,
-    "maxX": 44.099999999999994,
-    "minY": -18.2,
-    "maxY": 18.2
-  },
-  "ramFanoutDrc": {
-    "valid": true,
-    "checkedTraceCount": 33,
-    "checkedSegmentCount": 223,
-    "checkedViaCount": 66,
-    "issues": []
-  },
-  "fixedCopperDrc": {
-    "valid": true,
-    "checkedTraceCount": 66,
-    "checkedSegmentCount": 1076,
-    "checkedViaCount": 132,
-    "issues": []
-  },
-  "carrierTraceCount": 0,
-  "connectionCount": 33,
-  "ramLayerSequences": {
-    "source_trace_80": [
-      [
-        "top",
-        "bottom",
-        "inner2"
-      ]
-    ],
-    "source_trace_81": [
-      [
-        "top",
-        "bottom",
-        "inner2"
-      ]
-    ],
-    "source_trace_82": [
-      [
-        "top",
-        "bottom",
-        "inner2"
-      ]
-    ],
-    "source_trace_83": [
-      [
-        "top",
-        "bottom",
-        "inner2"
-      ]
-    ],
-    "source_trace_84": [
-      [
-        "top",
-        "bottom",
-        "inner2"
-      ]
-    ],
-    "source_trace_85": [
-      [
-        "top",
-        "bottom",
-        "inner2"
-      ]
-    ],
-    "source_trace_86": [
-      [
-        "top",
-        "bottom",
-        "inner2"
-      ]
-    ],
-    "source_trace_87": [
-      [
-        "top",
-        "bottom",
-        "inner2"
-      ]
-    ],
-    "source_trace_88": [
-      [
-        "top",
-        "bottom",
-        "inner2"
-      ]
-    ],
-    "source_trace_89": [
-      [
-        "top",
-        "bottom",
-        "inner2"
-      ]
-    ],
-    "source_trace_90": [
-      [
-        "top",
-        "bottom",
-        "inner2"
-      ]
-    ],
-    "source_trace_91": [
-      [
-        "top",
-        "bottom",
-        "inner2"
-      ]
-    ],
-    "source_trace_92": [
-      [
-        "top",
-        "bottom",
-        "inner2"
-      ]
-    ],
-    "source_trace_93": [
-      [
-        "top",
-        "bottom",
-        "inner2"
-      ]
-    ],
-    "source_trace_94": [
-      [
-        "top",
-        "bottom",
-        "inner2"
-      ]
-    ],
-    "source_trace_95": [
-      [
-        "top",
-        "bottom",
-        "inner2"
-      ]
-    ],
-    "source_trace_96": [
-      [
-        "top",
-        "bottom",
-        "inner4"
-      ]
-    ],
-    "source_trace_97": [
-      [
-        "top",
-        "bottom",
-        "inner4"
-      ]
-    ],
-    "source_trace_98": [
-      [
-        "top",
-        "bottom",
-        "inner4"
-      ]
-    ],
-    "source_trace_99": [
-      [
-        "top",
-        "bottom",
-        "inner4"
-      ]
-    ],
-    "source_trace_100": [
-      [
-        "top",
-        "bottom",
-        "inner4"
-      ]
-    ],
-    "source_trace_101": [
-      [
-        "top",
-        "bottom",
-        "inner4"
-      ]
-    ],
-    "source_trace_102": [
-      [
-        "top",
-        "bottom",
-        "inner2"
-      ]
-    ],
-    "source_trace_103": [
-      [
-        "top",
-        "bottom",
-        "inner2"
-      ]
-    ],
-    "source_trace_104": [
-      [
-        "top",
-        "bottom",
-        "inner2"
-      ]
-    ],
-    "source_trace_105": [
-      [
-        "top",
-        "bottom",
-        "inner2"
-      ]
-    ],
-    "source_trace_106": [
-      [
-        "top",
-        "bottom",
-        "inner2"
-      ]
-    ],
-    "source_trace_107": [
-      [
-        "top",
-        "bottom",
-        "inner2"
-      ]
-    ],
-    "source_trace_108": [
-      [
-        "top",
-        "bottom",
-        "inner4"
-      ]
-    ],
-    "source_trace_109": [
-      [
-        "top",
-        "bottom",
-        "inner4"
-      ]
-    ],
-    "source_trace_110": [
-      [
-        "top",
-        "bottom",
-        "inner4"
-      ]
-    ],
-    "source_trace_111": [
-      [
-        "top",
-        "bottom",
-        "inner4"
-      ]
-    ],
-    "source_trace_112": [
-      [
-        "top",
-        "bottom",
-        "inner4"
-      ]
-    ]
+    "minX": -20.12,
+    "maxX": 20.12,
+    "minY": -20.12,
+    "maxY": 20.12
   },
   "socCenter": {
-    "x": -9,
+    "x": 0,
     "y": 0
   },
+  "ramRegion": {
+    "minX": 37.88,
+    "maxX": 78.12,
+    "minY": -16.12,
+    "maxY": 24.12
+  },
   "ramCenter": {
-    "x": 25.9,
-    "y": 0
+    "x": 58,
+    "y": 4
   }
 }
