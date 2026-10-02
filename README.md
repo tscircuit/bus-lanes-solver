@@ -28,6 +28,43 @@ const routed = solver.getOutput()
 
 Each connection must have exactly two terminals on the same fixed layer. The solver never emits vias, changes terminal layers, or falls back to a multilayer router. Existing copper and obstacles remain fixed. Geometric winding sweeps, seam rotations and reverse searches choose lane order; planar congestion, crossed lane orders, unsupported constraints, and exhausted search budgets produce explicit failures. A bounded visibility-graph search failure is not a proof that no continuous planar solution exists.
 
+## Hypergraph initial-routing variant
+
+`HypergraphBusLanesSolver` plans the initial routes as a conflict-constrained
+hypergraph cover, then opens tuning corridors and matches total pad-to-pad copper
+lengths. It first reserves matched bus corridors, then retries with buses and
+controls planned together when necessary. Fixed power copper stays immutable;
+only local signal dogbone vias are added.
+
+```ts
+import { HypergraphBusLanesSolver } from "@tscircuit/bus-lanes-solver"
+
+const solver = new HypergraphBusLanesSolver(simpleRouteJson)
+solver.solve()
+if (!solver.solved) throw new Error(solver.error ?? "Routing failed")
+const routed = solver.getOutput()
+```
+
+Run the four power-inclusive PR #10 placements with the strict completion gate:
+
+```sh
+./benchmark.sh --solver hypergraph --require-all-solved \
+  --timeout-seconds 1200 --output benchmark-hypergraph-results.json \
+  --artifacts docs/hypergraph-am3352
+```
+
+Pairs declaring `traceGap` use one shared centerline and two offset rails, even
+without `maxUncoupledLength`. The hypergraph selects and replaces each pair as a
+whole, and length tuning adds shared meanders to both rails. Only package
+approaches may separate for pin access and skew correction. Explicit uncoupled
+length limits are still checked.
+
+The four-sample audit also measures physical pair spacing independently of solver
+metadata: the interior edge gap must stay within 0.0999–0.155 mm after the reviewed
+6.2 mm package allowance at each end. The existing solver remains the default.
+
+See [algorithm, fixture correction and results](docs/hypergraph-routing.md).
+
 ## Review target
 
 The integrated preset routes the original TSX from the
@@ -80,7 +117,7 @@ The main review path is:
 - `buses[].maxLengthSkew`: maximum difference in total planar copper lengths, in millimeters, including fixed traces associated by `source_trace_id` or `connection_name`. The solver adds clearance-checked tuning detours and verifies the final result.
 - `buses[].traceWidth`: explicit width in millimeters; otherwise uses connection `nominalTraceWidth` / `width`, then `minTraceWidth`.
 - `buses[].allowedLayers`: must contain the fixed terminal layer.
-- `differentialPairs[].lengthTolerance`: supported as a routed-length constraint. Pairs with `traceGap` use a shared corridor. An explicit `maxUncoupledLength` bounds total uncoupled copper, including fixed fanouts.
+- `differentialPairs[].lengthTolerance`: supported as a routed-length constraint. The default solver routes pairs with `traceGap` through a shared corridor. An explicit `maxUncoupledLength` bounds total uncoupled copper, including fixed fanouts.
 
 Matching includes both fixed fanouts and the routes produced by this phase. It measures XY copper length; via depth, layer-dependent propagation velocity, and package delays are not inferred. No impedance or delay defaults are supplied. Matching uses the existing core SRJ fields: bus `maxLengthSkew` and differential-pair `lengthTolerance` (mapped from the JSX pair’s `maxLengthSkew`). Routes already inside the bound remain untuned; shorter routes grow only to the permitted lower bound. Overlapping bus and pair constraints are resolved together without forcing exact equality.
 
@@ -237,3 +274,12 @@ captures outside the repository.
 - [Left to right](docs/routed-ddr/ddr_left_io_right-solved.png)
 - [Right to left](docs/routed-ddr/ddr_right_io_left-solved.png)
 - [Top to bottom](docs/routed-ddr/ddr_top_io_bottom-solved.png)
+
+### Live hypergraph debugger
+
+Run `bun start` and choose `am3352-ram-below`, `am3352-ram-right`,
+`am3352-ram-left`, or `am3352-ram-above`. Each Cosmos page contains only
+`GenericSolverDebugger`. Use **Step** for individual solver iterations and
+**Next Stage** for phase boundaries. After solving, enable **Filter by step**
+to inspect retained stage visualizations, including the untuned hypergraph
+cover. These fixtures compute from input; they do not replay solved traces.

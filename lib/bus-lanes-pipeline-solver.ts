@@ -1,3 +1,5 @@
+import { routeHypergraphDogbones } from "./hypergraph-dogbones"
+import { captureRoutingStage } from "./capture-routing-stage"
 import { isUnroutedComponentPad } from "./is-unrouted-component-pad"
 import { BaseSolver } from "@tscircuit/solver-utils"
 import {
@@ -19,12 +21,34 @@ export class BusLanesPipelineSolver extends BaseSolver {
   phase = "resolve_layers"
   traces: Trace[] = []
   failureCode: string | null = null
+  readonly attemptFailures: Array<{
+    attempt: number
+    phase: string
+    error: string
+  }> = []
   private child?: BusLanesSolver
   private escapes: Trace[] = []
   private attempt = 0
   private completedLanes: Trace[] = []
   private remainingInput?: SimpleRouteJson
   private terminalLayers = new Map<string, string[]>()
+  private childOptions(): SolverOptions {
+    return {
+      ...this.options,
+      onStage: this.options.onStage
+        ? (snapshot) =>
+            this.options.onStage!({
+              ...snapshot,
+              attempt: this.attempt,
+              routingStage: this.completedLanes.length
+                ? "remaining_signals"
+                : this.remainingInput
+                  ? "matched_buses"
+                  : "all_signals",
+            })
+        : undefined,
+    }
+  }
   constructor(input: SimpleRouteJson, options: BusLanesPipelineOptions = {}) {
     super()
     this.input = structuredClone(input)
@@ -45,7 +69,7 @@ export class BusLanesPipelineSolver extends BaseSolver {
   }
   private prepare() {
     if (this.options.fanout === "none") {
-      this.child = new BusLanesSolver(this.input, this.options)
+      this.child = new BusLanesSolver(this.input, this.childOptions())
       return
     }
     const layers = getCopperLayerNames(this.input.layerCount)
@@ -121,7 +145,14 @@ export class BusLanesPipelineSolver extends BaseSolver {
               )
                 crossings++
             }
-          return crossings * (this.attempt === 1 ? 0 : 4) + load.get(layer)!
+          return (
+            crossings *
+              (this.attempt === 1 &&
+              this.options.initialRouting !== "hypergraph"
+                ? 0
+                : 4) +
+            load.get(layer)!
+          )
         }
         return (
           rank(a) - rank(b) ||
@@ -130,7 +161,12 @@ export class BusLanesPipelineSolver extends BaseSolver {
           layers.indexOf(a) - layers.indexOf(b)
         )
       })
-      const target = allowed[Math.max(0, this.attempt - 1) % allowed.length]
+      const target =
+        allowed[
+          this.options.initialRouting === "hypergraph" && this.attempt <= 1
+            ? 0
+            : Math.max(0, this.attempt - 1) % allowed.length
+        ]
       for (const name of group) targets.set(name, target)
       load.set(target, load.get(target)! + group.size)
     }
@@ -143,7 +179,19 @@ export class BusLanesPipelineSolver extends BaseSolver {
         this.input.minTraceWidth,
     )
     // The shared site matcher uses a conservative width while reserving sites.
-    const result = routeLocalSignalDogbones(
+    const dogboneRouter =
+      this.options.initialRouting === "hypergraph"
+        ? (
+            input: Parameters<typeof routeLocalSignalDogbones>[0],
+            options: Parameters<typeof routeLocalSignalDogbones>[1],
+          ) =>
+            routeHypergraphDogbones(
+              input as SimpleRouteJson,
+              options,
+              this.attempt,
+            )
+        : routeLocalSignalDogbones
+    const result = dogboneRouter(
       this.input as Parameters<typeof routeLocalSignalDogbones>[0],
       {
         targetLayers: targets,
@@ -169,34 +217,37 @@ export class BusLanesPipelineSolver extends BaseSolver {
     // congestion negotiation. Existing handoffs always keep their fixed layer.
     const terminalLayers = new Map<string, string[]>()
     for (const connection of this.input.connections) {
-      if (
-        (this.input.buses ?? []).some((b) =>
-          b.connectionNames.includes(connection.name),
-        )
+      const memberBuses = (this.input.buses ?? []).filter((b) =>
+        b.connectionNames.includes(connection.name),
       )
+      if (memberBuses.length && this.options.initialRouting !== "hypergraph")
         continue
       const vias = this.escapes
         .filter((t) => t.connection_name === connection.name)
         .flatMap((t) => t.route.filter((p) => p.route_type === "via"))
       if (vias.length !== 2) continue
-      const available = layers.filter((layer) =>
-        vias.every(
-          (via) =>
-            layer !== via.from_layer &&
-            (
-              via.layers ??
-              layers.slice(
-                Math.min(
-                  layers.indexOf(via.from_layer),
-                  layers.indexOf(via.to_layer),
-                ),
-                Math.max(
-                  layers.indexOf(via.from_layer),
-                  layers.indexOf(via.to_layer),
-                ) + 1,
-              )
-            ).includes(layer),
-        ),
+      const available = layers.filter(
+        (layer) =>
+          memberBuses.every(
+            (b) => !b.allowedLayers || b.allowedLayers.includes(layer),
+          ) &&
+          vias.every(
+            (via) =>
+              layer !== via.from_layer &&
+              (
+                via.layers ??
+                layers.slice(
+                  Math.min(
+                    layers.indexOf(via.from_layer),
+                    layers.indexOf(via.to_layer),
+                  ),
+                  Math.max(
+                    layers.indexOf(via.from_layer),
+                    layers.indexOf(via.to_layer),
+                  ) + 1,
+                )
+              ).includes(layer),
+          ),
       )
       if (available.length > 1) terminalLayers.set(connection.name, available)
     }
@@ -206,6 +257,14 @@ export class BusLanesPipelineSolver extends BaseSolver {
       connections: result.connections as SimpleRouteJson["connections"],
       traces: [...(this.input.traces ?? []), ...this.escapes],
     }
+    captureRoutingStage(this.options, {
+      stage: "local_dogbones",
+      input: this.input,
+      traces: this.escapes,
+      attempt: this.attempt,
+      routingStage: "all_signals",
+      stats: { localDogbones: this.escapes.length },
+    })
     const constrained = new Set([
       ...(laneInput.buses ?? []).flatMap((b) => b.connectionNames),
       ...(laneInput.differentialPairs ?? []).flatMap((p) => p.connectionNames),
@@ -218,7 +277,11 @@ export class BusLanesPipelineSolver extends BaseSolver {
     )
     // The reference routes and tunes bus corridors before placing unrelated
     // controls, so those controls cannot consume space required for matching.
-    if (matching.length && remaining.length) {
+    if (
+      matching.length &&
+      remaining.length &&
+      (this.options.initialRouting !== "hypergraph" || this.attempt === 0)
+    ) {
       this.remainingInput = {
         ...laneInput,
         connections: remaining,
@@ -227,15 +290,25 @@ export class BusLanesPipelineSolver extends BaseSolver {
       }
       this.child = new BusLanesSolver(
         { ...laneInput, connections: matching },
-        this.options,
+        this.childOptions(),
         terminalLayers,
       )
     } else
-      this.child = new BusLanesSolver(laneInput, this.options, terminalLayers)
+      this.child = new BusLanesSolver(
+        laneInput,
+        this.childOptions(),
+        terminalLayers,
+      )
   }
   _step() {
     try {
-      if (!this.child) this.prepare()
+      if (!this.child) {
+        this.prepare()
+        this.activeSubSolver = this.child
+        this.phase = "local_dogbones"
+        return
+      }
+      this.activeSubSolver = this.child
       this.child!.step()
       this.phase = `lanes_${this.child!.phase}`
       this.stats = {
@@ -249,6 +322,23 @@ export class BusLanesPipelineSolver extends BaseSolver {
             : "all_signals",
       }
       this.progress = this.child!.progress
+      // The preliminary bus-only pass is a cheap first portfolio choice. If
+      // its terminal sites cannot produce even one paired corridor, try a new
+      // dogbone assignment instead of exhausting every handoff combination.
+      if (
+        this.options.initialRouting === "hypergraph" &&
+        this.attempt === 0 &&
+        this.remainingInput &&
+        this.child!.phase === "route" &&
+        this.child!.stats.topologyAttempt === 0 &&
+        this.child!.iterations > 200000 &&
+        !this.child!.traces.length
+      ) {
+        this.child!.tryFinalAcceptance()
+        throw Error(
+          "Initial terminal sites produced no paired corridor within the preliminary search budget",
+        )
+      }
       if (this.child!.failed)
         throw Error(this.child!.error ?? "Bus lanes failed")
       if (this.child!.solved && this.remainingInput) {
@@ -261,10 +351,12 @@ export class BusLanesPipelineSolver extends BaseSolver {
               ...this.completedLanes,
             ],
           },
-          this.options,
+          this.childOptions(),
           this.terminalLayers,
         )
         this.remainingInput = undefined
+        this.phase = "remaining_signals"
+        this.activeSubSolver = this.child
         return
       }
       if (this.child!.solved) {
@@ -325,8 +417,21 @@ export class BusLanesPipelineSolver extends BaseSolver {
         )
         this.solved = true
         this.phase = "solved"
+        captureRoutingStage(this.options, {
+          stage: "assembled_output",
+          input: this.input,
+          traces: this.traces,
+          attempt: this.attempt,
+          routingStage: "all_signals",
+          stats: { connectedSignals: this.traces.length },
+        })
       }
     } catch (error) {
+      this.attemptFailures.push({
+        attempt: this.attempt,
+        phase: this.child?.phase ?? this.phase,
+        error: String(error),
+      })
       this.attempt++
       if (
         this.options.fanout !== "none" &&
@@ -347,6 +452,11 @@ export class BusLanesPipelineSolver extends BaseSolver {
     }
   }
   visualize() {
-    return this.child?.visualize() ?? { points: [], lines: [] }
+    if (this.solved)
+      return new BusLanesSolver({
+        ...this.getOutput(),
+        connections: [],
+      }).visualize()
+    return this.child?.visualize() ?? new BusLanesSolver(this.input).visualize()
   }
 }

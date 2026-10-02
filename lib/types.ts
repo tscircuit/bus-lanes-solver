@@ -86,8 +86,31 @@ export interface SimpleRouteJson {
   }>
 }
 export interface SolverOptions {
+  /** Debugger-only abstract graph stage; ordinary routing does not capture it. */
+  visualizeHypergraphTopology?: boolean
+  /** Optional diagnostic observer. Receives detached snapshots only at stage
+   * boundaries; intermediate geometry is not a validated routing solution. */
+  onStage?: (snapshot: RoutingStageSnapshot) => void
+  initialRouting?: "visibility" | "hypergraph"
   smoothTuning?: boolean
   denseSearch?: boolean
   maxLaneIterations?: number
   maxSearchIterations?: number
+}
+
+export interface RoutingStageSnapshot {
+  topology?: import("./route-hypergraph").RouteHypergraphTopology
+  stage:
+    | "local_dogbones"
+    | "hypergraph_cover"
+    | "route_cleanup"
+    | "tuning_corridor"
+    | "length_matching"
+    | "validated_lanes"
+    | "assembled_output"
+  input: SimpleRouteJson
+  traces: Trace[]
+  stats: Record<string, unknown>
+  attempt?: number
+  routingStage?: "matched_buses" | "remaining_signals" | "all_signals"
 }
