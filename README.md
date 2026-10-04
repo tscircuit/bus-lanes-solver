@@ -28,6 +28,113 @@ const routed = solver.getOutput()
 
 Each connection must have exactly two terminals on the same fixed layer. The solver never emits vias, changes terminal layers, or falls back to a multilayer router. Existing copper and obstacles remain fixed. Geometric winding sweeps, seam rotations and reverse searches choose lane order; planar congestion, crossed lane orders, unsupported constraints, and exhausted search budgets produce explicit failures. A bounded visibility-graph search failure is not a proof that no continuous planar solution exists.
 
+## Anytime optimization
+
+`AnytimeBusLanesSolver` returns a provisional endpoint-connected result immediately,
+then retains the best valid route while exploring alternative routing topologies
+and reconstructing whole matching cohorts. Existing `BusLanesSolver` and
+`BusLanesPipelineSolver` behavior is unchanged.
+
+```ts
+import { AnytimeBusLanesSolver } from "@tscircuit/bus-lanes-solver"
+
+const solver = new AnytimeBusLanesSolver(simpleRouteJson, {
+  fanout: "auto", // default; use "none" for supplied fixed-layer handoffs
+  effort: "1x",
+  iterationsPerX: 512,
+})
+const immediate = solver.getResult() // status: "best_effort", with violations
+const one = solver.solve()
+const two = solver.improve("2x")
+const five = solver.improve("5x")
+const ten = solver.improve("10x")
+```
+
+The levels are cumulative work budgets: 512, 1024, 2560 and 5120 optimization trial or
+discovery steps by default. They follow one deterministic search sequence, and
+continuation produces the same geometry as a fresh run at that effort. Routing
+the first valid incumbent is a separate cost; these labels are not wall-time
+multipliers. If bounded routing fails, higher effort retries the same input with
+larger routing budgets (1, 2, 5 and 10 times `maxSearchIterations`).
+After any valid checkpoint, `runIterations(1000)` continues optimization beyond
+the presets. The current best remains available if the neighborhood converges.
+
+For interactive scheduling, call `step()` and inspect `getResult()` between calls.
+`solved` means a valid incumbent exists; `exhausted` means the current effort
+budget has finished. `getResult()`, `getOutput()`, `traces` and `history` return
+detached snapshots. `tryFinalAcceptance()` interrupts work and preserves the
+current result. A single geometric trial or acceptance check is synchronous,
+so an external time budget is checked between steps rather than preempting them.
+
+The search recovers untuned carrier skeletons and closes overlapping bus and
+pair constraints into electrical cohorts. A global coordinate contraction
+finds empty strips crossed only by straight runs, moves every affected lane
+together, and removes compatible strips from the outside inward. Terminals,
+via handoffs, package escapes, and supplied copper anchor the stationary side.
+This can reduce a large envelope without changing crossing order. A bounded
+beam reconstructs several contraction candidates concurrently, so an
+infeasible maximal cut does not starve a feasible smaller one.
+
+Scratch transactions can also abandon old
+corridors, rip up blocking nets together, reroute whole cohorts in different
+orders, and contract the search envelope. Coarse-to-fine visibility searches
+preserve known local package approaches. A joint allocator computes a new length
+target vector and distributes the required copper across multiple tuning
+pockets; several skew targets and geometric forms receive work concurrently.
+It uses accepted pocket capacity when choosing shared and independent pair
+lengths, and shortens straight lobe legs while preserving curved bends. Compact
+bank density follows physical width and clearance rather than a fixed radius.
+These searches use geometry primitives rather than rerunning the original lane
+router or matching pass. Scratch routes can be incomplete or unmatched, while
+the public result remains the last strictly accepted complete route. Supplied
+copper and newly created local signal escapes remain immutable.
+
+The objective is `areaWeight * normalizedArea + skewWeight * skewPenalty +
+lengthWeight * normalizedLength`, with default weights 1, 0.1 and 0.2. Area
+combines the outer envelope, mean layer envelope, mean lane envelope, and mean
+clearance-exclusion union, normalized by the terminal envelope. The conservative
+board grid counts the
+extra space blocked to an unrelated minimum-width trace beyond immutable copper
+and board edges; overlapping generated exclusions count once per layer. These
+are physical copper envelopes including wire radii and via pads. Tuning-bank
+rectangles are diagnostics and
+do not affect acceptance. Length is normalized by direct terminal
+lengths plus immutable fanouts. Skew is the mean of `(skew / tolerance)^2`,
+with tolerance floored at the minimum trace width. Electrical lengths
+include fixed fanouts. All raw measurements are returned alongside the objective.
+The objective never increases after the first valid route; individual components
+may trade off. Extra effort can plateau and does not guarantee a global optimum.
+Every accepted transaction passes the original strict lane validator, complete
+bus/pair matching, continuous clearance, self-clearance, angle checks, and
+exterior pair-spacing checks. `stats` reports candidate and rejection counts.
+Acceptance also checks original carrier handoffs, widths, ownership, immutable
+escape geometry, and the accepted shared corridors' physical minimum gap.
+
+Geometry work reuses immutable copper, bank shapes and obstacle scenes within a
+search, and shares spatial indexes across sufficiently large validation batches.
+On inner-layers-above, three alternating before/after runs reduced median 5x
+optimization from 24.7 s to 17.1 s while preserving identical routes, scores and
+search statistics. Initial routing is a separate cost. See the
+[performance measurements](docs/anytime/performance.json).
+
+`status: "best_effort"` always carries violations and must not be treated as
+fabrication-ready copper. Infeasible or unsupported inputs still have a result,
+but no algorithm can promise legal routing for impossible physical constraints.
+`status: "valid"` identifies accepted routed geometry. Provisional copper is never
+used as a review image or counted as a solved sample.
+
+Generate the complete effort comparison, independent validations, output JSON,
+and an interactive local report with:
+
+```sh
+bun scripts/compare-anytime.ts docs/anytime 512 --concurrency 2
+```
+
+The report covers all eight AM3352 placements, all four complete AM62L DDR
+samples, the obstacle channel, and the skew-tolerance example. Each sample shows
+1x, 2x, 5x and 10x at a shared physical scale, with separate routing and optimization
+timings. See [the generated report](docs/anytime/index.html).
+
 ## Review target
 
 The integrated preset routes the original TSX from the
