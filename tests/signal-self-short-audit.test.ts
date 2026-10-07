@@ -66,4 +66,76 @@ test("untimed control audit materializes through-via lands that bypass earlier c
     if (point.route_type === "via") point.via_diameter = 0.01
   expect(checkSignalSelfShorts(input, [withoutLands])).toHaveLength(0)
   expect(checkSignalSelfShorts(input, [candidate])).toHaveLength(1)
+  for (const point of withoutLands.route)
+    if (point.route_type === "via") point.via_diameter = 0.3
+  expect(checkSignalSelfShorts(input, [withoutLands])).toHaveLength(1)
+})
+
+for (const layer of ["top", "bottom"]) {
+  test(`${layer} native audit rejects tangency and retracing but permits ordinary joints`, () => {
+    const w = (x: number, y: number) => wire(x, y, layer)
+    expect(
+      checkSignalSelfShorts(input, [trace([w(0, 0), w(1, 0), w(1, 1)])]),
+    ).toHaveLength(0)
+    expect(
+      checkSignalSelfShorts(input, [trace([w(0, 0), w(1, 0), w(0.5, 0)])]),
+    ).toHaveLength(1)
+    expect(
+      checkSignalSelfShorts(input, [
+        trace([w(0, 0), w(1, 0), w(1, 1), w(0.5, 1), w(0.5, 0.1), w(-1, 0.1)]),
+      ]),
+    ).toHaveLength(1)
+  })
+}
+
+test("native audit permits projected crossings between separate wire layers", () => {
+  expect(
+    checkSignalSelfShorts(input, [
+      trace([
+        wire(-1, 0),
+        wire(1, 0),
+        {
+          route_type: "via",
+          x: 1,
+          y: 0,
+          from_layer: "top",
+          to_layer: "bottom",
+          layers: ["top", "inner1", "inner2", "bottom"],
+          via_diameter: 0.3,
+          via_hole_diameter: 0.15,
+        },
+        wire(1, 0, "bottom"),
+        wire(1, 1, "bottom"),
+        wire(0, 1, "bottom"),
+        wire(0, -1, "bottom"),
+      ]),
+    ]),
+  ).toHaveLength(0)
+})
+
+test("an earlier audit pass cannot hide later coordinate or copper-width changes", () => {
+  const candidate = trace([
+    wire(0, 0),
+    wire(1, 0),
+    wire(1, 1),
+    wire(0.5, 1),
+    wire(0.5, 0.11),
+    wire(-1, 0.11),
+  ])
+  expect(checkSignalSelfShorts(input, [candidate])).toHaveLength(0)
+  for (const point of candidate.route)
+    if (point.route_type === "wire") point.width = 0.12
+  expect(checkSignalSelfShorts(input, [candidate])).toHaveLength(1)
+  for (const point of candidate.route)
+    if (point.route_type === "wire") point.width = 0.1
+  expect(checkSignalSelfShorts(input, [candidate])).toHaveLength(0)
+  candidate.route[4].y = 0
+  expect(checkSignalSelfShorts(input, [candidate])).toHaveLength(1)
+})
+
+test("the audit also rejects self-contact when a signal is identified only by its PCB trace ID", () => {
+  const candidate = trace([wire(0, 0), wire(1, 0), wire(0.5, 0)])
+  delete candidate.connection_name
+  delete candidate.source_trace_id
+  expect(checkSignalSelfShorts(input, [candidate])).toHaveLength(1)
 })

@@ -1,5 +1,5 @@
-import { createTerminalViaClearanceChecker } from "./terminal-via-clearance"
 import { terminalViaTuningSegment } from "./terminal-via-tuning-segment"
+import { createTerminalViaClearanceChecker } from "./terminal-via-clearance"
 import { routeAnglesAreConventional } from "./route-angle-validation"
 import { foldedTuningLobes } from "./folded-tuning"
 import { packageApproachRegions, pointInBox } from "./package-approach-regions"
@@ -32,9 +32,12 @@ export function tuneSmoothLengths(
     maxCandidates?: number
     packMeanders?: boolean
     packageOnlyPairTuning?: boolean
+    /** Negotiation-only, never a completed route. The caller must reconstruct
+     * these approaches and run the complete-copper self-short audit. */
+    allowProvisionalLandConflicts?: boolean
   } = {},
 ) {
-  let attempted = 0
+  const attempted = [0, 0]
   let allowFolded = false
   const fixed = fixedCopper(input)
   function* candidates(
@@ -45,8 +48,7 @@ export function tuneSmoothLengths(
     const connection = input.connections.find(
       (c) => c.name === t.connection_name,
     )!
-    // Individual skew correction must not spend additional copper length in
-    // its own manufactured via land.
+    // Paired skew corrections also need to clear their manufactured via lands.
     const terminalViaCopperIsClear = createTerminalViaClearanceChecker(input, t)
     const width = (t.route[0] as Wire).width
     const fixedLength = fixedRouteLength(input, connection.name)
@@ -96,169 +98,185 @@ export function tuneSmoothLengths(
     // a small free pocket at an endpoint, so retry with compact, endpoint-aligned
     // banks only after every ordinary run has exhausted the original choices.
     const folded = allowFolded
-    // Each lane (and each partial-deficit retry) must get a chance to search.
-    // A shared counter let one difficult lane starve every later connection.
-    let attemptedFolded = 0
-    for (const compact of folded ? [false] : [false, true])
-      for (const { i } of segments) {
-        // A second bank must use an ordinary run; never place new teeth inside
-        // the sampled arcs of a previously accepted smooth correction.
-        if (t.curvedSegments?.includes(i + 1)) continue
-        if (
-          t.coupledSection &&
-          i >= t.coupledSection[0] &&
-          i < t.coupledSection[1]
-        )
-          continue
-        const a = t.route[i],
-          b = t.route[i + 1],
-          span = distance(a, b)
-        if (span < 0.01) continue
-        const ux = (b.x - a.x) / span,
-          uy = (b.y - a.y) / span
-        // Spread substantial deficits over several lobes without turning small
-        // corrections into dozens of microscopic teeth.
-        const maximumTeeth = Math.max(1, Math.floor((span * 0.9) / pitch))
-        // Compact banks spend the available run on more rounded cells, so
-        // added length fills the allocated bank without a tall sparse lobe.
-        const preferredTeeth = Math.min(
-          maximumTeeth,
-          options.packMeanders
-            ? maximumTeeth
-            : Math.max(2, Math.ceil(delta / (12 * width))),
-        )
-        const counts = Array.from(
-          { length: maximumTeeth },
-          (_, i) => i + 1,
-        ).sort(
-          (a, b) =>
-            Math.abs(a - preferredTeeth) - Math.abs(b - preferredTeeth) ||
-            b - a,
-        )
-        function* placements() {
-          if (folded) {
-            for (const teeth of [1, 2, 3])
-              for (const fraction of [0.9, 0.65, 0.4])
-                for (const position of [0.5, 0, 1])
-                  yield { teeth, fraction, position }
-            return
-          }
-          for (const teeth of counts) {
-            if (!compact) {
-              for (const fraction of [0.9, 0.65, 0.4])
-                for (const phase of [0.5, 0, 1])
-                  yield {
-                    teeth,
-                    fraction,
-                    position: 0.05 + 0.9 * phase,
-                  }
-            } else {
-              for (const fraction of [0.9, 0.65, 0.4])
-                for (const position of [0, 1])
-                  yield { teeth, fraction, position }
-              for (const fraction of [0.25, 0.15, 0.1])
-                for (const position of [0.5, 0.05, 0.95, 0, 1])
-                  yield { teeth, fraction, position }
+    // Give each lane and partial-deficit retry its own folded-pocket budget.
+    // Preserve established clear banks, then reserve a separate bounded search
+    // for via-safe pockets rather than letting rejected banks starve them.
+    tuningMode: for (const protectTerminal of [false, true]) {
+      let attemptedFolded = 0
+      for (const compact of folded ? [false] : [false, true])
+        for (const { i } of segments) {
+          // A second bank must use an ordinary run; never place new teeth inside
+          // the sampled arcs of a previously accepted smooth correction.
+          if (t.curvedSegments?.includes(i + 1)) continue
+          if (
+            t.coupledSection &&
+            i >= t.coupledSection[0] &&
+            i < t.coupledSection[1]
+          )
+            continue
+          const a = t.route[i],
+            b = t.route[i + 1],
+            span = distance(a, b)
+          if (span < 0.01) continue
+          const ux = (b.x - a.x) / span,
+            uy = (b.y - a.y) / span
+          // Spread substantial deficits over several lobes without turning small
+          // corrections into dozens of microscopic teeth.
+          const maximumTeeth = protectTerminal
+            ? Math.max(1, Math.floor((span * 0.9) / pitch))
+            : Math.floor((span * 0.9) / pitch)
+          // Compact banks spend the available run on more rounded cells, so
+          // added length fills the allocated bank without a tall sparse lobe.
+          const preferredTeeth = Math.min(
+            maximumTeeth,
+            options.packMeanders
+              ? maximumTeeth
+              : Math.max(2, Math.ceil(delta / (12 * width))),
+          )
+          const counts = Array.from(
+            { length: maximumTeeth },
+            (_, i) => i + 1,
+          ).sort(
+            (a, b) =>
+              Math.abs(a - preferredTeeth) - Math.abs(b - preferredTeeth) ||
+              b - a,
+          )
+          function* placements() {
+            if (folded) {
+              for (const teeth of [1, 2, 3])
+                for (const fraction of [0.9, 0.65, 0.4])
+                  for (const position of [0.5, 0, 1])
+                    yield { teeth, fraction, position }
+              return
+            }
+            for (const teeth of counts) {
+              if (!compact) {
+                for (const fraction of [0.9, 0.65, 0.4])
+                  for (const phase of [0.5, 0, 1])
+                    yield {
+                      teeth,
+                      fraction,
+                      position: 0.05 + 0.9 * phase,
+                    }
+              } else {
+                for (const fraction of [0.9, 0.65, 0.4])
+                  for (const position of [0, 1])
+                    yield { teeth, fraction, position }
+                for (const fraction of [0.25, 0.15, 0.1])
+                  for (const position of [0.5, 0.05, 0.95, 0, 1])
+                    yield { teeth, fraction, position }
+              }
             }
           }
-        }
-        for (const { teeth, fraction, position } of placements()) {
-          const w = (span * fraction) / teeth
-          for (const side of [1, -1])
-            for (const createLobes of folded
-              ? [foldedTuningLobes]
-              : [roundedTuningLobes, smoothTuningLobes]) {
-              // The cosine constructor independently bounds curvature radius.
-              // A shallow correction need not fit a whole serpentine cell.
-              if (!folded && w < pitch && createLobes !== smoothTuningLobes)
-                continue
-              const offset = span * (1 - fraction) * position
-              const start = { x: a.x + ux * offset, y: a.y + uy * offset }
-              const end = {
-                x: start.x + ux * span * fraction,
-                y: start.y + uy * span * fraction,
-              }
-              const usable = terminalViaTuningSegment(input, t, i, {
-                start,
-                end,
-              })
-              if (!usable) continue
-              if (folded) {
+          for (const { teeth, fraction, position } of placements()) {
+            const w = (span * fraction) / teeth
+            for (const side of [1, -1])
+              for (const createLobes of folded
+                ? [foldedTuningLobes]
+                : [roundedTuningLobes, smoothTuningLobes]) {
+                // A shallow cosine correction need not fit a full return cell;
+                // its constructor still enforces minimum curvature radius.
                 if (
-                  ++attemptedFolded >
-                  Math.min(1024, options.maxCandidates ?? 1024)
+                  !folded &&
+                  w < pitch &&
+                  (!protectTerminal || createLobes !== smoothTuningLobes)
                 )
-                  return
+                  continue
+                const offset = span * (1 - fraction) * position
+                const start = { x: a.x + ux * offset, y: a.y + uy * offset }
+                const end = {
+                  x: start.x + ux * span * fraction,
+                  y: start.y + uy * span * fraction,
+                }
+                const usable = protectTerminal
+                  ? terminalViaTuningSegment(input, t, i, { start, end })
+                  : { a: start, b: end, firstLead: 0, lastLead: 0 }
+                if (!usable) continue
+                if (
+                  protectTerminal &&
+                  !usable.firstLead &&
+                  !usable.lastLead &&
+                  w >= pitch
+                )
+                  continue
+                if (folded) {
+                  if (
+                    ++attemptedFolded >
+                    Math.min(1024, options.maxCandidates ?? 1024)
+                  )
+                    continue tuningMode
+                }
+                if (
+                  !folded &&
+                  ++attempted[Number(protectTerminal)] >
+                    (options.maxCandidates ?? Infinity)
+                )
+                  continue tuningMode
+                const lobes = createLobes(
+                  usable.a,
+                  usable.b,
+                  delta,
+                  teeth,
+                  side,
+                  Math.max(width * 1.2, clearance),
+                )
+                if (
+                  !lobes ||
+                  (regions.length &&
+                    !regions.some((r) =>
+                      lobes.every((p) => pointInBox(p, r.copper)),
+                    ))
+                )
+                  continue
+                const bump: Point[] = [
+                  a,
+                  ...(usable.firstLead ? [start, usable.a] : []),
+                  ...lobes,
+                  ...(usable.lastLead ? [usable.b, end] : []),
+                  b,
+                ]
+                if (!scene.pathVisible(bump)) continue
+                const next = (
+                  t.coupledSection ? (points: Point[]) => points : simplify
+                )([...t.route.slice(0, i), ...bump, ...t.route.slice(i + 2)])
+                if (
+                  Math.abs(
+                    length(next) + fixedLength - (currentLength + delta),
+                  ) > 1e-6
+                )
+                  continue
+                if (
+                  (!options.allowProvisionalLandConflicts &&
+                    !terminalViaCopperIsClear(next)) ||
+                  !tuningPathIsSelfClear(next, returnSpacing)
+                )
+                  continue
+                const candidate: Trace = {
+                  ...t,
+                  coupledSection: t.coupledSection
+                    ? (t.coupledSection.map((v) =>
+                        v > i ? v + next.length - t.route.length : v,
+                      ) as [number, number])
+                    : undefined,
+                  curvedSegments: next.slice(1).flatMap((p, i) => {
+                    const dx = Math.abs(p.x - next[i].x),
+                      dy = Math.abs(p.y - next[i].y)
+                    return Math.min(dx, dy) > 1e-8 && Math.abs(dx - dy) > 1e-8
+                      ? [i + 1]
+                      : []
+                  }),
+                  route: next.map((p) => ({
+                    ...p,
+                    route_type: "wire",
+                    layer: connection.pointsToConnect[0].layer,
+                    width,
+                  })),
+                }
+                if (routeAnglesAreConventional([candidate])) yield candidate
               }
-              if (
-                !folded &&
-                ++attempted > (options.maxCandidates ?? Infinity)
-              ) {
-                if (options.packMeanders) return
-                throw Error("Smooth tuning candidate budget exhausted")
-              }
-              const lobes = createLobes(
-                usable.a,
-                usable.b,
-                delta,
-                teeth,
-                side,
-                Math.max(width * 1.2, clearance),
-              )
-              if (
-                !lobes ||
-                (regions.length &&
-                  !regions.some((r) =>
-                    lobes.every((p) => pointInBox(p, r.copper)),
-                  ))
-              )
-                continue
-              const bump: Point[] = [
-                a,
-                ...(usable.firstLead ? [start, usable.a] : []),
-                ...lobes,
-                ...(usable.lastLead ? [usable.b, end] : []),
-                b,
-              ]
-              if (!scene.pathVisible(bump)) continue
-              const next = (
-                t.coupledSection ? (points: Point[]) => points : simplify
-              )([...t.route.slice(0, i), ...bump, ...t.route.slice(i + 2)])
-              if (
-                Math.abs(length(next) + fixedLength - (currentLength + delta)) >
-                1e-6
-              )
-                continue
-              if (
-                !terminalViaCopperIsClear(next) ||
-                !tuningPathIsSelfClear(next, returnSpacing)
-              )
-                continue
-              const candidate: Trace = {
-                ...t,
-                coupledSection: t.coupledSection
-                  ? (t.coupledSection.map((v) =>
-                      v > i ? v + next.length - t.route.length : v,
-                    ) as [number, number])
-                  : undefined,
-                curvedSegments: next.slice(1).flatMap((p, i) => {
-                  const dx = Math.abs(p.x - next[i].x),
-                    dy = Math.abs(p.y - next[i].y)
-                  return Math.min(dx, dy) > 1e-8 && Math.abs(dx - dy) > 1e-8
-                    ? [i + 1]
-                    : []
-                }),
-                route: next.map((p) => ({
-                  ...p,
-                  route_type: "wire",
-                  layer: connection.pointsToConnect[0].layer,
-                  width,
-                })),
-              }
-              if (routeAnglesAreConventional([candidate])) yield candidate
-            }
+          }
         }
-      }
+    }
   }
   const result = [...traces]
   const deficits = traces.map(

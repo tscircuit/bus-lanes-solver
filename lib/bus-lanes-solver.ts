@@ -59,6 +59,7 @@ export class BusLanesSolver extends BaseSolver {
   phase = "validate"
   failureCode: string | null = null
   traces: Trace[] = []
+  private minimumOriginalTuningCandidates = 0
   private widths = new Map<string, number>()
   private fixed: Copper[] = []
   private orders: Connection[][] = []
@@ -99,8 +100,10 @@ export class BusLanesSolver extends BaseSolver {
     input: SimpleRouteJson,
     traces: Trace[],
     options: SolverOptions = {},
+    minimumOriginalTuningCandidates = 0,
   ) {
     const solver = new BusLanesSolver(input, options)
+    solver.minimumOriginalTuningCandidates = minimumOriginalTuningCandidates
     solver.initialize()
     if (solver.failed) return solver
     if (solver.search instanceof GridVisibilitySearch) solver.search.cancel()
@@ -654,13 +657,20 @@ export class BusLanesSolver extends BaseSolver {
                 ? tuneCoupledLengths(input, candidate, {
                     // Narrow banks need more curve period/offset combinations.
                     // Keep that extra bounded work local to packed candidates.
+                    // Via-safe clipped leads also need room in the original
+                    // search before a wider, longer corridor is considered.
                     maxCandidates:
                       corridor === original
-                        ? input.buses?.some(
-                            (bus) => bus.maxLength !== undefined,
+                        ? Math.max(
+                            this.minimumOriginalTuningCandidates,
+                            input.buses?.some(
+                              (bus) => bus.maxLength !== undefined,
+                            )
+                              ? 65536
+                              : input.allowedLayers?.length === 2
+                                ? 512
+                                : 4096,
                           )
-                          ? 65536
-                          : 512
                         : demandPackedCorridors.has(corridor)
                           ? 65536
                           : 16384,

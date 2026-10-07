@@ -1,3 +1,4 @@
+import { checkSignalSelfShorts } from "./check-signal-self-shorts"
 import { retargetGeneratedEscape } from "./retarget-generated-escape"
 import { joinSignalEscapes } from "./join-signal-escapes"
 import { tuneGeneratedPairEscapes } from "./tune-generated-pair-escapes"
@@ -173,6 +174,7 @@ export class BusLanesPipelineSolver extends BaseSolver {
               }
               if (
                 !validator.solved ||
+                checkSignalSelfShorts(this.input, complete).length > 0 ||
                 exteriorPairSpacingReports(view.input, carriers).some(
                   (r) => !r.matched,
                 )
@@ -259,7 +261,11 @@ export class BusLanesPipelineSolver extends BaseSolver {
                     validator.step()
                     yield
                   }
-                  if (!validator.solved) continue
+                  if (
+                    !validator.solved ||
+                    checkSignalSelfShorts(this.input, complete).length > 0
+                  )
+                    continue
                 } finally {
                   if (!validator.solved && !validator.failed)
                     validator.tryFinalAcceptance()
@@ -385,15 +391,33 @@ export class BusLanesPipelineSolver extends BaseSolver {
     let refined = yield* extendPackageCoupling(input, lanes)
     if (exteriorPairSpacingReports(input, refined).every((r) => r.matched))
       return refined
-    refined = yield* extendPackageCoupling(
-      input,
-      shortenPairApproaches(input, refined),
-      { preserveMatching: false },
-    )
-    if (exteriorPairSpacingReports(input, refined).some((r) => !r.matched))
-      throw Error(
-        "Pair approaches still separate outside native package fanouts",
-      )
+    const preserved = refined
+    let error: unknown
+    // Either rail may define the new package approach. A geometrically legal
+    // first choice can leave no safe room for its residual skew correction.
+    for (const reverseSides of [false, true]) {
+      try {
+        refined = yield* extendPackageCoupling(
+          input,
+          shortenPairApproaches(input, preserved),
+          { preserveMatching: false, reverseSides },
+        )
+        if (exteriorPairSpacingReports(input, refined).some((r) => !r.matched))
+          throw Error(
+            "Pair approaches still separate outside native package fanouts",
+          )
+        return yield* this.matchPackageApproaches(input, refined, lanes)
+      } catch (candidateError) {
+        error = candidateError
+      }
+    }
+    throw error
+  }
+  private *matchPackageApproaches(
+    input: SimpleRouteJson,
+    refined: Trace[],
+    lanes: Trace[],
+  ): Generator<void, Trace[]> {
     const tunedEscapes = yield* tuneGeneratedPairEscapes(
       input,
       refined,
@@ -416,7 +440,14 @@ export class BusLanesPipelineSolver extends BaseSolver {
         return repaired.traces
       }
     }
-    const matcher = BusLanesSolver.forRefinement(input, refined, this.options)
+    // Rematching a finished approach needs its clipped-pocket search without
+    // changing the initial bounded search for crowded two-layer corridors.
+    const matcher = BusLanesSolver.forRefinement(
+      input,
+      refined,
+      this.options,
+      4096,
+    )
     try {
       while (!matcher.solved && !matcher.failed) {
         matcher.step()
@@ -1077,6 +1108,9 @@ export class BusLanesPipelineSolver extends BaseSolver {
           )
         )
           throw Error("Final absolute bus length violation")
+        const selfShorts = checkSignalSelfShorts(this.input, this.traces)
+        if (selfShorts.length)
+          throw Error(selfShorts.map((error) => error.message).join("; "))
         this.acceptedTraces = structuredClone(this.traces)
         this.phase = "optimize_envelope"
         this.envelopeOptimization = this.optimizeEnvelope()
