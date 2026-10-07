@@ -105,6 +105,20 @@ reversals, smooth length-tuning curves, coupled pair shapes, and the declared bu
 and pair skew limits. The separate AM62L DDR benchmarks alone do not establish
 this AM3352 result.
 
+The standard placement benchmark and pipeline benchmark also independently
+reject self-touching complete signal copper with the native trace self-short
+check, including terminal approaches and manufactured via lands. This applies
+to untimed controls as well as length-matched buses; a solver success alone
+cannot pass the benchmark or snapshot export.
+
+Tuning retains a straight lead outside each terminal via land and rejects
+adjacent returning segments, including duplicate handoff points. Crowded
+solver-owned package approaches can use provisional matching banks during
+joint site negotiation. Those banks are rebuilt against completed neighboring
+copper and rematched with actual via lands before a candidate is returned;
+supplied FanoutSolver copper stays immutable. Complete joined-copper auditing
+remains mandatory at final acceptance and after envelope optimization.
+
 The separate core AM3352 regression measures these limits independently of the solver:
 
 | Measurement | Reviewed reference | Generated result | Regression limit |
