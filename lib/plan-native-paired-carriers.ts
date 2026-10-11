@@ -302,16 +302,22 @@ export function* planNativePairedCarriers(
       Math.hypot(p.x - point.x, p.y - point.y) +
       Math.hypot(p.x - c.pointsToConnect[1].x, p.y - c.pointsToConnect[1].y)
     for (
-      let x = Math.ceil(box.minX / step);
-      x <= Math.floor(box.maxX / step);
+      let x = Math.ceil((box.minX - native.bounds.minX) / step);
+      x <= Math.floor((box.maxX - native.bounds.minX) / step);
       x++
     )
       for (
-        let y = Math.ceil((box.minY + 0.01) / step);
-        y <= Math.floor(Math.min(box.maxY, point.y + 0.2) / step);
+        let y = Math.ceil((box.minY + 0.01 - native.bounds.minY) / step);
+        y <=
+        Math.floor(
+          (Math.min(box.maxY, point.y + 0.2) - native.bounds.minY) / step,
+        );
         y++
       ) {
-        const p = { x: x * step, y: y * step },
+        const p = {
+            x: native.bounds.minX + x * step,
+            y: native.bounds.minY + y * step,
+          },
           lower = estimate(p)
         if (lower <= desired + 0.3 && lower >= desired - 0.7) candidates.push(p)
       }

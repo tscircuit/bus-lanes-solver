@@ -9,7 +9,7 @@ import {
   writeDiagnosticSnapshot,
 } from "./fixtures/native-pair-diagnostic-svg"
 
-test("Core-authored fractional bounds make every pair-balancing via miss the native grid", async () => {
+test("Core-authored fractional bounds produce native-grid vias that route real balancing approaches", async () => {
   const step = 0.1
   const { input, circuitJson } = compileGridPairCircuit()
   const before = structuredClone(input)
@@ -64,12 +64,10 @@ test("Core-authored fractional bounds make every pair-balancing via miss the nat
       (coordinate) => Math.abs(coordinate - Math.round(coordinate)) < 1e-8,
     )
   expect(proposal.attempts.length).toBeGreaterThan(0)
-  expect(proposal.attempts.every(({ point }) => !onNativeGrid(point))).toBe(
-    true,
-  )
-  expect(proposal.attempts.some(({ accepted }) => accepted)).toBe(false)
-  // Second-order consequence: no candidate can reroute its approach, although
-  // projecting the same candidate onto the native grid produces real copper.
+  expect(proposal.attempts.every(({ point }) => onNativeGrid(point))).toBe(true)
+  expect(proposal.attempts.some(({ accepted }) => accepted)).toBe(true)
+  // Candidate centers now reach actual native routing; the separate control
+  // still proves a physical approach exists without inserting output copper.
   expect(proposal.projectedAlternative).not.toBeNull()
   expect(
     proposal.projectedAlternative!.route.some(
@@ -101,16 +99,17 @@ test("Core-authored fractional bounds make every pair-balancing via miss the nat
     } as unknown as Parameters<typeof validateRoutedCopperDrc>[0]).valid,
   ).toBe(true)
   const report = pairLengthReports(input, proposal.traces)[0]
-  expect(report.matched).toBe(false)
+  expect(report.matched).toBe(true)
+  expect(report.skewMm!).toBeLessThanOrEqual(report.toleranceMm!)
   const svg = nativePairDiagnosticSvg(
     input,
     proposal,
     "grid",
-    "before",
+    "after",
     circuitJson,
   )
   const snapshot = new URL(
-    "./__snapshots__/native-pair-grid.before.svg",
+    "./__snapshots__/native-pair-grid.after.svg",
     import.meta.url,
   ).pathname
   if (process.env.UPDATE_NATIVE_PAIR_SNAPSHOTS === "1")
