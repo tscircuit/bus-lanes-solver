@@ -276,6 +276,28 @@ export class GridHistoryProjector {
   get cellCount() {
     return this.nx * this.ny
   }
+  reprojectHistory(
+    source: GridHistoryProjector,
+    history: Float32Array,
+  ): Float32Array {
+    if (history.length !== source.cellCount)
+      throw Error("Congestion history does not match its source grid")
+    const projected = new Float32Array(this.cellCount)
+    for (let y = 0; y < this.ny; y++) {
+      const sourceY = Math.round(
+        (this.ys[y] - source.origin.y) / source.stepSize,
+      )
+      if (sourceY < 0 || sourceY >= source.ny) continue
+      for (let x = 0; x < this.nx; x++) {
+        const sourceX = Math.round(
+          (this.xs[x] - source.origin.x) / source.stepSize,
+        )
+        if (sourceX < 0 || sourceX >= source.nx) continue
+        projected[x + y * this.nx] = history[sourceX + sourceY * source.nx]
+      }
+    }
+    return projected
+  }
   penalizeIntersection(
     history: Float32Array,
     a: Point,

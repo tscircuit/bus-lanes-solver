@@ -38,6 +38,10 @@ interface State {
   collisions: number
   unfinished: string[]
 }
+interface Congestion {
+  projector: GridHistoryProjector
+  values: Float32Array[]
+}
 
 /** Matched carriers and controllers negotiate together. A clear but unmatched
  * state is never accepted; matching banks participate in the physical conflict
@@ -154,6 +158,7 @@ export function* matchNativeCarrierSignals(
       allowBlindAndBuriedVias: false,
     } as unknown as Parameters<typeof validateRoutedCopperDrc>[0]).valid
   }
+  let congestion: Congestion | undefined
   function* negotiate(
     seed: Trace[],
     frozen: Trace[],
@@ -179,11 +184,19 @@ export function* matchNativeCarrierSignals(
         ),
         { bounds: local.bounds, step },
       )
-    const history = [
-        new Float32Array(projector.cellCount),
-        new Float32Array(projector.cellCount),
-      ],
+    // Local repair changes resolution, while the learned conflicts remain at
+    // the same physical positions and on the same TOP/carrier planes.
+    const previousCongestion = congestion
+    const history = previousCongestion
+        ? previousCongestion.values.map((plane) =>
+            projector.reprojectHistory(previousCongestion.projector, plane),
+          )
+        : [
+            new Float32Array(projector.cellCount),
+            new Float32Array(projector.cellCount),
+          ],
       router = new NativeCarrierRouter(local, step, history)
+    congestion = { projector, values: history }
     const routed = new Map(
       seed
         .filter((t) => !frozenNames.has(t.connection_name))
