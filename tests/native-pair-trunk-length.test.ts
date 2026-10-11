@@ -6,7 +6,7 @@ import { joinSignalEscapes } from "../lib/join-signal-escapes"
 import { planNativePairedCarriers } from "../lib/plan-native-paired-carriers"
 import type { SimpleRouteJson, Trace } from "../lib/types"
 
-test("native pair rebalancing adds skew when it omits unequal offset trunks", () => {
+test("native pair rebalancing preserves whole-copper skew across unequal offset trunks", () => {
   const input: SimpleRouteJson = {
     layerCount: 4,
     allowedLayers: ["inner1"],
@@ -94,6 +94,6 @@ test("native pair rebalancing adds skew when it omits unequal offset trunks", ()
     } as unknown as Parameters<typeof validateRoutedCopperDrc>[0]).valid,
   ).toBe(true)
   const totals = proposals.map((trace) => length(trace.route))
-  expect(Math.abs(totals[0] - totals[1])).toBeCloseTo(0.45857864, 7)
+  expect(Math.abs(totals[0] - totals[1])).toBeLessThanOrEqual(0.1)
   expect(input).toEqual(before)
 })

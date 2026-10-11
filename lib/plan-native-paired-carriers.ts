@@ -287,14 +287,18 @@ export function* planNativePairedCarriers(
     const totals = pair.connectionNames.map(
       (name) =>
         length(routed.get(`${name}_0`)!.route) +
-        length(routed.get(`${name}_1`)!.route),
+        length(routed.get(`${name}_1`)!.route) +
+        length(trunks.find((t) => t.connection_name === name)!.route),
     )
     if (Math.abs(totals[0] - totals[1]) <= 0.1) continue
     const short = totals[0] < totals[1] ? 0 : 1,
       name = pair.connectionNames[short],
       c = legs.find((c) => c.name === `${name}_0`)!,
       old = routed.get(c.name)!
-    const desired = totals[1 - short] - length(routed.get(`${name}_1`)!.route),
+    const desired =
+        totals[1 - short] -
+        length(routed.get(`${name}_1`)!.route) -
+        length(trunks.find((t) => t.connection_name === name)!.route),
       point = c.pointsToConnect[0],
       box = legRegions.get(c.name)!,
       candidates: Point[] = []
