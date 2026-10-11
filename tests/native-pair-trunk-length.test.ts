@@ -8,7 +8,7 @@ import {
 } from "./fixtures/native-pair-diagnostic-svg"
 import { compileTrunkPairCircuit } from "./fixtures/native-pair-trunk-circuit"
 
-test("Core-authored native pair violates its length constraint when balancing omits offset trunks", async () => {
+test("Core-authored native pair meets its whole-copper length constraint after via balancing", async () => {
   const { input, circuitJson } = compileTrunkPairCircuit()
   const before = structuredClone(input)
   expect(
@@ -71,20 +71,20 @@ test("Core-authored native pair violates its length constraint when balancing om
     } as unknown as Parameters<typeof validateRoutedCopperDrc>[0]).valid,
   ).toBe(true)
   const report = pairLengthReports(input, traces)[0]
-  expect(report.skewMm).toBeCloseTo(0.4, 7)
-  // Second-order consequence: the complete, DRC-clean native proposal fails
-  // the pair constraint compiled from TSX and hands extra skew to refinement.
-  expect(report.matched).toBe(false)
-  expect(report.skewMm! - report.toleranceMm!).toBeCloseTo(0.3, 7)
+  expect(report.skewMm).toBeLessThanOrEqual(0.1)
+  // The same complete copper now meets the authored pair constraint before
+  // refinement; the omitted-trunk deficit no longer needs residual tuning.
+  expect(report.matched).toBe(true)
+  expect(report.skewMm!).toBeLessThanOrEqual(report.toleranceMm!)
   const svg = nativePairDiagnosticSvg(
     input,
     proposal,
     "trunk",
-    "before",
+    "after",
     circuitJson,
   )
   const snapshot = new URL(
-    "./__snapshots__/native-pair-trunk.before.svg",
+    "./__snapshots__/native-pair-trunk.after.svg",
     import.meta.url,
   ).pathname
   if (process.env.UPDATE_NATIVE_PAIR_SNAPSHOTS === "1")
