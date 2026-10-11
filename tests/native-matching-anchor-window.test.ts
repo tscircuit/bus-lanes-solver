@@ -98,6 +98,27 @@ function match(input: SimpleRouteJson, paired: Trace[]) {
   return result.value
 }
 
+function scaleFixture(input: SimpleRouteJson, paired: Trace[]) {
+  for (const connection of input.connections)
+    for (const point of connection.pointsToConnect) {
+      point.x *= 3
+      point.y *= 3
+    }
+  for (const obstacle of input.obstacles) {
+    obstacle.center.x *= 3
+    obstacle.center.y *= 3
+  }
+  for (const trace of paired)
+    for (const point of trace.route) {
+      point.x *= 3
+      point.y *= 3
+    }
+  input.bounds = { minX: -9, maxX: 9, minY: -6, maxY: 9 }
+  input.buses![0].maxLength = 10.5
+  input.buses![0].maxLengthSkew = 1.5
+  input.differentialPairs![0].traceGap = 1.4
+}
+
 test("native data may be longer than its fixed pair within the declared bus skew", () => {
   const { input, paired } = fixture()
   const before = structuredClone({ input, paired })
@@ -179,24 +200,7 @@ test("ordinary members on both sides of the fixed pair still match the complete 
     )
   // Keep the same relative timing window on a larger physical fixture so
   // the existing rounded tuner has room for the shorter member's bank.
-  for (const connection of input.connections)
-    for (const point of connection.pointsToConnect) {
-      point.x *= 3
-      point.y *= 3
-    }
-  for (const obstacle of input.obstacles) {
-    obstacle.center.x *= 3
-    obstacle.center.y *= 3
-  }
-  for (const trace of paired)
-    for (const point of trace.route) {
-      point.x *= 3
-      point.y *= 3
-    }
-  input.bounds = { minX: -9, maxX: 9, minY: -6, maxY: 9 }
-  input.buses![0].maxLength = 10.5
-  input.buses![0].maxLengthSkew = 1.5
-  input.differentialPairs![0].traceGap = 1.4
+  scaleFixture(input, paired)
   const before = structuredClone({ input, paired })
   const traces = match(input, paired)
   expect(traces).not.toBeNull()
@@ -229,3 +233,103 @@ test("overlapping bus skew windows retain the stricter limit", () => {
   expect(match(input, paired)).toBeNull()
   expect({ input, paired }).toEqual(before)
 })
+
+function addPairedFanouts(input: SimpleRouteJson, paired: Trace[]) {
+  input.traces = paired.map((trace) => {
+    const start = trace.route[0]
+    return {
+      type: "pcb_trace",
+      pcb_trace_id: `fixed_${trace.connection_name}`,
+      connection_name: trace.connection_name,
+      source_trace_id: trace.source_trace_id,
+      route: [
+        {
+          route_type: "wire",
+          x: start.x - 3.5,
+          y: start.y,
+          width: 0.1,
+          layer: "top",
+        },
+        {
+          route_type: "wire",
+          x: start.x,
+          y: start.y,
+          width: 0.1,
+          layer: "top",
+        },
+      ],
+    }
+  })
+  input.buses![0].maxLength = 13.5
+}
+
+test("anchor windows count immutable paired fanouts in total copper length", () => {
+  const { input, paired } = fixture()
+  scaleFixture(input, paired)
+  addPairedFanouts(input, paired)
+  const before = structuredClone({ input, paired })
+  const traces = match(input, paired)
+  expect(traces).not.toBeNull()
+  expect(traces!.slice(0, 2)).toEqual(paired)
+  const [bus] = busLengthReports(input, traces!)
+  expect(bus.matched).toBe(true)
+  expect(bus.withinLengthLimit).toBe(true)
+  expect(bus.lengths.slice(0, 2).map((member) => member.totalLengthMm)).toEqual(
+    [12.5, 12.5],
+  )
+  const data = traces!.find((trace) => trace.connection_name === "DATA")!
+  expect(length(data.route)).toBeGreaterThanOrEqual(11 - 1e-7)
+  expect(
+    validateRoutedCopperDrc({
+      inputSrj: input,
+      routedSrj: { ...input, traces: [...input.traces!, ...traces!] },
+      clearance: 0.1,
+    } as unknown as Parameters<typeof validateRoutedCopperDrc>[0]).valid,
+  ).toBe(true)
+  expect({ input, paired }).toEqual(before)
+})
+
+for (const fixedLength of [0.5, 3.5])
+  test(`ordinary ${fixedLength} mm fixed fanout reduces its remaining timing budget`, () => {
+    const { input, paired } = fixture()
+    scaleFixture(input, paired)
+    addPairedFanouts(input, paired)
+    const start = input.connections[2].pointsToConnect[0]
+    input.traces!.push({
+      type: "pcb_trace",
+      pcb_trace_id: "fixed_DATA",
+      connection_name: "DATA",
+      source_trace_id: "DATA",
+      route: [
+        {
+          route_type: "wire",
+          x: start.x - fixedLength,
+          y: start.y,
+          layer: "top",
+          width: 0.1,
+        },
+        { ...start, route_type: "wire", width: 0.1 },
+      ],
+    })
+    const before = structuredClone({ input, paired })
+    const traces = match(input, paired)
+    if (fixedLength === 3.5) expect(traces).toBeNull()
+    else {
+      expect(traces).not.toBeNull()
+      const [bus] = busLengthReports(input, traces!)
+      expect(bus.matched).toBe(true)
+      expect(bus.withinLengthLimit).toBe(true)
+      const data = bus.lengths.find((member) => member.name === "DATA")!
+      expect(data.fixedLengthMm).toBeCloseTo(fixedLength, 8)
+      expect(data.totalLengthMm!).toBeGreaterThanOrEqual(11 - 1e-7)
+      expect(traces!.slice(0, 2)).toEqual(paired)
+      expect(
+        validateRoutedCopperDrc({
+          inputSrj: input,
+          routedSrj: { ...input, traces: [...input.traces!, ...traces!] },
+          clearance: 0.1,
+        } as unknown as Parameters<typeof validateRoutedCopperDrc>[0]).valid,
+      ).toBe(true)
+    }
+    expect({ input, paired }).toEqual(before)
+  })

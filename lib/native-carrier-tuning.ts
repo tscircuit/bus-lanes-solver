@@ -2,6 +2,7 @@ import { chamferOrdinaryCorners } from "./chamfer-ordinary-corners"
 import { reduceOrdinaryTurns } from "./reduce-ordinary-turns"
 import { tuneSmoothLengths } from "./smooth-length-tuning"
 import { length } from "./geometry"
+import { fixedRouteLength } from "./route-lengths"
 import { VectorScene, fixedCopper } from "./vector-scene"
 import type { Connection, SimpleRouteJson, Trace } from "./types"
 
@@ -86,6 +87,9 @@ export function tuneNativeCarrierSignal(
   soft: Trace[],
   bankCost?: (trace: Trace) => number,
 ): Trace | null {
+  // The caller supplies the remaining length budget. Smooth tuning counts
+  // immutable copper too, so its targets must restore that fixed offset.
+  const fixedLength = fixedRouteLength(native, connection.name)
   const trace = cleanNativeCarrierSignal(native, connection, raw, soft, false)
   if (!trace) return null
   const [a, b] = trace.route.flatMap((p, i) =>
@@ -130,8 +134,8 @@ export function tuneNativeCarrierSignal(
       {
         busId: "native_target",
         connectionNames: [c.name],
-        minLength: minimum,
-        maxLength: maximum,
+        minLength: minimum + fixedLength,
+        maxLength: maximum + fixedLength,
       },
     ],
     differentialPairs: [],
@@ -162,7 +166,7 @@ export function tuneNativeCarrierSignal(
     const matched = tuneSmoothLengths(
       input,
       [clean],
-      new Map([[c.name, minimum]]),
+      new Map([[c.name, minimum + fixedLength]]),
       {
         candidateScore: bankCost,
         alignPeriods: true,
