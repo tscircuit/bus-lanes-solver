@@ -1,8 +1,8 @@
 {
   "coreVersion": "0.0.2125",
   "options": {
-    "gridStep": 0.3,
-    "fineGridStep": 0.1,
+    "gridStep": 0.6,
+    "fineGridStep": 0.2,
     "maxPasses": 1,
     "maxLocalPasses": 1,
     "maxExpansionsPerRoute": 100000,
@@ -13,57 +13,57 @@
   "validation": {
     "valid": false,
     "checkedTraceCount": 6,
-    "checkedSegmentCount": 44,
+    "checkedSegmentCount": 56,
     "checkedViaCount": 12,
     "issues": [
       {
         "code": "different-net-trace-clearance",
-        "traceId": "native_source_trace_0",
-        "connectionName": "source_trace_0",
-        "otherTraceId": "native_source_trace_4",
-        "otherConnectionName": "source_trace_4",
+        "traceId": "native_source_trace_2",
+        "connectionName": "source_trace_2",
+        "otherTraceId": "native_source_trace_3",
+        "otherConnectionName": "source_trace_3",
         "layer": "inner1",
-        "message": "Different-net traces native_source_trace_0 and native_source_trace_4 intersect or violate clearance on inner1"
+        "message": "Different-net traces native_source_trace_2 and native_source_trace_3 intersect or violate clearance on inner1"
       }
     ]
   },
   "lengths": [
     {
-      "connectionName": "source_trace_1",
-      "copperLengthMm": 11.325483399593903,
-      "signalName": "S1"
+      "connectionName": "source_trace_5",
+      "copperLengthMm": 14.040916292848975,
+      "signalName": "S5"
     },
     {
       "connectionName": "source_trace_0",
-      "copperLengthMm": 10.828427124746192,
+      "copperLengthMm": 13.650966799187806,
       "signalName": "S0"
     },
     {
+      "connectionName": "source_trace_1",
+      "copperLengthMm": 12.48528137423857,
+      "signalName": "S1"
+    },
+    {
       "connectionName": "source_trace_2",
-      "copperLengthMm": 11.325483399593905,
+      "copperLengthMm": 13.215217343971284,
       "signalName": "S2"
     },
     {
       "connectionName": "source_trace_3",
-      "copperLengthMm": 12.042640687119288,
+      "copperLengthMm": 12.25685424949238,
       "signalName": "S3"
     },
     {
       "connectionName": "source_trace_4",
-      "copperLengthMm": 11.23531835664895,
+      "copperLengthMm": 13.620815280171307,
       "signalName": "S4"
-    },
-    {
-      "connectionName": "source_trace_5",
-      "copperLengthMm": 13.042640687119285,
-      "signalName": "S5"
     }
   ],
   "stages": [
     {
       "stage": "native_global_matching",
       "pass": 0,
-      "collisions": 1,
+      "collisions": 6,
       "unfinished": []
     },
     {

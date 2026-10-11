@@ -9,16 +9,39 @@ import {
   nativeMatchingHistorySvg,
 } from "./fixtures/native-matching-history-snapshot"
 
-test("bounded fine repair routes the Core TSX crossing when coarse history is retained", async () => {
+test("bounded fine repair routes the Core 0402 crossing when coarse history is retained", async () => {
   const { input, circuitJson, signalNames } =
     await compileNativeMatchingHistoryFixture()
   const before = structuredClone(input)
   expect(
     circuitJson.filter((element) => element.type.includes("error")),
   ).toEqual([])
+  const pads = circuitJson.filter(
+    (element) => element.type === "pcb_smtpad" && element.shape === "rect",
+  )
+  expect(pads).toHaveLength(24)
   expect(
-    circuitJson.filter((element) => element.type === "pcb_smtpad"),
+    circuitJson.filter((element) => element.type === "source_component"),
   ).toHaveLength(12)
+  // All actual 0402 terminals remain obstacles, including the unused pads.
+  for (const pad of pads) {
+    expect(pad.shape).toBe("rect")
+    expect(pad).toMatchObject({ width: 0.54, height: 0.64, layer: "top" })
+    expect(input.obstacles).toContainEqual(
+      expect.objectContaining({
+        center: { x: pad.x, y: pad.y },
+        width: 0.54,
+        height: 0.64,
+        layers: ["top"],
+      }),
+    )
+  }
+  for (const connection of input.connections) {
+    for (const terminal of connection.pointsToConnect) {
+      const pad = pads.find((pad) => pad.pcb_port_id === terminal.pcb_port_id)!
+      expect(terminal).toMatchObject({ x: pad.x, y: pad.y, layer: pad.layer })
+    }
+  }
   expect(
     circuitJson.filter((element) => element.type === "pcb_keepout"),
   ).toHaveLength(2)
@@ -41,7 +64,7 @@ test("bounded fine repair routes the Core TSX crossing when coarse history is re
     "native_global_matching",
     "native_local_matching_0",
   ])
-  expect(result.stages.map((state) => state.collisions)).toEqual([1, 0])
+  expect(result.stages.map((state) => state.collisions)).toEqual([6, 0])
   expect(result.validation.valid).toBe(true)
   expect(result.validation.issues).toEqual([])
   expect(result.validation.checkedViaCount).toBe(12)
@@ -54,7 +77,7 @@ test("bounded fine repair routes the Core TSX crossing when coarse history is re
   expect(input).toEqual(before)
   // Compare the artifact to this actual compiled-and-solved fixture, so the
   // diagnostic geometry, labels and measured lengths cannot go stale.
-  const fixture = { input, signalNames }
+  const fixture = { input, circuitJson, signalNames }
   expect(nativeMatchingHistorySvg(fixture, result)).toBe(
     await Bun.file(
       new URL(

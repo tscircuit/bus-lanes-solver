@@ -9,12 +9,12 @@ import {
 import type { SimpleRouteJson, Trace } from "../../lib/types"
 
 const endpoints = [
-  [-1, 1],
-  [-0.6, -1],
-  [-0.2, 0.6],
-  [0.2, 0.2],
-  [0.6, -0.2],
-  [1, -0.6],
+  [-3.5, 3.5],
+  [-2.1, -3.5],
+  [-0.7, 2.1],
+  [0.7, 0.7],
+  [2.1, -0.7],
+  [3.5, -2.1],
 ] as const
 
 /** Six signals cross around two inner-layer keepouts. No saved routes or
@@ -22,8 +22,8 @@ const endpoints = [
 export default function NativeMatchingHistoryFixture() {
   return (
     <board
-      width={12}
-      height={6}
+      width={16}
+      height={12}
       layers={4}
       routingDisabled
       schematicDisabled
@@ -35,16 +35,13 @@ export default function NativeMatchingHistoryFixture() {
     >
       {endpoints.flatMap((ends, i) =>
         ends.map((y, side) => (
-          <React.Fragment key={`P${i}_${side}`}>
-            <chip
-              name={`P${i}_${side}`}
-              pcbX={side ? 5 : -5}
+          <React.Fragment key={`R${i}_${side}`}>
+            <resistor
+              name={`R${i}_${side}`}
+              resistance="10k"
+              footprint="0402"
+              pcbX={side ? 5.51 : -5.51}
               pcbY={y}
-              footprint={
-                <footprint>
-                  <smtpad portHints={["pin1"]} shape="circle" radius={0.125} />
-                </footprint>
-              }
             />
           </React.Fragment>
         )),
@@ -53,25 +50,25 @@ export default function NativeMatchingHistoryFixture() {
         <React.Fragment key={`S${i}`}>
           <trace
             name={`S${i}`}
-            from={`.P${i}_0 > .pin1`}
-            to={`.P${i}_1 > .pin1`}
+            from={`.R${i}_0 > .pin2`}
+            to={`.R${i}_1 > .pin1`}
           />
         </React.Fragment>
       ))}
       <keepout
         shape="rect"
         pcbX={-0.9}
-        pcbY={0.6}
+        pcbY={1.68}
         width={0.3}
-        height={2}
+        height={5.6}
         layers={["inner1"]}
       />
       <keepout
         shape="rect"
         pcbX={0.9}
-        pcbY={-1}
+        pcbY={-2.8}
         width={0.5}
-        height={2}
+        height={5.6}
         layers={["inner1"]}
       />
     </board>
@@ -108,8 +105,8 @@ export async function compileNativeMatchingHistoryFixture() {
 }
 
 export const nativeMatchingHistoryOptions = {
-  gridStep: 0.3,
-  fineGridStep: 0.1,
+  gridStep: 0.6,
+  fineGridStep: 0.2,
   // This is a bounded repair case: one pass per stage, with all six local
   // repair attempts available and a substantial real search budget.
   maxPasses: 1,
