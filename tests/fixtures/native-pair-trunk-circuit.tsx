@@ -1,15 +1,9 @@
 import { Circuit, getSimpleRouteJsonFromCircuitJson } from "@tscircuit/core"
 import type { SimpleRouteJson } from "../../lib/types"
 
-/** Two real two-pad packages placed around a right-angle inner-layer corridor. */
+/** Standard 0402 zero-ohm link pads around a right-angle inner-layer corridor. */
 export function compileTrunkPairCircuit() {
   const circuit = new Circuit()
-  const footprint = (
-    <footprint>
-      <smtpad portHints={["1"]} shape="circle" radius={0.2} pcbY={0.4} />
-      <smtpad portHints={["2"]} shape="circle" radius={0.2} pcbY={-0.4} />
-    </footprint>
-  )
   circuit.add(
     <board
       width={6}
@@ -23,23 +17,12 @@ export function compileTrunkPairCircuit() {
       minViaPadDiameter={0.3}
       minViaHoleDiameter={0.15}
     >
-      <chip
-        name="U1"
-        pcbX={-2}
-        pcbY={-1}
-        pinLabels={{ pin1: "P", pin2: "N" }}
-        footprint={footprint}
-      />
-      <chip
-        name="U2"
-        pcbX={1}
-        pcbY={2}
-        pcbRotation={-90}
-        pinLabels={{ pin1: "P", pin2: "N" }}
-        footprint={footprint}
-      />
-      <trace name="P" from="U1.P" to="U2.P" width={0.1} />
-      <trace name="N" from="U1.N" to="U2.N" width={0.1} />
+      <resistor name="R1" resistance="0" footprint="0402" pcbX={-2} pcbY={-0.09} pcbRotation={-90} />
+      <resistor name="R2" resistance="0" footprint="0402" pcbX={-2} pcbY={-1.91} pcbRotation={90} />
+      <resistor name="R3" resistance="0" footprint="0402" pcbX={1.91} pcbY={2} pcbRotation={180} />
+      <resistor name="R4" resistance="0" footprint="0402" pcbX={0.09} pcbY={2} />
+      <trace name="P" from="R2.pin2" to="R3.pin2" width={0.1} />
+      <trace name="N" from="R1.pin2" to="R4.pin2" width={0.1} />
       <differentialpair
         name="CLOCK"
         positiveConnection="P"

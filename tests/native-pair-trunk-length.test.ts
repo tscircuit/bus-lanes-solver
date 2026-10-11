@@ -13,14 +13,32 @@ test("Core-authored native pair violates its length constraint when balancing om
   const before = structuredClone(input)
   expect(
     circuitJson.filter((element) => element.type === "pcb_smtpad"),
+  ).toHaveLength(8)
+  expect(input.obstacles).toHaveLength(8)
+  expect(input.obstacles.every((obstacle) => obstacle.type === "rect")).toBe(
+    true,
+  )
+  expect(
+    circuitJson.filter(
+      (element) =>
+        element.type === "pcb_smtpad" && element.port_hints?.includes("1"),
+    ),
+  ).toHaveLength(4)
+  expect(
+    input.obstacles.filter(
+      (obstacle) =>
+        !input.connections.some((connection) =>
+          obstacle.connectedTo.includes(connection.name),
+        ),
+    ),
   ).toHaveLength(4)
   expect(input.differentialPairs?.[0].lengthTolerance).toBe(0.1)
   const proposal = captureNativePairProposal(input, {
     centerlines: [
       [
-        { x: -2.8, y: 0 },
+        { x: -2.5, y: 0 },
         { x: 0, y: 0 },
-        { x: 0, y: 2.8 },
+        { x: 0, y: 2.5 },
       ],
     ],
     gridStep: 0.1,
@@ -53,12 +71,18 @@ test("Core-authored native pair violates its length constraint when balancing om
     } as unknown as Parameters<typeof validateRoutedCopperDrc>[0]).valid,
   ).toBe(true)
   const report = pairLengthReports(input, traces)[0]
-  expect(report.skewMm).toBeCloseTo(0.45857864, 7)
+  expect(report.skewMm).toBeCloseTo(0.4, 7)
   // Second-order consequence: the complete, DRC-clean native proposal fails
   // the pair constraint compiled from TSX and hands extra skew to refinement.
   expect(report.matched).toBe(false)
-  expect(report.skewMm! - report.toleranceMm!).toBeCloseTo(0.35857864, 7)
-  const svg = nativePairDiagnosticSvg(input, proposal, "trunk", "before")
+  expect(report.skewMm! - report.toleranceMm!).toBeCloseTo(0.3, 7)
+  const svg = nativePairDiagnosticSvg(
+    input,
+    proposal,
+    "trunk",
+    "before",
+    circuitJson,
+  )
   const snapshot = new URL(
     "./__snapshots__/native-pair-trunk.before.svg",
     import.meta.url,
