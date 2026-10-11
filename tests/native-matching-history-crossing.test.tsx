@@ -4,6 +4,10 @@ import {
   runNativeMatchingHistoryFixture,
 } from "./fixtures/native-matching-history"
 import { routeAnglesAreConventional } from "../lib/route-angle-validation"
+import {
+  nativeMatchingHistoryReport,
+  nativeMatchingHistorySvg,
+} from "./fixtures/native-matching-history-snapshot"
 
 test("bounded fine repair routes the Core TSX crossing when coarse history is retained", async () => {
   const { input, circuitJson, signalNames } =
@@ -48,4 +52,23 @@ test("bounded fine repair routes the Core TSX crossing when coarse history is re
     ),
   ).toBe(true)
   expect(input).toEqual(before)
+  // Compare the artifact to this actual compiled-and-solved fixture, so the
+  // diagnostic geometry, labels and measured lengths cannot go stale.
+  const fixture = { input, signalNames }
+  expect(nativeMatchingHistorySvg(fixture, result)).toBe(
+    await Bun.file(
+      new URL(
+        "../docs/repros/native-matching-history/before.svg",
+        import.meta.url,
+      ),
+    ).text(),
+  )
+  expect(nativeMatchingHistoryReport(fixture, result)).toEqual(
+    await Bun.file(
+      new URL(
+        "../docs/repros/native-matching-history/before.json",
+        import.meta.url,
+      ),
+    ).json(),
+  )
 }, 30000)
