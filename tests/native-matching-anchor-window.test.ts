@@ -89,7 +89,7 @@ function fixture() {
 function match(input: SimpleRouteJson, paired: Trace[]) {
   const search = matchNativeCarrierSignals(input, paired, {
     gridStep: 0.1,
-    maxPasses: 2,
+    maxPasses: 4,
     maxLocalPasses: 1,
     maxExpansionsPerRoute: 100000,
   })
@@ -134,3 +134,98 @@ for (const constraint of ["absolute maximum", "bus skew", "zero skew"] as const)
     expect(match(input, paired)).toBeNull()
     expect({ input, paired }).toEqual(before)
   })
+
+test("a bus with only absolute bounds does not require equality with its pair", () => {
+  const { input, paired } = fixture()
+  delete input.buses![0].maxLengthSkew
+  input.buses![0].minLength = 2.9
+  const before = structuredClone({ input, paired })
+  const traces = match(input, paired)
+  expect(traces).not.toBeNull()
+  const [bus] = busLengthReports(input, traces!)
+  expect(bus.aboveMinimumLength).toBe(true)
+  expect(bus.withinLengthLimit).toBe(true)
+  expect(traces!.slice(0, 2)).toEqual(paired)
+  expect({ input, paired }).toEqual(before)
+})
+
+test("ordinary members on both sides of the fixed pair still match the complete bus", () => {
+  const { input, paired } = fixture()
+  for (const point of input.connections[2].pointsToConnect) point.x *= 1.3 / 1.7
+  input.obstacles = input.obstacles.filter(
+    (obstacle) => !obstacle.connectedTo.includes("DATA"),
+  )
+  const longer = {
+    name: "LONGER",
+    source_trace_id: "LONGER",
+    pointsToConnect: [
+      { x: -1.7, y: -1, layer: "top" },
+      { x: 1.7, y: -1, layer: "top" },
+    ],
+  }
+  input.connections.push(longer)
+  input.buses![0].connectionNames.push(longer.name)
+  for (const connection of [input.connections[2], longer])
+    input.obstacles.push(
+      ...connection.pointsToConnect.map((point, side) => ({
+        componentId: `U${side}`,
+        shape: "circle" as const,
+        center: { x: point.x, y: point.y },
+        width: 0.3,
+        height: 0.3,
+        layers: ["top"],
+        connectedTo: [connection.name],
+      })),
+    )
+  // Keep the same relative timing window on a larger physical fixture so
+  // the existing rounded tuner has room for the shorter member's bank.
+  for (const connection of input.connections)
+    for (const point of connection.pointsToConnect) {
+      point.x *= 3
+      point.y *= 3
+    }
+  for (const obstacle of input.obstacles) {
+    obstacle.center.x *= 3
+    obstacle.center.y *= 3
+  }
+  for (const trace of paired)
+    for (const point of trace.route) {
+      point.x *= 3
+      point.y *= 3
+    }
+  input.bounds = { minX: -9, maxX: 9, minY: -6, maxY: 9 }
+  input.buses![0].maxLength = 10.5
+  input.buses![0].maxLengthSkew = 1.5
+  input.differentialPairs![0].traceGap = 1.4
+  const before = structuredClone({ input, paired })
+  const traces = match(input, paired)
+  expect(traces).not.toBeNull()
+  expect(traces).toHaveLength(4)
+  expect(traces!.slice(0, 2)).toEqual(paired)
+  const [bus] = busLengthReports(input, traces!)
+  expect(bus.matched).toBe(true)
+  expect(bus.withinLengthLimit).toBe(true)
+  expect(bus.skewMm!).toBeLessThanOrEqual(1.5 + 1e-7)
+  const data = traces!.find((trace) => trace.connection_name === "DATA")!
+  expect(length(data.route)).toBeGreaterThanOrEqual(8.7 - 1e-7)
+  expect(
+    validateRoutedCopperDrc({
+      inputSrj: input,
+      routedSrj: { ...input, traces: traces! },
+      clearance: 0.1,
+    } as unknown as Parameters<typeof validateRoutedCopperDrc>[0]).valid,
+  ).toBe(true)
+  expect({ input, paired }).toEqual(before)
+})
+
+test("overlapping bus skew windows retain the stricter limit", () => {
+  const { input, paired } = fixture()
+  input.buses!.push({
+    busId: "TIGHTER_BUS",
+    connectionNames: ["P", "N", "DATA"],
+    maxLengthSkew: 0.3,
+  })
+  const before = structuredClone({ input, paired })
+  expect(match(input, paired)).toBeNull()
+  expect({ input, paired }).toEqual(before)
+})

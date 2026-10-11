@@ -66,19 +66,28 @@ export function* matchNativeCarrierSignals(
       throw Error(
         `Native matching bus ${bus.busId} needs a paired length anchor`,
       )
+    const anchorLengths = anchors.map((t) => length(t.route))
+    // Fixed paired copper constrains both sides of the bus skew window.
+    // An ordinary member may be longer than the pair; the final whole-bus
+    // check still requires every ordinary member to match one another too.
     const ceiling = Math.min(
-      Math.max(...anchors.map((t) => length(t.route))),
+      bus.maxLengthSkew === undefined
+        ? Infinity
+        : Math.min(...anchorLengths) + bus.maxLengthSkew,
       bus.maxLength ?? Infinity,
     )
     const floor = Math.max(
       bus.minLength ?? 0,
-      ceiling - (bus.maxLengthSkew ?? 0),
+      bus.maxLengthSkew === undefined
+        ? 0
+        : Math.max(...anchorLengths) - bus.maxLengthSkew,
     )
     for (const name of bus.connectionNames) {
       maximums.set(name, Math.min(maximums.get(name) ?? Infinity, ceiling))
       minimums.set(name, Math.max(minimums.get(name) ?? 0, floor))
     }
   }
+  const anchorMinimums = new Map(minimums)
   const clearance =
     original.minTraceToPadEdgeClearance ??
     original.defaultObstacleMargin ??
@@ -112,6 +121,29 @@ export function* matchNativeCarrierSignals(
               length(t.route) > maximums.get(t.connection_name!)! + 1e-7)),
       )
       .map((t) => t.connection_name!)
+  const raiseBusMinimums = (traces: Trace[]) => {
+    minimums.clear()
+    for (const [name, floor] of anchorMinimums) minimums.set(name, floor)
+    const complete = [...paired, ...traces]
+    for (const bus of original.buses ?? []) {
+      if (bus.maxLengthSkew === undefined) continue
+      const legal = complete.filter(
+        (trace) =>
+          bus.connectionNames.includes(trace.connection_name!) &&
+          nativeSignalGeometryIsValid(trace) &&
+          length(trace.route) <=
+            (maximums.get(trace.connection_name!) ?? Infinity) + 1e-7,
+      )
+      if (!legal.length) continue
+      const floor =
+        Math.max(...legal.map((trace) => length(trace.route))) -
+        bus.maxLengthSkew
+      // Ordinary members can occupy both sides of the fixed anchor. Raise
+      // the shorter members together once a longer legal member is known.
+      for (const name of bus.connectionNames)
+        minimums.set(name, Math.max(minimums.get(name) ?? 0, floor))
+    }
+  }
   const valid = (traces: Trace[]) => {
     const complete = [...paired, ...traces]
     if (
@@ -167,6 +199,7 @@ export function* matchNativeCarrierSignals(
       connections: input.connections.filter((c) => !frozenNames.has(c.name)),
       traces: [...input.traces!, ...frozen],
     }
+    raiseBusMinimums([...seed, ...frozen])
     if (!local.connections.length)
       return { traces: frozen, collisions: 0, unfinished: unfinished(frozen) }
     const fixed = fixedCopper(local),
@@ -194,6 +227,7 @@ export function* matchNativeCarrierSignals(
       bestMetric = Infinity,
       stale = 0
     for (let pass = 0; pass < passes; pass++) {
+      raiseBusMinimums([...frozen, ...routed.values()])
       for (const c of [...local.connections].sort(
         (a, b) => (trouble.get(b.name) ?? 0) - (trouble.get(a.name) ?? 0),
       )) {
@@ -270,6 +304,7 @@ export function* matchNativeCarrierSignals(
       }
       const all = [...routed.values()],
         hits = graph(all)
+      raiseBusMinimums([...frozen, ...all])
       trouble = new Map()
       for (const [a, b, [first, second]] of hits) {
         for (const t of [all[a], all[b]])
@@ -328,6 +363,10 @@ export function* matchNativeCarrierSignals(
       )
         break
       yield
+    }
+    if (best) {
+      raiseBusMinimums(best.traces)
+      best.unfinished = unfinished(best.traces)
     }
     return best
   }
