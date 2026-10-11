@@ -286,7 +286,9 @@ export function* matchNativeCarrierSignals(
             second.a,
             second.b,
             first.radius + second.radius + clearance,
-            true,
+            // An intersection must not make otherwise clear package exits
+            // or distant carrier copper more expensive on every retry.
+            false,
             10,
           )
       }
