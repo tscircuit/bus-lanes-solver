@@ -12,4 +12,4 @@ Regenerate the active branch's snapshot with:
 UPDATE_NATIVE_PAIR_SNAPSHOTS=1 bun test tests/native-pair-via-grid-origin.test.ts
 ```
 
-Compiler/rasterizer and Core's missing/incompatible runtime imports are pinned development dependencies. The fix changes candidate grid arithmetic only.
+Compiler/rasterizer and Core's missing/incompatible runtime imports are pinned development dependencies. An explicit `initialSignalDogbones` return annotation preserves portable declarations when Core adds a second capacity-autorouter version, without changing behavior. The routing fix changes candidate grid arithmetic only.
