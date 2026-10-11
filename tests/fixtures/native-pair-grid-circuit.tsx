@@ -4,12 +4,6 @@ import type { SimpleRouteJson } from "../../lib/types"
 /** Fractional board origin comes from authored board size and placement. */
 export function compileGridPairCircuit() {
   const circuit = new Circuit()
-  const footprint = (
-    <footprint>
-      <smtpad portHints={["1"]} shape="circle" radius={0.2} pcbY={0.4} />
-      <smtpad portHints={["2"]} shape="circle" radius={0.2} pcbY={-0.4} />
-    </footprint>
-  )
   circuit.add(
     <board
       width={8.1}
@@ -25,17 +19,18 @@ export function compileGridPairCircuit() {
     >
       <chip
         name="U1"
-        pcbX={-3.02}
+        pcbX={-1.8825}
         pcbY={-0.02}
-        pinLabels={{ pin1: "P", pin2: "N" }}
-        footprint={footprint}
+        pinLabels={{ pin1: "P", pin2: "N", pin3: "NC" }}
+        footprint="sot23"
       />
       <chip
         name="U2"
-        pcbX={2.98}
+        pcbX={1.8425}
         pcbY={-0.02}
-        pinLabels={{ pin1: "P", pin2: "N" }}
-        footprint={footprint}
+        pcbRotation={180}
+        pinLabels={{ pin1: "N", pin2: "P", pin3: "NC" }}
+        footprint="sot23"
       />
       <trace name="P" from="U1.P" to="U2.P" width={0.1} />
       <trace name="N" from="U1.N" to="U2.N" width={0.1} />
