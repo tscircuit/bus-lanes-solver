@@ -1,87 +1,46 @@
-import { expect, spyOn, test } from "bun:test"
+import { expect, test } from "bun:test"
 import { validateRoutedCopperDrc } from "@tscircuit/fanout-solver"
-import { BusLanesSolver } from "../lib/bus-lanes-solver"
-import { length } from "../lib/geometry"
-import { joinSignalEscapes } from "../lib/join-signal-escapes"
-import { planNativePairedCarriers } from "../lib/plan-native-paired-carriers"
-import type { SimpleRouteJson, Trace } from "../lib/types"
+import { pairLengthReports } from "../lib/route-lengths"
+import { captureNativePairProposal } from "./fixtures/capture-native-pair-proposal"
+import {
+  nativePairDiagnosticSvg,
+  writeDiagnosticSnapshot,
+} from "./fixtures/native-pair-diagnostic-svg"
+import { compileTrunkPairCircuit } from "./fixtures/native-pair-trunk-circuit"
 
-test("native pair rebalancing preserves whole-copper skew across unequal offset trunks", () => {
-  const input: SimpleRouteJson = {
-    layerCount: 4,
-    allowedLayers: ["inner1"],
-    minTraceWidth: 0.1,
-    minTraceToPadEdgeClearance: 0.05,
-    minViaPadDiameter: 0.3,
-    minViaHoleDiameter: 0.15,
-    bounds: { minX: -4, maxX: 2, minY: -2, maxY: 4 },
-    connections: ["P", "N"].map((name, i) => ({
-      name,
-      pointsToConnect: [
-        { x: -3, y: i ? -0.4 : 0.4, layer: "top" },
-        { x: i ? -0.4 : 0.4, y: 3, layer: "top" },
+test("Core-authored native pair meets its whole-copper length constraint after via balancing", async () => {
+  const { input, circuitJson } = compileTrunkPairCircuit()
+  const before = structuredClone(input)
+  expect(
+    circuitJson.filter((element) => element.type === "pcb_smtpad"),
+  ).toHaveLength(4)
+  expect(input.differentialPairs?.[0].lengthTolerance).toBe(0.1)
+  const proposal = captureNativePairProposal(input, {
+    centerlines: [
+      [
+        { x: -2.8, y: 0 },
+        { x: 0, y: 0 },
+        { x: 0, y: 2.8 },
       ],
-    })),
-    obstacles: ["P", "N"].flatMap((name, i) =>
-      [0, 1].map((side) => ({
-        type: "rect",
-        shape: "circle" as const,
-        componentId: `package_${side}`,
-        center: side
-          ? { x: i ? -0.4 : 0.4, y: 3 }
-          : { x: -3, y: i ? -0.4 : 0.4 },
-        width: 0.4,
-        height: 0.4,
-        layers: ["top"],
-        connectedTo: [name],
-      })),
-    ),
-    differentialPairs: [
-      { connectionNames: ["P", "N"], traceGap: 0.1, lengthTolerance: 0.1 },
     ],
-  }
-  const before = structuredClone(input),
-    stopped = new Error("Captured the complete pair before residual tuning")
-  let proposals: Trace[] = []
-  // Observe the actual routed approaches at the next stage boundary. This
-  // isolates via rebalancing from the later, much larger meander search.
-  const matching = spyOn(BusLanesSolver, "forRefinement").mockImplementation(
-    (prepared, carriers) => {
-      proposals = carriers.map((trace) =>
-        joinSignalEscapes(
-          trace,
-          prepared.traces!.filter(
-            (escape) => escape.connection_name === trace.connection_name,
-          ),
-        ),
-      )
-      throw stopped
-    },
-  )
-  try {
-    const search = planNativePairedCarriers(input, {
-      centerlines: [
-        [
-          { x: -2.8, y: 0 },
-          { x: 0, y: 0 },
-          { x: 0, y: 2.8 },
-        ],
-      ],
-      maxApproachPasses: 20,
-      maxExpansionsPerRoute: 10000,
-    })
-    expect(() => {
-      let result = search.next()
-      while (!result.done) result = search.next()
-    }).toThrow(stopped)
-  } finally {
-    matching.mockRestore()
-  }
-  expect(proposals).toHaveLength(2)
-  for (const [index, trace] of proposals.entries()) {
+    gridStep: 0.1,
+    maxApproachPasses: 20,
+    maxExpansionsPerRoute: 10000,
+  })
+  const { traces } = proposal
+  expect(traces).toHaveLength(2)
+  for (const [index, trace] of traces.entries()) {
     const endpoints = input.connections[index].pointsToConnect
-    expect(trace.route[0]).toMatchObject(endpoints[0])
-    expect(trace.route.at(-1)).toMatchObject(endpoints[1])
+    expect(trace.route[0]).toMatchObject({
+      x: endpoints[0].x,
+      y: endpoints[0].y,
+      layer: endpoints[0].layer,
+    })
+    expect(trace.route.at(-1)).toMatchObject({
+      x: endpoints[1].x,
+      y: endpoints[1].y,
+      layer: endpoints[1].layer,
+    })
     expect(
       trace.route.filter((point) => point.route_type === "via"),
     ).toHaveLength(2)
@@ -89,11 +48,23 @@ test("native pair rebalancing preserves whole-copper skew across unequal offset 
   expect(
     validateRoutedCopperDrc({
       inputSrj: input,
-      routedSrj: { ...input, traces: proposals },
+      routedSrj: { ...input, traces },
       clearance: 0.05,
     } as unknown as Parameters<typeof validateRoutedCopperDrc>[0]).valid,
   ).toBe(true)
-  const totals = proposals.map((trace) => length(trace.route))
-  expect(Math.abs(totals[0] - totals[1])).toBeLessThanOrEqual(0.1)
+  const report = pairLengthReports(input, traces)[0]
+  expect(report.skewMm).toBeLessThanOrEqual(0.1)
+  // The same complete copper now meets the authored pair constraint before
+  // refinement; the omitted-trunk deficit no longer needs residual tuning.
+  expect(report.matched).toBe(true)
+  expect(report.skewMm!).toBeLessThanOrEqual(report.toleranceMm!)
+  const svg = nativePairDiagnosticSvg(input, proposal, "trunk", "after")
+  const snapshot = new URL(
+    "./__snapshots__/native-pair-trunk.after.svg",
+    import.meta.url,
+  ).pathname
+  if (process.env.UPDATE_NATIVE_PAIR_SNAPSHOTS === "1")
+    await writeDiagnosticSnapshot(snapshot, svg)
+  expect(svg).toBe(await Bun.file(snapshot).text())
   expect(input).toEqual(before)
 })
