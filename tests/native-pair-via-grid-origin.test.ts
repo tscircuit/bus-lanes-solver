@@ -15,13 +15,31 @@ test("Core-authored fractional bounds produce native-grid vias that route real b
   const before = structuredClone(input)
   expect(
     circuitJson.filter((element) => element.type === "pcb_smtpad"),
-  ).toHaveLength(4)
+  ).toHaveLength(6)
   expect(input.bounds).toEqual({
     minX: -4.03,
     maxX: 4.069999999999999,
     minY: -2.03,
     maxY: 2.07,
   })
+  expect(input.obstacles).toHaveLength(6)
+  expect(input.obstacles.every((obstacle) => obstacle.type === "rect")).toBe(
+    true,
+  )
+  expect(
+    circuitJson.filter(
+      (element) =>
+        element.type === "pcb_smtpad" && element.port_hints?.includes("3"),
+    ),
+  ).toHaveLength(2)
+  expect(
+    input.obstacles.filter(
+      (obstacle) =>
+        !input.connections.some((connection) =>
+          obstacle.connectedTo.includes(connection.name),
+        ),
+    ),
+  ).toHaveLength(2)
   expect(input.differentialPairs?.[0].lengthTolerance).toBe(0.1)
   const proposal = captureNativePairProposal(input, {
     centerlines: [
@@ -83,7 +101,13 @@ test("Core-authored fractional bounds produce native-grid vias that route real b
   const report = pairLengthReports(input, proposal.traces)[0]
   expect(report.matched).toBe(true)
   expect(report.skewMm!).toBeLessThanOrEqual(report.toleranceMm!)
-  const svg = nativePairDiagnosticSvg(input, proposal, "grid", "after")
+  const svg = nativePairDiagnosticSvg(
+    input,
+    proposal,
+    "grid",
+    "after",
+    circuitJson,
+  )
   const snapshot = new URL(
     "./__snapshots__/native-pair-grid.after.svg",
     import.meta.url,
