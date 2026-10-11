@@ -1,4 +1,5 @@
 import { Resvg } from "@resvg/resvg-js"
+import type { AnyCircuitElement } from "circuit-json"
 import { length } from "../../lib/geometry"
 import { pairLengthReports } from "../../lib/route-lengths"
 import type { Point, SimpleRouteJson, Trace } from "../../lib/types"
@@ -24,6 +25,7 @@ export function nativePairDiagnosticSvg(
   proposal: Proposal,
   kind: "trunk" | "grid",
   state: "before" | "after",
+  circuitJson: AnyCircuitElement[],
 ) {
   const report = pairLengthReports(input, proposal.traces)[0]
   const accepted = proposal.attempts.filter(
@@ -81,29 +83,67 @@ export function nativePairDiagnosticSvg(
   svg += `<rect x="30" y="142" width="614" height="590" rx="12" fill="#111e33"/><rect x="665" y="142" width="485" height="590" rx="12" fill="#111e33"/>`
   svg += text(50, 170, "Actual native copper · top pads + inner1 carrier", 18)
   svg += `<rect x="${x({ x: bound.minX, y: bound.minY })}" y="${y({ x: bound.minX, y: bound.maxY })}" width="${(bound.maxX - bound.minX) * scale}" height="${(bound.maxY - bound.minY) * scale}" fill="#17263b" stroke="#64748b" stroke-width="1.5"/>`
+  const componentNames = new Map(
+    circuitJson
+      .filter((element) => element.type === "source_component")
+      .map((element) => [element.source_component_id, element.name]),
+  )
+  const packageNames = new Map<string, string>()
+  for (const component of circuitJson.filter(
+    (element) => element.type === "pcb_component",
+  )) {
+    const name = componentNames.get(component.source_component_id) ?? "package"
+    packageNames.set(component.pcb_component_id, name)
+    // The dashed outline is the exact compiled component bounds, not artwork
+    // substituted for a footprint. The copper pads below retain their shapes.
+    svg += `<rect x="${x(component.center) - (component.width * scale) / 2}" y="${y(component.center) - (component.height * scale) / 2}" width="${component.width * scale}" height="${component.height * scale}" fill="none" stroke="#94a3b8" stroke-width="1.2" stroke-dasharray="5,4"/>`
+    const verticalLink = kind === "trunk" && component.height > component.width
+    svg += text(
+      verticalLink
+        ? x(component.center) + (component.width * scale) / 2 + 8
+        : x(component.center) - (component.width * scale) / 2,
+      verticalLink
+        ? y(component.center) + 6
+        : y(component.center) + (component.height * scale) / 2 + 23,
+      `${name} · ${kind === "trunk" ? "0402" : "SOT-23"}`,
+      16,
+      "#cbd5e1",
+    )
+  }
   svg += proposal.traces
     .map((trace, index) => drawTrace(trace, colors[index]))
     .join("")
   for (const obstacle of input.obstacles) {
-    svg += `<circle cx="${x(obstacle.center)}" cy="${y(obstacle.center)}" r="${(obstacle.width * scale) / 2}" fill="#fbbf24" stroke="#fff7ed" stroke-width="1"/>`
     const label =
       (
         obstacle as typeof obstacle & {
           circuitJsonMetadata?: { source_port_name?: string }
         }
       ).circuitJsonMetadata?.source_port_name ?? "pad"
-    svg += text(
-      x(obstacle.center) + 18,
-      y(obstacle.center) + 6,
-      label,
-      17,
-      "#fde68a",
+    const connected = input.connections.some((connection) =>
+      obstacle.connectedTo.includes(connection.name),
     )
+    const padColor = connected ? "#fbbf24" : "#64748b"
+    svg += `<rect x="${x(obstacle.center) - (obstacle.width * scale) / 2}" y="${y(obstacle.center) - (obstacle.height * scale) / 2}" width="${obstacle.width * scale}" height="${obstacle.height * scale}" fill="${padColor}" stroke="#fff7ed" stroke-width="1"/>`
+    svg += text(
+      x(obstacle.center) - (obstacle.width * scale) / 2,
+      y(obstacle.center) - (obstacle.height * scale) / 2 - 8,
+      `${packageNames.get(obstacle.componentId ?? "") ?? "pad"}.${label}`,
+      15,
+      connected ? "#fde68a" : "#cbd5e1",
+    )
+  }
+  // Draw the actual drilled barrels above pad fill so via-in-owned-pad
+  // contacts remain visible in this composite TOP/inner-layer projection.
+  for (const point of proposal.traces.flatMap((trace) =>
+    trace.route.filter((point) => point.route_type === "via"),
+  )) {
+    svg += `<circle cx="${x(point)}" cy="${y(point)}" r="${(scale * (input.minViaPadDiameter ?? 0.3)) / 2}" fill="none" stroke="#f8fafc" stroke-width="1.5"/><circle cx="${x(point)}" cy="${y(point)}" r="${(scale * (input.minViaHoleDiameter ?? 0.15)) / 2}" fill="#0f172a"/>`
   }
   svg +=
     text(50, 761, "P copper", 18, colors[0]) +
     text(185, 761, "N copper", 18, colors[1]) +
-    text(325, 761, "Gold = Core pads · rings = full-span vias", 17)
+    text(325, 761, "Gold = connected pads · gray = unused · rings = vias", 17)
   svg += text(
     685,
     180,

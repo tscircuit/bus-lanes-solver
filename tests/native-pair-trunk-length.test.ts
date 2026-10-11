@@ -13,14 +13,32 @@ test("Core-authored native pair meets its whole-copper length constraint after v
   const before = structuredClone(input)
   expect(
     circuitJson.filter((element) => element.type === "pcb_smtpad"),
+  ).toHaveLength(8)
+  expect(input.obstacles).toHaveLength(8)
+  expect(input.obstacles.every((obstacle) => obstacle.type === "rect")).toBe(
+    true,
+  )
+  expect(
+    circuitJson.filter(
+      (element) =>
+        element.type === "pcb_smtpad" && element.port_hints?.includes("1"),
+    ),
+  ).toHaveLength(4)
+  expect(
+    input.obstacles.filter(
+      (obstacle) =>
+        !input.connections.some((connection) =>
+          obstacle.connectedTo.includes(connection.name),
+        ),
+    ),
   ).toHaveLength(4)
   expect(input.differentialPairs?.[0].lengthTolerance).toBe(0.1)
   const proposal = captureNativePairProposal(input, {
     centerlines: [
       [
-        { x: -2.8, y: 0 },
+        { x: -2.5, y: 0 },
         { x: 0, y: 0 },
-        { x: 0, y: 2.8 },
+        { x: 0, y: 2.5 },
       ],
     ],
     gridStep: 0.1,
@@ -58,7 +76,13 @@ test("Core-authored native pair meets its whole-copper length constraint after v
   // refinement; the omitted-trunk deficit no longer needs residual tuning.
   expect(report.matched).toBe(true)
   expect(report.skewMm!).toBeLessThanOrEqual(report.toleranceMm!)
-  const svg = nativePairDiagnosticSvg(input, proposal, "trunk", "after")
+  const svg = nativePairDiagnosticSvg(
+    input,
+    proposal,
+    "trunk",
+    "after",
+    circuitJson,
+  )
   const snapshot = new URL(
     "./__snapshots__/native-pair-trunk.after.svg",
     import.meta.url,
