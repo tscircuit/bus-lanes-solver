@@ -2,7 +2,7 @@
 
 The [TSX circuit](../../../tests/fixtures/native-matching-history.tsx) declares a 12 × 6 mm, four-layer board with twelve circular SMT pads, six crossing signals and two inner1 keepouts. Published Core 0.0.2125 compiles its Circuit JSON and routing input. The only adaptation is declaring inner1 as the native matcher's carrier layer; pad coordinates, ownership, obstacles, connections and board bounds come from Core.
 
-Run `bun test tests/native-matching-history-crossing.test.tsx` for the end-to-end routing regression, or `bun scripts/snapshot-native-matching-history.ts` to regenerate the labeled SVG, PNG and numeric report for the current implementation.
+Run `bun test tests/native-matching-history-crossing.test.tsx` for the end-to-end routing regression, or `bun scripts/snapshot-native-matching-history.ts` to regenerate the labeled SVG, PNG and numeric report for the current implementation. The regression compares its actual result's generated SVG and numeric report with the committed artifacts, preventing stale labels, geometry or measurements.
 
 The fixture uses a supported bounded configuration: one coarse pass, one pass in each local repair stage, and 100,000 search expansions per route. It provides no saved routes, mocks or manually constructed obstacles. On main, the coarse stage finds one physical S0/S4 copper conflict. Each of the six fine repair stages still has that conflict and the matcher returns `null`. The before panel shows the **final rejected candidate**, whose endpoints are connected but whose copper fails real DRC. It is a diagnostic, not a successfully routed board.
 
