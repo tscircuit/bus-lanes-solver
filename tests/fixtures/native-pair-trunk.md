@@ -12,4 +12,4 @@ Regenerate the active branch's snapshot with:
 UPDATE_NATIVE_PAIR_SNAPSHOTS=1 bun test tests/native-pair-trunk-length.test.ts
 ```
 
-The fixture compiler and rasterizer are pinned dev dependencies. Additional direct runtime pins repair missing or incompatible imports in the published Core dependency tree; they do not change the solver's production source.
+The fixture compiler and rasterizer are pinned dev dependencies. Additional direct runtime pins repair missing or incompatible imports in the published Core dependency tree; one behavior-neutral explicit return annotation in `initialSignalDogbones` keeps declaration output portable when Core introduces a second capacity-autorouter version. The routing algorithm is unchanged.
