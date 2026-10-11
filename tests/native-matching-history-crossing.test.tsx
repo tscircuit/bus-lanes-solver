@@ -58,7 +58,7 @@ test("bounded fine repair routes the Core TSX crossing when coarse history is re
   expect(nativeMatchingHistorySvg(fixture, result)).toBe(
     await Bun.file(
       new URL(
-        "../docs/repros/native-matching-history/before.svg",
+        "../docs/repros/native-matching-history/after.svg",
         import.meta.url,
       ),
     ).text(),
@@ -66,7 +66,7 @@ test("bounded fine repair routes the Core TSX crossing when coarse history is re
   expect(nativeMatchingHistoryReport(fixture, result)).toEqual(
     await Bun.file(
       new URL(
-        "../docs/repros/native-matching-history/before.json",
+        "../docs/repros/native-matching-history/after.json",
         import.meta.url,
       ),
     ).json(),
