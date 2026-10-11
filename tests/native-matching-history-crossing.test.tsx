@@ -5,7 +5,7 @@ import {
 } from "./fixtures/native-matching-history"
 import { routeAnglesAreConventional } from "../lib/route-angle-validation"
 
-test("bounded fine repair repeats the same real copper conflict after losing history", async () => {
+test("bounded fine repair routes the Core TSX crossing when coarse history is retained", async () => {
   const { input, circuitJson, signalNames } =
     await compileNativeMatchingHistoryFixture()
   const before = structuredClone(input)
@@ -29,27 +29,23 @@ test("bounded fine repair repeats the same real copper conflict after losing his
   ])
 
   const result = runNativeMatchingHistoryFixture(input)
-  expect(result.traces).toBeNull()
+  expect(result.traces).not.toBeNull()
+  expect(result.traces).toHaveLength(6)
   expect(result.complete).toBe(true)
   expect(routeAnglesAreConventional(result.diagnosticTraces)).toBe(true)
   expect(result.stages.map((state) => state.stage)).toEqual([
     "native_global_matching",
-    ...Array.from(
-      { length: 6 },
-      (_, index) => `native_local_matching_${index}`,
-    ),
+    "native_local_matching_0",
   ])
-  expect(result.stages.every((state) => state.collisions === 1)).toBe(true)
-  expect(result.validation.valid).toBe(false)
-  expect(result.validation.issues).toHaveLength(1)
-  const [conflict] = result.validation.issues
-  expect(conflict.code).toBe("different-net-trace-clearance")
-  expect(conflict.layer).toBe("inner1")
+  expect(result.stages.map((state) => state.collisions)).toEqual([1, 0])
+  expect(result.validation.valid).toBe(true)
+  expect(result.validation.issues).toEqual([])
+  expect(result.validation.checkedViaCount).toBe(12)
   expect(
-    [
-      signalNames[conflict.connectionName!],
-      signalNames[conflict.otherConnectionName!],
-    ].sort(),
-  ).toEqual(["S0", "S4"])
+    result.traces!.every(
+      (trace) =>
+        trace.route.filter((point) => point.route_type === "via").length === 2,
+    ),
+  ).toBe(true)
   expect(input).toEqual(before)
 }, 30000)

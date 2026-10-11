@@ -13,3 +13,5 @@ This demonstrates a failed bounded repair and repeated conflict after each histo
 Core's published package imports several runtime packages without declaring them as dependencies. The pinned development dependencies supply those imports and align Circuit JSON with Core's schema. The existing fanout solver stays pinned to its original algorithm version. A behavior-neutral `ReturnType<typeof routeAlternateSignalDogbones>` annotation makes `initialSignalDogbones` declarations portable when Core introduces another autorouter version; no routing logic changes in the reproduction.
 
 ![Before: final rejected candidate with S0/S4 clearance conflict](before.png)
+
+![After: six accepted routes with zero copper clearance issues](after.png)
