@@ -1,102 +1,43 @@
-import { expect, spyOn, test } from "bun:test"
-import { BusLanesSolver } from "../lib/bus-lanes-solver"
+import { expect, test } from "bun:test"
+import { validateRoutedCopperDrc } from "@tscircuit/fanout-solver"
+import { pairLengthReports } from "../lib/route-lengths"
+import type { Point } from "../lib/types"
+import { captureNativePairProposal } from "./fixtures/capture-native-pair-proposal"
+import { compileGridPairCircuit } from "./fixtures/native-pair-grid-circuit"
 import {
-  NativeCarrierRouter,
-  type NativeCarrierSearchOptions,
-} from "../lib/native-carrier-router"
-import { planNativePairedCarriers } from "../lib/plan-native-paired-carriers"
-import type { Connection, Point, SimpleRouteJson } from "../lib/types"
+  nativePairDiagnosticSvg,
+  writeDiagnosticSnapshot,
+} from "./fixtures/native-pair-diagnostic-svg"
 
-test("pair balancing proposes off-grid vias when native bounds have a fractional origin", () => {
+test("Core-authored fractional bounds make every pair-balancing via miss the native grid", async () => {
   const step = 0.1
-  const input: SimpleRouteJson = {
-    layerCount: 4,
-    allowedLayers: ["inner1"],
-    minTraceWidth: step,
-    minTraceToPadEdgeClearance: 0.05,
-    minViaPadDiameter: 0.3,
-    minViaHoleDiameter: 0.15,
-    bounds: { minX: -4.03, maxX: 4.07, minY: -2.03, maxY: 2.07 },
-    connections: ["P", "N"].map((name, i) => ({
-      name,
-      pointsToConnect: [-3, 3].map((x) => ({
-        x,
-        y: i ? -0.4 : 0.4,
-        layer: "top",
-      })),
-    })),
-    obstacles: ["P", "N"].flatMap((name, i) =>
-      [-3, 3].map((x, side) => ({
-        type: "rect",
-        shape: "circle" as const,
-        componentId: `package_${side}`,
-        center: { x, y: i ? -0.4 : 0.4 },
-        width: 0.4,
-        height: 0.4,
-        layers: ["top"],
-        connectedTo: [name],
-      })),
-    ),
-    differentialPairs: [
-      { connectionNames: ["P", "N"], traceGap: 0.1, lengthTolerance: 0.1 },
-    ],
-  }
-  const before = structuredClone(input),
-    stopped = new Error("Captured balancing before residual matching"),
-    originalRoute = NativeCarrierRouter.prototype.route
-  const attempts: Array<{ point: Point; accepted: boolean }> = []
-  let first:
-    | {
-        router: NativeCarrierRouter
-        connection: Connection
-        options: NativeCarrierSearchOptions
-      }
-    | undefined
-  const routing = spyOn(
-    NativeCarrierRouter.prototype,
-    "route",
-  ).mockImplementation(function* (
-    this: NativeCarrierRouter,
-    connection,
-    options = {},
-  ) {
-    const result = yield* originalRoute.call(this, connection, options)
-    if (options.forcedVia) {
-      first ??= { router: this, connection, options }
-      attempts.push({ point: options.forcedVia, accepted: result !== null })
-    }
-    return result
+  const { input, circuitJson } = compileGridPairCircuit()
+  const before = structuredClone(input)
+  expect(
+    circuitJson.filter((element) => element.type === "pcb_smtpad"),
+  ).toHaveLength(4)
+  expect(input.bounds).toEqual({
+    minX: -4.03,
+    maxX: 4.069999999999999,
+    minY: -2.03,
+    maxY: 2.07,
   })
-  const matching = spyOn(BusLanesSolver, "forRefinement").mockImplementation(
-    () => {
-      throw stopped
-    },
-  )
-  try {
-    const search = planNativePairedCarriers(input, {
-      centerlines: [
-        [
-          { x: -2.8, y: 0 },
-          { x: -1, y: 0 },
-          { x: 0, y: 1 },
-          { x: 1, y: 1 },
-          { x: 2, y: 0 },
-          { x: 2.8, y: 0 },
-        ],
+  expect(input.differentialPairs?.[0].lengthTolerance).toBe(0.1)
+  const proposal = captureNativePairProposal(input, {
+    centerlines: [
+      [
+        { x: -2.8, y: 0 },
+        { x: -1, y: 0 },
+        { x: 0, y: 1 },
+        { x: 1, y: 1 },
+        { x: 2, y: 0 },
+        { x: 2.8, y: 0 },
       ],
-      gridStep: step,
-      maxApproachPasses: 20,
-      maxExpansionsPerRoute: 10000,
-    })
-    expect(() => {
-      let result = search.next()
-      while (!result.done) result = search.next()
-    }).toThrow(stopped)
-  } finally {
-    routing.mockRestore()
-    matching.mockRestore()
-  }
-  expect(attempts.length).toBeGreaterThan(0)
+    ],
+    gridStep: step,
+    maxApproachPasses: 20,
+    maxExpansionsPerRoute: 10000,
+  })
   const onNativeGrid = (point: Point) =>
     [
       (point.x - input.bounds.minX) / step,
@@ -104,27 +45,52 @@ test("pair balancing proposes off-grid vias when native bounds have a fractional
     ].every(
       (coordinate) => Math.abs(coordinate - Math.round(coordinate)) < 1e-8,
     )
-  expect(attempts.every(({ point }) => !onNativeGrid(point))).toBe(true)
-  expect(attempts.some(({ accepted }) => accepted)).toBe(false)
-  // Prove this scene has a legal alternative: project those same sites onto
-  // the router's actual grid and run the unchanged physical router again.
-  const legal = attempts.some(({ point }) => {
-    const forcedVia = {
-      x:
-        input.bounds.minX +
-        Math.round((point.x - input.bounds.minX) / step) * step,
-      y:
-        input.bounds.minY +
-        Math.round((point.y - input.bounds.minY) / step) * step,
-    }
-    const search = originalRoute.call(first!.router, first!.connection, {
-      ...first!.options,
-      forcedVia,
+  expect(proposal.attempts.length).toBeGreaterThan(0)
+  expect(proposal.attempts.every(({ point }) => !onNativeGrid(point))).toBe(
+    true,
+  )
+  expect(proposal.attempts.some(({ accepted }) => accepted)).toBe(false)
+  // Second-order consequence: no candidate can reroute its approach, although
+  // projecting the same candidate onto the native grid produces real copper.
+  expect(proposal.projectedAlternative).not.toBeNull()
+  expect(
+    proposal.projectedAlternative!.route.some(
+      (point) => point.route_type === "via",
+    ),
+  ).toBe(true)
+  expect(proposal.traces).toHaveLength(2)
+  for (const [index, trace] of proposal.traces.entries()) {
+    const endpoints = input.connections[index].pointsToConnect
+    expect(trace.route[0]).toMatchObject({
+      x: endpoints[0].x,
+      y: endpoints[0].y,
+      layer: endpoints[0].layer,
     })
-    let result = search.next()
-    while (!result.done) result = search.next()
-    return result.value !== null
-  })
-  expect(legal).toBe(true)
+    expect(trace.route.at(-1)).toMatchObject({
+      x: endpoints[1].x,
+      y: endpoints[1].y,
+      layer: endpoints[1].layer,
+    })
+    expect(
+      trace.route.filter((point) => point.route_type === "via"),
+    ).toHaveLength(2)
+  }
+  expect(
+    validateRoutedCopperDrc({
+      inputSrj: input,
+      routedSrj: { ...input, traces: proposal.traces },
+      clearance: 0.05,
+    } as unknown as Parameters<typeof validateRoutedCopperDrc>[0]).valid,
+  ).toBe(true)
+  const report = pairLengthReports(input, proposal.traces)[0]
+  expect(report.matched).toBe(false)
+  const svg = nativePairDiagnosticSvg(input, proposal, "grid", "before")
+  const snapshot = new URL(
+    "./__snapshots__/native-pair-grid.before.svg",
+    import.meta.url,
+  ).pathname
+  if (process.env.UPDATE_NATIVE_PAIR_SNAPSHOTS === "1")
+    await writeDiagnosticSnapshot(snapshot, svg)
+  expect(svg).toBe(await Bun.file(snapshot).text())
   expect(input).toEqual(before)
 })
