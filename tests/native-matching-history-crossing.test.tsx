@@ -16,9 +16,32 @@ test("bounded fine repair repeats the same real copper conflict after losing his
   expect(
     circuitJson.filter((element) => element.type.includes("error")),
   ).toEqual([])
+  const pads = circuitJson.filter(
+    (element) => element.type === "pcb_smtpad" && element.shape === "rect",
+  )
+  expect(pads).toHaveLength(24)
   expect(
-    circuitJson.filter((element) => element.type === "pcb_smtpad"),
+    circuitJson.filter((element) => element.type === "source_component"),
   ).toHaveLength(12)
+  // All actual 0402 terminals remain obstacles, including the unused pads.
+  for (const pad of pads) {
+    expect(pad.shape).toBe("rect")
+    expect(pad).toMatchObject({ width: 0.54, height: 0.64, layer: "top" })
+    expect(input.obstacles).toContainEqual(
+      expect.objectContaining({
+        center: { x: pad.x, y: pad.y },
+        width: 0.54,
+        height: 0.64,
+        layers: ["top"],
+      }),
+    )
+  }
+  for (const connection of input.connections) {
+    for (const terminal of connection.pointsToConnect) {
+      const pad = pads.find((pad) => pad.pcb_port_id === terminal.pcb_port_id)!
+      expect(terminal).toMatchObject({ x: pad.x, y: pad.y, layer: pad.layer })
+    }
+  }
   expect(
     circuitJson.filter((element) => element.type === "pcb_keepout"),
   ).toHaveLength(2)
@@ -43,7 +66,9 @@ test("bounded fine repair repeats the same real copper conflict after losing his
       (_, index) => `native_local_matching_${index}`,
     ),
   ])
-  expect(result.stages.every((state) => state.collisions === 1)).toBe(true)
+  expect(result.stages.map((state) => state.collisions)).toEqual([
+    6, 1, 1, 1, 1, 1, 1,
+  ])
   expect(result.validation.valid).toBe(false)
   expect(result.validation.issues).toHaveLength(1)
   const [conflict] = result.validation.issues
@@ -54,11 +79,11 @@ test("bounded fine repair repeats the same real copper conflict after losing his
       signalNames[conflict.connectionName!],
       signalNames[conflict.otherConnectionName!],
     ].sort(),
-  ).toEqual(["S0", "S4"])
+  ).toEqual(["S2", "S3"])
   expect(input).toEqual(before)
   // Compare the artifact to this actual compiled-and-solved fixture, so the
   // diagnostic geometry, labels and measured lengths cannot go stale.
-  const fixture = { input, signalNames }
+  const fixture = { input, circuitJson, signalNames }
   expect(nativeMatchingHistorySvg(fixture, result)).toBe(
     await Bun.file(
       new URL(
