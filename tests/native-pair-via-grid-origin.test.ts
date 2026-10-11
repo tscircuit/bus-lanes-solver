@@ -7,7 +7,7 @@ import {
 import { planNativePairedCarriers } from "../lib/plan-native-paired-carriers"
 import type { Connection, Point, SimpleRouteJson } from "../lib/types"
 
-test("pair balancing proposes off-grid vias when native bounds have a fractional origin", () => {
+test("pair balancing proposes legal native-grid vias when bounds have a fractional origin", () => {
   const step = 0.1
   const input: SimpleRouteJson = {
     layerCount: 4,
@@ -104,8 +104,8 @@ test("pair balancing proposes off-grid vias when native bounds have a fractional
     ].every(
       (coordinate) => Math.abs(coordinate - Math.round(coordinate)) < 1e-8,
     )
-  expect(attempts.every(({ point }) => !onNativeGrid(point))).toBe(true)
-  expect(attempts.some(({ accepted }) => accepted)).toBe(false)
+  expect(attempts.every(({ point }) => onNativeGrid(point))).toBe(true)
+  expect(attempts.some(({ accepted }) => accepted)).toBe(true)
   // Prove this scene has a legal alternative: project those same sites onto
   // the router's actual grid and run the unchanged physical router again.
   const legal = attempts.some(({ point }) => {
