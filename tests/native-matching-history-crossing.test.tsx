@@ -9,7 +9,7 @@ import {
   nativeMatchingHistorySvg,
 } from "./fixtures/native-matching-history-snapshot"
 
-test("bounded fine repair repeats the same real copper conflict after losing history", async () => {
+test("bounded fine repair routes the Core 0402 crossing when coarse history is retained", async () => {
   const { input, circuitJson, signalNames } =
     await compileNativeMatchingHistoryFixture()
   const before = structuredClone(input)
@@ -56,30 +56,24 @@ test("bounded fine repair repeats the same real copper conflict after losing his
   ])
 
   const result = runNativeMatchingHistoryFixture(input)
-  expect(result.traces).toBeNull()
+  expect(result.traces).not.toBeNull()
+  expect(result.traces).toHaveLength(6)
   expect(result.complete).toBe(true)
   expect(routeAnglesAreConventional(result.diagnosticTraces)).toBe(true)
   expect(result.stages.map((state) => state.stage)).toEqual([
     "native_global_matching",
-    ...Array.from(
-      { length: 6 },
-      (_, index) => `native_local_matching_${index}`,
-    ),
+    "native_local_matching_0",
   ])
-  expect(result.stages.map((state) => state.collisions)).toEqual([
-    6, 1, 1, 1, 1, 1, 1,
-  ])
-  expect(result.validation.valid).toBe(false)
-  expect(result.validation.issues).toHaveLength(1)
-  const [conflict] = result.validation.issues
-  expect(conflict.code).toBe("different-net-trace-clearance")
-  expect(conflict.layer).toBe("inner1")
+  expect(result.stages.map((state) => state.collisions)).toEqual([6, 0])
+  expect(result.validation.valid).toBe(true)
+  expect(result.validation.issues).toEqual([])
+  expect(result.validation.checkedViaCount).toBe(12)
   expect(
-    [
-      signalNames[conflict.connectionName!],
-      signalNames[conflict.otherConnectionName!],
-    ].sort(),
-  ).toEqual(["S2", "S3"])
+    result.traces!.every(
+      (trace) =>
+        trace.route.filter((point) => point.route_type === "via").length === 2,
+    ),
+  ).toBe(true)
   expect(input).toEqual(before)
   // Compare the artifact to this actual compiled-and-solved fixture, so the
   // diagnostic geometry, labels and measured lengths cannot go stale.
@@ -87,7 +81,7 @@ test("bounded fine repair repeats the same real copper conflict after losing his
   expect(nativeMatchingHistorySvg(fixture, result)).toBe(
     await Bun.file(
       new URL(
-        "../docs/repros/native-matching-history/before.svg",
+        "../docs/repros/native-matching-history/after.svg",
         import.meta.url,
       ),
     ).text(),
@@ -95,7 +89,7 @@ test("bounded fine repair repeats the same real copper conflict after losing his
   expect(nativeMatchingHistoryReport(fixture, result)).toEqual(
     await Bun.file(
       new URL(
-        "../docs/repros/native-matching-history/before.json",
+        "../docs/repros/native-matching-history/after.json",
         import.meta.url,
       ),
     ).json(),

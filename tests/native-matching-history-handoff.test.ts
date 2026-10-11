@@ -3,7 +3,7 @@ import { matchNativeCarrierSignals } from "../lib/match-native-carrier-signals"
 import { NativeCarrierRouter } from "../lib/native-carrier-router"
 import type { SimpleRouteJson, Trace } from "../lib/types"
 
-test("reproduce fine native matching dropping congestion learned by the coarse pass", () => {
+test("fine native matching retains congestion learned by the coarse pass", () => {
   const input: SimpleRouteJson = {
     layerCount: 4,
     allowedLayers: ["inner1"],
@@ -135,6 +135,6 @@ test("reproduce fine native matching dropping congestion learned by the coarse p
   expect(fine).toBeDefined()
   expect(fine.initialHistory[0].every((value) => value === 0)).toBe(true)
   // The crossing is at board coordinate (0, 0), cell (20, 20) in the fine grid.
-  expect(fine.initialHistory[1][20 + 20 * 41]).toBe(0)
+  expect(fine.initialHistory[1][20 + 20 * 41]).toBeGreaterThan(0)
   expect({ input, initial }).toEqual(before)
 })

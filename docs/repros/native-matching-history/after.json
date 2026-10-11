@@ -1,0 +1,66 @@
+{
+  "coreVersion": "0.0.2125",
+  "options": {
+    "gridStep": 0.6,
+    "fineGridStep": 0.2,
+    "maxPasses": 1,
+    "maxLocalPasses": 1,
+    "maxExpansionsPerRoute": 100000,
+    "maxStrictExpansionsPerRoute": 100000
+  },
+  "accepted": true,
+  "allCandidateEndpointsConnected": true,
+  "validation": {
+    "valid": true,
+    "checkedTraceCount": 6,
+    "checkedSegmentCount": 53,
+    "checkedViaCount": 12,
+    "issues": []
+  },
+  "lengths": [
+    {
+      "connectionName": "source_trace_0",
+      "copperLengthMm": 14.216652224137047,
+      "signalName": "S0"
+    },
+    {
+      "connectionName": "source_trace_1",
+      "copperLengthMm": 12.48528137423857,
+      "signalName": "S1"
+    },
+    {
+      "connectionName": "source_trace_2",
+      "copperLengthMm": 16.461017305526642,
+      "signalName": "S2"
+    },
+    {
+      "connectionName": "source_trace_3",
+      "copperLengthMm": 13.803731957466685,
+      "signalName": "S3"
+    },
+    {
+      "connectionName": "source_trace_4",
+      "copperLengthMm": 17.36812408671319,
+      "signalName": "S4"
+    },
+    {
+      "connectionName": "source_trace_5",
+      "copperLengthMm": 15.126487181192093,
+      "signalName": "S5"
+    }
+  ],
+  "stages": [
+    {
+      "stage": "native_global_matching",
+      "pass": 0,
+      "collisions": 6,
+      "unfinished": []
+    },
+    {
+      "stage": "native_local_matching_0",
+      "pass": 0,
+      "collisions": 0,
+      "unfinished": []
+    }
+  ]
+}
