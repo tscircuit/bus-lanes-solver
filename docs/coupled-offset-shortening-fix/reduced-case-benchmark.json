@@ -1,0 +1,114 @@
+{
+  "sample": "coupled-offset-shortening",
+  "cpu": null,
+  "ram": null,
+  "allowedLayers": null,
+  "carrierLayerCounts": {
+    "top": 2
+  },
+  "status": "solved",
+  "solved": true,
+  "timeoutSeconds": 5,
+  "solveMilliseconds": 68.2629,
+  "milliseconds": 73.018777,
+  "iterations": 19,
+  "requestedSignals": 2,
+  "routedSignals": 2,
+  "fixedPowerDogbones": 0,
+  "inputUnchanged": true,
+  "fixedPowerPreserved": true,
+  "inputSha256": "4f0816b08e6b3a22ed58b686159f519aada2b472a3dcc6189cf427a0151b856f",
+  "failureCode": null,
+  "error": null,
+  "validation": {
+    "valid": true,
+    "complete": true,
+    "matched": true,
+    "fixedPowerTraces": 0,
+    "fixedPowerVias": 0,
+    "fixedPowerPadJoins": 0,
+    "fixedDrc": {
+      "valid": true,
+      "checkedTraceCount": 0,
+      "checkedSegmentCount": 0,
+      "checkedViaCount": 0,
+      "issues": []
+    },
+    "combinedDrc": {
+      "valid": true,
+      "checkedTraceCount": 2,
+      "checkedSegmentCount": 8,
+      "checkedViaCount": 0,
+      "issues": []
+    },
+    "busLengths": [],
+    "pairLengths": [
+      {
+        "busId": "pair_0",
+        "minLengthMm": null,
+        "aboveMinimumLength": true,
+        "maxLengthMm": null,
+        "withinLengthLimit": true,
+        "toleranceMm": 0.127,
+        "skewMm": 0,
+        "matched": true,
+        "lengths": [
+          {
+            "name": "P",
+            "carrierLengthMm": 1.3943305932162624,
+            "fixedLengthMm": 0,
+            "totalLengthMm": 1.3943305932162624
+          },
+          {
+            "name": "N",
+            "carrierLengthMm": 1.3943305932162624,
+            "fixedLengthMm": 0,
+            "totalLengthMm": 1.3943305932162624
+          }
+        ]
+      }
+    ],
+    "quality": null,
+    "issues": [],
+    "sharedSpacing": [
+      {
+        "connectionNames": ["P", "N"],
+        "requestedGapMm": 0.18,
+        "sharedSectionPresent": true,
+        "minEdgeGapMm": 0.18000000000000116,
+        "maxEdgeGapMm": 0.18088600000000243,
+        "maxSamplingErrorMm": 0.0009980538343018915,
+        "sharedCopperMm": [0.9143305932162655, 0.9143305932162655],
+        "maxAllowedEdgeGapMm": 0.20506981608187033,
+        "matched": true
+      }
+    ],
+    "coupling": [
+      {
+        "connectionNames": ["P", "N"],
+        "conductors": [
+          {
+            "name": "P",
+            "totalLengthMm": 1.3943305932162624,
+            "uncoupledLengthMm": 0,
+            "coupledFraction": 1
+          },
+          {
+            "name": "N",
+            "totalLengthMm": 1.3943305932162624,
+            "uncoupledLengthMm": 0,
+            "coupledFraction": 1
+          }
+        ],
+        "maxUncoupledLengthMm": 1,
+        "matched": true
+      }
+    ],
+    "minPairEdgeClearanceMm": 0.18000000000000113
+  },
+  "envelopeOptimization": {
+    "beforeAreaMm2": 0.5690298197496033,
+    "afterAreaMm2": 0.5690298197496033,
+    "milliseconds": 7.812067000000013
+  }
+}

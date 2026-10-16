@@ -76,3 +76,22 @@ The focused suite passes 25 tests and 260 assertions; type checking passes.
 All eleven native AM3352 benchmark samples pass connectivity, full DRC and
 total-length matching with their original inputs and 161 fixed power fanouts
 preserved. See [per-bus skew, runtime and inspected native snapshots](coupled-offset-shortening-fix/README.md).
+
+
+## Benchmark coverage
+
+The exact reduced input is also a default benchmark case named
+`coupled-offset-shortening`, appended after the eleven AM3352 placements.
+The shared manifest includes it in future main-versus-PR `/benchmark` runs
+once the updated trusted harness is merged into `main`.
+
+```sh
+./benchmark.sh --worker coupled-offset-shortening --timeout-seconds 5 --require-all-solved
+```
+
+The worker uses the selected revision’s public pipeline with `fanout: "none"`;
+`--solver /path/to/revision/lib/index.ts` selects that revision’s router.
+Running this harness against the pre-fix repro revision fails natively; the fix
+passes both signals, DRC, connectivity, coupling and length matching. Failed
+searches remain measured failures; `--require-all-solved` also makes an unsolved
+direct worker exit nonzero. See [reduced-case measurements and completed snapshot](coupled-offset-shortening-fix/README.md#reduced-case-in-the-default-benchmark).

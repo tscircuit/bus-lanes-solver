@@ -253,6 +253,24 @@ const relativeChange = (before: number | null, after: number | null) =>
       : null
 const BUS_TOLERANCES = { DDR_BYTE0: 0.635, DDR_BYTE1: 0.635 }
 const PAIR_TOLERANCES = { pair_0: 0.127, pair_1: 0.127, pair_2: 0.127 }
+// Requirements come from the trusted requested case, never worker-supplied
+// counts or tolerances. The reduced fixture has no AM3352 power metadata.
+const sampleRequirements = (sample: SampleName) =>
+  sample === "coupled-offset-shortening"
+    ? {
+        signals: 2,
+        fixedPower: 0,
+        buses: {} as Readonly<Record<string, number>>,
+        pairs: { pair_0: 0.127 } as Readonly<Record<string, number>>,
+      }
+    : {
+        signals: 47,
+        fixedPower: 161,
+        buses: (sample === "inner-layers-complete-ca"
+          ? { ...BUS_TOLERANCES, DDR_ADDR_CTRL_CK: 0.635 }
+          : BUS_TOLERANCES) as Readonly<Record<string, number>>,
+        pairs: PAIR_TOLERANCES as Readonly<Record<string, number>>,
+      }
 const measurements = (
   value: unknown,
   expected: Readonly<Record<string, number>>,
@@ -347,13 +365,9 @@ function sampleResult(
   const validation = object(report.validation)
   const fixedDrc = object(validation?.fixedDrc)
   const combinedDrc = object(validation?.combinedDrc)
-  const busSkews = measurements(
-    validation?.busLengths,
-    sample === "inner-layers-complete-ca"
-      ? { ...BUS_TOLERANCES, DDR_ADDR_CTRL_CK: 0.635 }
-      : BUS_TOLERANCES,
-  )
-  const pairSkews = measurements(validation?.pairLengths, PAIR_TOLERANCES)
+  const requirements = sampleRequirements(sample)
+  const busSkews = measurements(validation?.busLengths, requirements.buses)
+  const pairSkews = measurements(validation?.pairLengths, requirements.pairs)
   if (
     report.status !== "solved" ||
     report.solved !== true ||
@@ -365,12 +379,12 @@ function sampleResult(
     combinedDrc?.valid !== true ||
     report.inputUnchanged !== true ||
     report.fixedPowerPreserved !== true ||
-    report.requestedSignals !== 47 ||
-    report.routedSignals !== 47 ||
-    report.fixedPowerDogbones !== 161 ||
-    validation.fixedPowerTraces !== 161 ||
-    validation.fixedPowerVias !== 161 ||
-    validation.fixedPowerPadJoins !== 161 ||
+    report.requestedSignals !== requirements.signals ||
+    report.routedSignals !== requirements.signals ||
+    report.fixedPowerDogbones !== requirements.fixedPower ||
+    validation.fixedPowerTraces !== requirements.fixedPower ||
+    validation.fixedPowerVias !== requirements.fixedPower ||
+    validation.fixedPowerPadJoins !== requirements.fixedPower ||
     !busSkews ||
     !pairSkews
   ) {
@@ -535,22 +549,26 @@ const percentileRows = (
     (key) =>
       `| ${key.toUpperCase()} time | ${seconds(main[key])} | ${seconds(pr[key])} | ${percent(delta ? delta[key] : relativeChange(main[key], pr[key]))} |`,
   )
-const resultCell = (result: SampleResult) =>
-  `${result.status.replace("_", " ")}${result.accepted ? " (47/47 signals; DRC passed)" : ""} · solve ${seconds(result.solveMilliseconds)} · wall ${seconds(result.wallMilliseconds)}`
+const resultCell = (sample: SampleName, result: SampleResult) => {
+  const signals = sampleRequirements(sample).signals
+  return `${result.status.replace("_", " ")}${result.accepted ? ` (${signals}/${signals} signals; DRC passed)` : ""} · solve ${seconds(result.solveMilliseconds)} · wall ${seconds(result.wallMilliseconds)}`
+}
 const skews = (measurements: readonly SkewMeasurement[], accepted: boolean) =>
   accepted
-    ? measurements
-        .map(
-          (measurement) =>
-            `${escape(measurement.name)}: ${measurement.skewMm.toFixed(4)} / ${measurement.toleranceMm.toFixed(4)}`,
-        )
-        .join("<br>")
+    ? measurements.length
+      ? measurements
+          .map(
+            (measurement) =>
+              `${escape(measurement.name)}: ${measurement.skewMm.toFixed(4)} / ${measurement.toleranceMm.toFixed(4)}`,
+          )
+          .join("<br>")
+      : "none declared"
     : "n/a (not accepted)"
 
 export function renderComparison(options: ComparisonOptions): string {
   const summary = summarizeComparison(options)
   const lines = [
-    `AM3352 benchmark for PR #${options.prNumber} · [workflow artifacts](${options.runUrl})`,
+    `Bus-lanes benchmark for PR #${options.prNumber} · [workflow artifacts](${options.runUrl})`,
     "",
     `Main: \`${options.mainSha}\` · PR: \`${options.prSha}\` · timeout budget: ${options.timeoutSeconds} s per sample.`,
     "",
@@ -576,7 +594,7 @@ export function renderComparison(options: ComparisonOptions): string {
       "",
     )
   lines.push(
-    "**Budgeted time to valid completion — all 11 canonical samples**",
+    `**Budgeted time to valid completion — all ${SAMPLE_NAMES.length} canonical samples**`,
     "",
     "Acceptance requires solving strictly before the timeout budget. An accepted sample contributes min(actual solve time, timeout budget). Every failure, timeout, crash, missing artifact, or invalid result contributes the full budget. These are completion-aware budgeted values, not percentiles of actual elapsed durations.",
     "",
@@ -606,7 +624,7 @@ export function renderComparison(options: ComparisonOptions): string {
   )
   for (const sample of summary.samples)
     lines.push(
-      `| ${sample.sample} | ${resultCell(sample.main)} | ${resultCell(sample.pr)} | ${!sample.comparable ? "comparison unavailable" : sample.main.accepted && !sample.pr.accepted ? "lost" : !sample.main.accepted && sample.pr.accepted ? "gained" : sample.main.accepted && sample.pr.accepted ? "both accepted" : "neither accepted"} |`,
+      `| ${sample.sample} | ${resultCell(sample.sample, sample.main)} | ${resultCell(sample.sample, sample.pr)} | ${!sample.comparable ? "comparison unavailable" : sample.main.accepted && !sample.pr.accepted ? "lost" : !sample.main.accepted && sample.pr.accepted ? "gained" : sample.main.accepted && sample.pr.accepted ? "both accepted" : "neither accepted"} |`,
     )
   lines.push(
     "",

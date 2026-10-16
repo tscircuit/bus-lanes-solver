@@ -3,6 +3,12 @@ import { join, resolve } from "node:path"
 import { BusLanesPipelineSolver } from "../lib"
 import { am3352Carrier } from "./am3352-carrier"
 import {
+  COUPLED_OFFSET_SAMPLE_NAME,
+  createCoupledOffsetShorteningInput,
+  validateCoupledOffsetShorteningSample,
+} from "./coupled-offset-shortening-sample"
+import sampleNames from "./pr-benchmark/samples.json"
+import {
   am3352Hash,
   am3352SamplePlacements,
   loadAm3352Sample,
@@ -44,13 +50,21 @@ for (let i = 0; i < args.length; i++) {
     throw Error(`Unknown option: ${args[i]}`)
 }
 
-type SampleName = (typeof am3352SamplePlacements)[number]["name"]
-type ValidationReport = Awaited<ReturnType<typeof validateAm3352Sample>>
+const samples = sampleNames.map((name) => {
+  const placement = am3352SamplePlacements.find((p) => p.name === name)
+  if (placement) return { name, placement, requestedSignals: 47 }
+  if (name === COUPLED_OFFSET_SAMPLE_NAME)
+    return { name, placement: null, requestedSignals: 2 }
+  throw Error(`Unknown benchmark sample: ${name}`)
+})
+type ValidationReport =
+  | Awaited<ReturnType<typeof validateAm3352Sample>>
+  | Awaited<ReturnType<typeof validateCoupledOffsetShorteningSample>>
 type BenchmarkStatus = "solved" | "failed" | "timed_out" | "validation_failed"
 interface BenchmarkReport {
-  sample: SampleName
-  cpu: { x: number; y: number }
-  ram: { x: number; y: number }
+  sample: string
+  cpu: { x: number; y: number } | null
+  ram: { x: number; y: number } | null
   allowedLayers: string[] | null
   carrierLayerCounts: Record<string, number>
   status: BenchmarkStatus
@@ -75,25 +89,28 @@ interface BenchmarkReport {
   validation: ValidationReport | null
 }
 
-const placement = workerName
-  ? am3352SamplePlacements.find((placement) => placement.name === workerName)
+const sample = workerName
+  ? samples.find((s) => s.name === workerName)
   : undefined
-if (workerName && !placement)
-  throw Error(`Unknown AM3352 sample: ${workerName}`)
+const placement = sample?.placement
+const reducedPair = sample?.name === COUPLED_OFFSET_SAMPLE_NAME
+if (workerName && !sample)
+  throw Error(`Unknown benchmark sample: ${workerName}`)
 
 if (!workerName) {
   const reports: BenchmarkReport[] = []
   let invalidRun = false
   // All declared cases, serially, in fresh processes. Keep failed routing in
-  // the score and continue collecting the remaining placements.
-  for (const placement of am3352SamplePlacements) {
+  // the score and continue collecting the remaining cases.
+  for (const sample of samples) {
+    const placement = sample.placement
     const workerStart = performance.now()
     const child = Bun.spawn(
       [
         process.execPath,
         import.meta.path,
         "--worker",
-        placement.name,
+        sample.name,
         "--timeout-seconds",
         String(timeoutSeconds),
         ...(solverModulePath ? ["--solver", resolve(solverModulePath)] : []),
@@ -122,11 +139,13 @@ if (!workerName) {
       error: string,
       status: BenchmarkStatus = "validation_failed",
     ): BenchmarkReport => ({
-      sample: placement.name,
-      cpu: { x: 0, y: 0 },
-      ram: placement.ram,
+      sample: sample.name,
+      cpu: placement ? { x: 0, y: 0 } : null,
+      ram: placement?.ram ?? null,
       allowedLayers:
-        "allowedLayers" in placement ? [...placement.allowedLayers] : null,
+        placement && "allowedLayers" in placement
+          ? [...placement.allowedLayers]
+          : null,
       carrierLayerCounts: {},
       status,
       solved: false,
@@ -134,7 +153,7 @@ if (!workerName) {
       solveMilliseconds: 0,
       milliseconds: performance.now() - workerStart,
       iterations: 0,
-      requestedSignals: 47,
+      requestedSignals: sample.requestedSignals,
       routedSignals: 0,
       fixedPowerDogbones: 0,
       inputUnchanged: false,
@@ -157,7 +176,7 @@ if (!workerName) {
     } else {
       try {
         const report: BenchmarkReport = JSON.parse(serialized.slice(7))
-        if (report.sample !== placement.name)
+        if (report.sample !== sample.name)
           throw Error("Worker reported wrong sample")
         invalidRun ||= exitCode !== 0 || report.status === "validation_failed"
         reports.push(report)
@@ -168,7 +187,7 @@ if (!workerName) {
     }
     const report = reports.at(-1)!
     console.log(
-      `${report.solved ? "PASS" : "FAIL"} ${report.sample} RAM=(${report.ram.x},${report.ram.y}) ${report.routedSignals}/${report.requestedSignals} signals ${(report.solveMilliseconds / 1000).toFixed(3)}s ${report.solved ? "DRC + matching passed" : (report.error ?? report.status)}`,
+      `${report.solved ? "PASS" : "FAIL"} ${report.sample} ${report.ram ? `RAM=(${report.ram.x},${report.ram.y})` : "reduced pair"} ${report.routedSignals}/${report.requestedSignals} signals ${(report.solveMilliseconds / 1000).toFixed(3)}s ${report.solved ? "DRC + matching passed" : (report.error ?? report.status)}`,
     )
     if (report.envelopeOptimization) {
       const { beforeAreaMm2, afterAreaMm2, milliseconds } =
@@ -191,11 +210,11 @@ if (!workerName) {
   }
   await Bun.write(outputPath, JSON.stringify(reports, null, 2) + "\n")
   console.log(
-    `AM3352 placements completed: ${reports.filter((report) => report.solved).length}/${am3352SamplePlacements.length}; results: ${outputPath}`,
+    `Benchmark cases completed: ${reports.filter((report) => report.solved).length}/${samples.length}; results: ${outputPath}`,
   )
   // Exhausted searches are measured outcomes. Corrupt fixtures, crashes and
   // invalid completed copper fail the command. Optional strict mode requires
-  // all declared placements to solve; failures are never counted as passes.
+  // all declared cases to solve; failures are never counted as passes.
   process.exit(
     invalidRun ||
       (args.includes("--require-all-solved") &&
@@ -207,11 +226,13 @@ if (!workerName) {
 
 const start = performance.now()
 let report: BenchmarkReport = {
-  sample: placement!.name,
-  cpu: { x: 0, y: 0 },
-  ram: placement!.ram,
+  sample: sample!.name,
+  cpu: placement ? { x: 0, y: 0 } : null,
+  ram: placement?.ram ?? null,
   allowedLayers:
-    "allowedLayers" in placement! ? [...placement!.allowedLayers] : null,
+    placement && "allowedLayers" in placement
+      ? [...placement.allowedLayers]
+      : null,
   carrierLayerCounts: {},
   status: "validation_failed",
   solved: false,
@@ -219,7 +240,7 @@ let report: BenchmarkReport = {
   solveMilliseconds: 0,
   milliseconds: 0,
   iterations: 0,
-  requestedSignals: 47,
+  requestedSignals: sample!.requestedSignals,
   routedSignals: 0,
   fixedPowerDogbones: 0,
   inputUnchanged: false,
@@ -230,10 +251,16 @@ let report: BenchmarkReport = {
   validation: null,
 }
 try {
-  const { input, metadata } = await loadAm3352Sample(placement!.name)
+  const { input, metadata } = reducedPair
+    ? { input: createCoupledOffsetShorteningInput(), metadata: null }
+    : await loadAm3352Sample(placement!.name)
+  const validate = (traces?: typeof input.traces) =>
+    metadata
+      ? validateAm3352Sample(input, metadata, traces)
+      : validateCoupledOffsetShorteningSample(input, traces)
   report.requestedSignals = input.connections.length
   report.fixedPowerDogbones = input.traces?.length ?? 0
-  report.validation = await validateAm3352Sample(input, metadata)
+  report.validation = await validate()
   if (!report.validation.fixedDrc.valid)
     throw Error("Pre-dogboned power copper failed DRC")
   const before = JSON.stringify(input)
@@ -243,9 +270,12 @@ try {
     ? await import(resolve(solverModulePath))
     : { BusLanesPipelineSolver }
   const solver: BusLanesPipelineSolver =
-    new solverModule.BusLanesPipelineSolver(input, {
-      singleCarrier: { fixedConnections: metadata.powerConnections },
-    })
+    new solverModule.BusLanesPipelineSolver(
+      input,
+      reducedPair
+        ? { fanout: "none" }
+        : { singleCarrier: { fixedConnections: metadata!.powerConnections } },
+    )
   const solveStart = performance.now()
   while (!solver.solved && !solver.failed) {
     if (performance.now() - solveStart >= timeoutSeconds * 1000) break
@@ -264,28 +294,34 @@ try {
   if (report.solveMilliseconds >= timeoutSeconds * 1000) {
     report.status = "timed_out"
     report.error = `Routing exceeded ${timeoutSeconds} seconds`
-  } else if (!solver.solved) {
+  } else if (!solver.solved || solver.failed) {
     report.status = "failed"
     report.error = solver.error ?? "Routing failed"
   } else {
-    report.validation = await validateAm3352Sample(
-      input,
-      metadata,
-      solver.traces,
-    )
+    report.validation = await validate(solver.traces)
     const output = solver.getOutput()
-    validateAm3352OutputShape(input, metadata, solver.traces, output)
+    if (metadata)
+      validateAm3352OutputShape(input, metadata, solver.traces, output)
+    else if (
+      output.traces?.length !== 2 ||
+      am3352Hash(output.traces) !== am3352Hash(solver.traces) ||
+      am3352Hash({ ...output, traces: undefined }) !==
+        am3352Hash({ ...input, traces: undefined })
+    )
+      throw Error("Reduced pair output changed its input or routed traces")
     report.fixedPowerPreserved &&=
       JSON.stringify(output.traces.slice(0, input.traces?.length ?? 0)) ===
       fixedBefore
     if (!report.fixedPowerPreserved)
       throw Error("Output changed immutable power dogbones")
-    for (const trace of solver.traces) {
-      const carrier = am3352Carrier(trace)
-      if (carrier)
-        report.carrierLayerCounts[carrier.layer] =
-          (report.carrierLayerCounts[carrier.layer] ?? 0) + 1
-    }
+    if (reducedPair) report.carrierLayerCounts.top = solver.traces.length
+    else
+      for (const trace of solver.traces) {
+        const carrier = am3352Carrier(trace)
+        if (carrier)
+          report.carrierLayerCounts[carrier.layer] =
+            (report.carrierLayerCounts[carrier.layer] ?? 0) + 1
+      }
     report.solved = report.validation.valid
     report.status = report.solved ? "solved" : "validation_failed"
     report.error = report.solved
@@ -298,9 +334,9 @@ try {
     if (routesDirectory && report.solved) {
       await mkdir(routesDirectory, { recursive: true })
       await Bun.write(
-        join(routesDirectory, `${placement!.name}.json`),
+        join(routesDirectory, `${sample!.name}.json`),
         JSON.stringify({
-          sample: placement!.name,
+          sample: sample!.name,
           solved: solver.solved,
           failed: solver.failed,
           error: solver.error,
@@ -319,4 +355,8 @@ try {
 }
 report.milliseconds = performance.now() - start
 console.log("REPORT " + JSON.stringify(report))
-if (report.status === "validation_failed") process.exitCode = 1
+if (
+  report.status === "validation_failed" ||
+  (args.includes("--require-all-solved") && !report.solved)
+)
+  process.exitCode = 1
