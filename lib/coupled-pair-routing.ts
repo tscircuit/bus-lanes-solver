@@ -425,6 +425,24 @@ export function* routeCoupledPair(
         const centerPath = reduceOrdinaryTurns(
           centerSearch.result,
           visibleScene,
+          (candidate) => {
+            try {
+              const rails = [
+                offsetPath(candidate, (width + gap) / 2),
+                offsetPath(candidate, -(width + gap) / 2),
+              ]
+              return (
+                routeAnglesAreConventional(
+                  rails.map((rail, i) => makeTrace(members[i], rail)),
+                ) &&
+                rails.every((rail) =>
+                  tuningPathIsSelfClear(rail, width + clearance),
+                )
+              )
+            } catch {
+              return false
+            }
+          },
         )
         // Grid endpoint attachments can briefly backtrack at a blocked
         // handoff. Reject that candidate instead of aborting the whole phase

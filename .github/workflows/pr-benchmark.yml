@@ -86,7 +86,7 @@ jobs:
             const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`
             const { data: comment } = await github.rest.issues.createComment({
               ...context.repo, issue_number: number,
-              body: `## AM3352 benchmark comparison\n\nQueued main \`${mainSha}\` versus PR #${number} \`${prSha}\`.\n\nAll ${samples.length} placements; ${command.timeoutSeconds}s per solver/sample; paired revisions run sequentially on the same runner.\n\n[Workflow and raw artifacts](${runUrl})`,
+              body: `## Bus-lanes benchmark comparison\n\nQueued main \`${mainSha}\` versus PR #${number} \`${prSha}\`.\n\nAll ${samples.length} cases; ${command.timeoutSeconds}s per solver/sample; paired revisions run sequentially on the same runner.\n\n[Workflow and raw artifacts](${runUrl})`,
             })
             core.setOutput('matrix', JSON.stringify({ sample: samples }))
             core.setOutput('pr_number', String(number))
@@ -144,7 +144,7 @@ jobs:
               fi
             )
           done
-      - name: Compare one placement sequentially on the same machine
+      - name: Compare one case sequentially on the same machine
         env:
           SAMPLE: ${{ matrix.sample }}
           TIMEOUT_SECONDS: ${{ needs.prepare.outputs.timeout_seconds }}
@@ -217,7 +217,7 @@ jobs:
             const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`
             let body = fs.existsSync('comparison.md')
               ? fs.readFileSync('comparison.md', 'utf8')
-              : `## AM3352 benchmark comparison\n\nComparison unavailable: the workflow failed before producing a valid report.\n\n[Workflow logs and raw artifacts](${runUrl})`
+              : `## Bus-lanes benchmark comparison\n\nComparison unavailable: the workflow failed before producing a valid report.\n\n[Workflow logs and raw artifacts](${runUrl})`
             const { data: pr } = await github.rest.pulls.get({ ...context.repo, pull_number: Number(process.env.PR_NUMBER) })
             if (pr.head.sha !== process.env.PR_SHA)
               body += `\n\n**PR head changed while this benchmark ran.** These results describe \`${process.env.PR_SHA}\`; run /benchmark again for the current revision.\n`
