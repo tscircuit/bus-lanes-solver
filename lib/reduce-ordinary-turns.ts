@@ -5,8 +5,15 @@ import type { Point } from "./types"
 import type { VectorScene } from "./vector-scene"
 
 /** Clearance-aware shortening before length tuning. Board-world mm, +X right,
- * +Y up. Never run on sampled meanders or one rail of an already coupled pair. */
-export function reduceOrdinaryTurns(path: Point[], scene: VectorScene) {
+ * +Y up. Never run on sampled meanders or one rail of an already coupled pair.
+ * The optional predicate preserves a currently valid result while allowing
+ * progressive repairs of initially invalid paths. Input simplification and
+ * fallback still require the caller's final validation. */
+export function reduceOrdinaryTurns(
+  path: Point[],
+  scene: VectorScene,
+  acceptCandidate?: (candidate: Point[]) => boolean,
+) {
   let result = simplify(path)
   for (let pass = 0; pass < 12; pass++) {
     let changed = false
@@ -31,6 +38,14 @@ export function reduceOrdinaryTurns(path: Point[], scene: VectorScene) {
             ...result.slice(j + 1),
           ])
           const required = scene.width / 2 + scene.margin
+          // Preserve the extra validity property once reached. Multiple raster
+          // jogs may require intermediate replacements before all are repaired.
+          if (
+            acceptCandidate &&
+            !acceptCandidate(candidate) &&
+            acceptCandidate(result)
+          )
+            continue
           // A raster path may contain several tiny returning jogs. Repair them
           // progressively; requiring the entire path to be clean after the first
           // shortcut prevents either independent jog from being removed.
