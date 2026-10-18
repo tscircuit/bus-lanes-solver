@@ -1,0 +1,319 @@
+{
+  "schema": 1,
+  "repository": "tscircuit/bus-lanes-solver",
+  "reproPullRequest": 58,
+  "sourceFiles": {
+    "lib/coupled-pair-routing.ts": "9ddd770c18de0a85b01e75b4ab33ec72a18043ef6e749f6de1303487e568ef83",
+    "lib/reduce-ordinary-turns.ts": "44efaeaae0e14d441c4700bd66ae2c2b176b64b5366588611b3f41ce4f349ab9",
+    "tests/coupled-offset-shortening.test.ts": "a0fec483dfa025198a7fadb15aa1318c95df251da47ed44bb7e5d7f64cbbd4cd",
+    "tests/progressive-coupled-shortening.test.ts": "844aeda4dcb8e70a4c603bb729af79cf06096a7f05773d6592237831d0835612"
+  },
+  "frozenNativeSourceFileCount": 157,
+  "runtime": {
+    "bunVersion": "1.4.0",
+    "bunSha256": "33d56b070be6a9e3da0ab013038b43d1645d0534ca811ecdba4472599117eb4b",
+    "flags": ["--smol"],
+    "gcMaxHeapSize": 0,
+    "hardHeapCapAdded": false,
+    "homogeneousGcConfiguration": false
+  },
+  "limits": {
+    "nativeCaseSeconds": 3600,
+    "caseProcessSeconds": 3615,
+    "overallSecondsPerInvocation": 10800,
+    "treeRssMiB": 6144,
+    "sharedGiB": 15.5
+  },
+  "firstEightCheckpointHashesUnchanged": true,
+  "imageReview": {
+    "reviewer": "ROOT",
+    "reviewedAtUtc": "2026-10-15T23:21:45Z"
+  },
+  "evidenceSha256": {
+    "nativeAggregate": "24d0d272125eb8fdacf2c158b4608458d57feca21a90b4ca470cc05a9a9be16c",
+    "sourceProfileFile": "611feef49e333d4f425e1d676cdaad30450d20d1411b2d66ceecf5fe52a20998",
+    "sourceProfileCanonical": "f0779563866401898c4c447c9a2a430122587348b2c44f8bdac7006299b85f73",
+    "frozen157FileManifest": "f4cafd65dea4f6794ce763fd8b9062f169f244833d3ccf02bf9cc8b83222b674",
+    "earlierGcIntent": "6ebb4a0506edffd52c983829ca40f62e78312f211fae4cedcda34c13e10acacd",
+    "actualEarlierGcMonitor": "baac62f2eb87a8c35dce08f3786c4f3e9b2e341156a50c7e086ccbf116a8414b",
+    "effectiveJscOptionsDump": "e4dd8e647730045ec2d2709a5b7da1bfb2ba00a1195a9dceb39109bf7a7d3e9d",
+    "nativeExportReceipt": "e40426fab89d3649a7933518ec7a97347730a9726f6fd3fd6a8d2ead6e153fc3",
+    "rootImageReview": "566ff5e53bbe3665681978fa8ec79ca59c36f800c4fc40f8deaee1cd9bdd50ec"
+  },
+  "runtimeNote": "First eight native successes retain original default JSC settings. Last three use the explicit earlier-GC overrides recorded per case. These are GC sizing hints, not a hard heap cap. Timings are not a homogeneous-configuration performance comparison.",
+  "cases": [
+    {
+      "sample": "control",
+      "inputSha256": "b7a4e9d09a22fe0ed131a544548b14eef20fbf4e88b6dc6ffaa11ca44e6bfe59",
+      "checkpointSha256": "c7b6d97735315c1ff11c7f6d78fa563195e17205e44eaf47bc6d532b04ef9475",
+      "nativeReportSha256": "1a42bac82c78ca92660b41a9d608f501237e4629d0bc9604f5be35164762001b",
+      "nativeRouteSha256": "8a6231e91e82b1f9b945998be862331fb48879388acf9815e07fc537e22d0786",
+      "runtimeEnvironmentOverrides": {},
+      "nativeStatus": "solved",
+      "nativeSolved": true,
+      "requestedSignals": 47,
+      "routedSignals": 47,
+      "inputUnchanged": true,
+      "fixedPowerPreserved": true,
+      "fixedPowerTraces": 161,
+      "fixedPowerVias": 161,
+      "fixedPowerPadJoins": 161,
+      "solveMilliseconds": 40074.817259999996,
+      "milliseconds": 41916.413651,
+      "reviewedPng": {
+        "file": "control-solved.png",
+        "sha256": "811ee038058ce10218683cf4f714e6857b2923f186222ab5263266e59e614014",
+        "visuallyInspected": true
+      }
+    },
+    {
+      "sample": "control-inner1",
+      "inputSha256": "14b5b318540ce7bac367cf22338abd7f9fffd2f7ce6c2a12f903116f50ca9bde",
+      "checkpointSha256": "c7f8b11c503be8d3d093b3c02014e8d02211c96fc6362f80d2721374680ea1c6",
+      "nativeReportSha256": "ca3075284ef6a2b8a696ac2dc76bec95fd600123edd42349af68eeaaf8ef9d09",
+      "nativeRouteSha256": "bdf7550cf77639ca38dab4d05c943c57ed67ccb60eaf861a8da88c88b418f865",
+      "runtimeEnvironmentOverrides": {},
+      "nativeStatus": "solved",
+      "nativeSolved": true,
+      "requestedSignals": 47,
+      "routedSignals": 47,
+      "inputUnchanged": true,
+      "fixedPowerPreserved": true,
+      "fixedPowerTraces": 161,
+      "fixedPowerVias": 161,
+      "fixedPowerPadJoins": 161,
+      "solveMilliseconds": 1594381.288118,
+      "milliseconds": 1596433.6501469999,
+      "reviewedPng": {
+        "file": "control-inner1-solved.png",
+        "sha256": "ff8e1114a078b38b6c73e9e1aa6817c6511b88c9addbab315211e8ecd314d1ea",
+        "visuallyInspected": true
+      }
+    },
+    {
+      "sample": "right",
+      "inputSha256": "78c22c8d818ee2c2abe2eec9c6b6e408161a9d0eaf09afbafc3242e71e8f5778",
+      "checkpointSha256": "c3e7285119b3066304608085fc26a41b0015185536670dbc9439e5ac595c5bb5",
+      "nativeReportSha256": "f2558956beb29e983a6eb9869dd07110038d1626c8beeef243c8c9c420243729",
+      "nativeRouteSha256": "9c3e9d5b761dba882899239297c8beabffd76d68cc1fa323b35babe0c33f1fbc",
+      "runtimeEnvironmentOverrides": {},
+      "nativeStatus": "solved",
+      "nativeSolved": true,
+      "requestedSignals": 47,
+      "routedSignals": 47,
+      "inputUnchanged": true,
+      "fixedPowerPreserved": true,
+      "fixedPowerTraces": 161,
+      "fixedPowerVias": 161,
+      "fixedPowerPadJoins": 161,
+      "solveMilliseconds": 32289.878272,
+      "milliseconds": 34757.581602,
+      "reviewedPng": {
+        "file": "right-solved.png",
+        "sha256": "f3722abc3b2f9f1b68650d5185f938436147ab304656a932156579afdef658a2",
+        "visuallyInspected": true
+      }
+    },
+    {
+      "sample": "left",
+      "inputSha256": "6042ca0f0889a983a6ccf8f929a6a46b18cc57134e1b9f3b49c19063b936caa5",
+      "checkpointSha256": "b53657732440e59d16d18af63eb8eeeaff45601900218c0f1dd2defef39e9301",
+      "nativeReportSha256": "2704fa1dcb5dcd12f4dc7704de06665a8d1bd960649f373356133be38ea9cd49",
+      "nativeRouteSha256": "dbd4dd1083aa922fd295911cd903aa1202e0466cdf5c55ea7586072f55a8840b",
+      "runtimeEnvironmentOverrides": {},
+      "nativeStatus": "solved",
+      "nativeSolved": true,
+      "requestedSignals": 47,
+      "routedSignals": 47,
+      "inputUnchanged": true,
+      "fixedPowerPreserved": true,
+      "fixedPowerTraces": 161,
+      "fixedPowerVias": 161,
+      "fixedPowerPadJoins": 161,
+      "solveMilliseconds": 43542.190874,
+      "milliseconds": 47746.130617999996,
+      "reviewedPng": {
+        "file": "left-solved.png",
+        "sha256": "42cebd55f4a15fb4db1c5b3c0e95b803a728fe7b39b89751e9f9c570e3c21777",
+        "visuallyInspected": true
+      }
+    },
+    {
+      "sample": "above",
+      "inputSha256": "20fc884f08accd368e4ce049ab3fc180a1926f425787a504dbc4040f651bfa69",
+      "checkpointSha256": "819452b911cbe9e5d1324c496781a1a9680403e9b8746d7242a55841cbb16052",
+      "nativeReportSha256": "e894aa8c3018bfd72ed9487b0a1f2b9dc8ebfd63b1dd834c5721ce54da1b131b",
+      "nativeRouteSha256": "01af6382f532187f8139b771a357e662f33317e9b131a59987b12b1cffb55059",
+      "runtimeEnvironmentOverrides": {},
+      "nativeStatus": "solved",
+      "nativeSolved": true,
+      "requestedSignals": 47,
+      "routedSignals": 47,
+      "inputUnchanged": true,
+      "fixedPowerPreserved": true,
+      "fixedPowerTraces": 161,
+      "fixedPowerVias": 161,
+      "fixedPowerPadJoins": 161,
+      "solveMilliseconds": 49814.847066,
+      "milliseconds": 53107.42702,
+      "reviewedPng": {
+        "file": "above-solved.png",
+        "sha256": "b5f785f1b1ecb3115dc6cac59c94f1cc55c8aa60a6a62dd463c49097b1e712c5",
+        "visuallyInspected": true
+      }
+    },
+    {
+      "sample": "inner-layers",
+      "inputSha256": "1b91e6c5207e4b7e132aa5ac246e94777f926c7beab8675adf0356634b8280ad",
+      "checkpointSha256": "c9705054b3a31c754af811cac372ae9bcc54284c86e2f12de69d24c6efca77bd",
+      "nativeReportSha256": "efd8e08acafe7eafbde71e3c46ea1d3e70ef601b9797b4e1c0779244f5dab624",
+      "nativeRouteSha256": "04badac4db68c70c7e4db29005674ae1c3d563dee32c25be591e89e6600a53f4",
+      "runtimeEnvironmentOverrides": {},
+      "nativeStatus": "solved",
+      "nativeSolved": true,
+      "requestedSignals": 47,
+      "routedSignals": 47,
+      "inputUnchanged": true,
+      "fixedPowerPreserved": true,
+      "fixedPowerTraces": 161,
+      "fixedPowerVias": 161,
+      "fixedPowerPadJoins": 161,
+      "solveMilliseconds": 60415.739043,
+      "milliseconds": 62300.796691999996,
+      "reviewedPng": {
+        "file": "inner-layers-solved.png",
+        "sha256": "69377065f2c849a08976dad9588dd6ed682b6af65eba4ec3505f5d367d2437a3",
+        "visuallyInspected": true
+      }
+    },
+    {
+      "sample": "inner-layers-right",
+      "inputSha256": "2eaf3dedcd84fbfed10262f4d4c99370a0ca00a7a060f87b7a1cdcba9de37a8e",
+      "checkpointSha256": "015151ca4d7d8dc4cfea3159e20ce2ef65b72f40b72f1f5bf77c08783b108634",
+      "nativeReportSha256": "93cccc5bf89b7ee5f4d0e05f206ce7e1afc906772849ed4e35b10745763f19e8",
+      "nativeRouteSha256": "92687317c8fd79b65c92f9248325fd5db53448b42ab0a8bf8813b2eec2994b4b",
+      "runtimeEnvironmentOverrides": {},
+      "nativeStatus": "solved",
+      "nativeSolved": true,
+      "requestedSignals": 47,
+      "routedSignals": 47,
+      "inputUnchanged": true,
+      "fixedPowerPreserved": true,
+      "fixedPowerTraces": 161,
+      "fixedPowerVias": 161,
+      "fixedPowerPadJoins": 161,
+      "solveMilliseconds": 89178.20923000001,
+      "milliseconds": 91050.95082900001,
+      "reviewedPng": {
+        "file": "inner-layers-right-solved.png",
+        "sha256": "9f14118c44621cded9aa6bb8730d33fe918be854eadb7c4c8662f0a46aeefdda",
+        "visuallyInspected": true
+      }
+    },
+    {
+      "sample": "inner-layers-left",
+      "inputSha256": "1c3db8ee018bc90df7fbbb0c198c42efcc0ca948a6a213338650cf81a51f7ab2",
+      "checkpointSha256": "8b4cec3da244365f4ec05308741ed0f22aeeb36131ad4e90e5ef264bb43595ef",
+      "nativeReportSha256": "01e7b4af10519bd63ce9b79829e5a6227cde48853293835dbe55d524256908b2",
+      "nativeRouteSha256": "d1815595be204c7bd723f9f4cbeff53210a75da43f22f6e6e3b488d271ed7c6f",
+      "runtimeEnvironmentOverrides": {},
+      "nativeStatus": "solved",
+      "nativeSolved": true,
+      "requestedSignals": 47,
+      "routedSignals": 47,
+      "inputUnchanged": true,
+      "fixedPowerPreserved": true,
+      "fixedPowerTraces": 161,
+      "fixedPowerVias": 161,
+      "fixedPowerPadJoins": 161,
+      "solveMilliseconds": 186811.328068,
+      "milliseconds": 192135.38488700002,
+      "reviewedPng": {
+        "file": "inner-layers-left-solved.png",
+        "sha256": "d004f64b7620372b8881eb69480b0240df43f8cd95d4c3a83d06d32a43bc5319",
+        "visuallyInspected": true
+      }
+    },
+    {
+      "sample": "inner-layers-above",
+      "inputSha256": "68a86ef74f8ec9628954e909464c009d98fb2c902a6376e20b3a32d4b5cff555",
+      "checkpointSha256": "5d00245b0b5d85286b3c16fb09a7aa0ab0560f9b309f36e3abf584c5d3972f95",
+      "nativeReportSha256": "2e9561bde0114f743647dcbf550786f21d3d7dc6da288ede74ba8b8613d49fa7",
+      "nativeRouteSha256": "1b8d8b75ff3ed04bb0dde6698b9f53072b84ed4b84641309ebc5c0a6dc1b9ada",
+      "runtimeEnvironmentOverrides": {
+        "BUN_JSC_forceRAMSize": "2147483648",
+        "BUN_JSC_miniVMHeapGrowthFactor": "1.05"
+      },
+      "nativeStatus": "solved",
+      "nativeSolved": true,
+      "requestedSignals": 47,
+      "routedSignals": 47,
+      "inputUnchanged": true,
+      "fixedPowerPreserved": true,
+      "fixedPowerTraces": 161,
+      "fixedPowerVias": 161,
+      "fixedPowerPadJoins": 161,
+      "solveMilliseconds": 287161.976331,
+      "milliseconds": 291499.167999,
+      "reviewedPng": {
+        "file": "inner-layers-above-solved.png",
+        "sha256": "dbdab10b144c64bc60be42584d232db7e23c7306d62d92402960c57e41ffed8a",
+        "visuallyInspected": true
+      }
+    },
+    {
+      "sample": "inner-layers-complete-ca",
+      "inputSha256": "a6def279fa2d3356a66ee94b1760a76eebb6c6d8e605005ce5903bd2fbca8776",
+      "checkpointSha256": "85db52b0a4fb92edc7915e3cab1432a1c1e8c7c0e572a7a93d0d5a6722be4981",
+      "nativeReportSha256": "9365a28f3c79df9aba6ba81ce72da95e4e51a5698355b47a3bc1403c22cc7f7a",
+      "nativeRouteSha256": "4f77c1c78a561f6478ecce1cfa4e6d1024da60ed0e13b07f54bbd8a4ce2de4bb",
+      "runtimeEnvironmentOverrides": {
+        "BUN_JSC_forceRAMSize": "2147483648",
+        "BUN_JSC_miniVMHeapGrowthFactor": "1.05"
+      },
+      "nativeStatus": "solved",
+      "nativeSolved": true,
+      "requestedSignals": 47,
+      "routedSignals": 47,
+      "inputUnchanged": true,
+      "fixedPowerPreserved": true,
+      "fixedPowerTraces": 161,
+      "fixedPowerVias": 161,
+      "fixedPowerPadJoins": 161,
+      "solveMilliseconds": 295354.077185,
+      "milliseconds": 308412.20974300004,
+      "reviewedPng": {
+        "file": "inner-layers-complete-ca-solved.png",
+        "sha256": "8d42fb6dd4142834d1971ff1b756f88e91288fc428783599647ad808a3640185",
+        "visuallyInspected": true
+      }
+    },
+    {
+      "sample": "outer-layers",
+      "inputSha256": "de3fd915f3c7d8c9bf4fd3c9b197596ba5e08c1be328f9c5223d7ab78736588f",
+      "checkpointSha256": "562c4bcc46fa9e33eb5d43cdb0ac64f279ce5ea23333e8a708b9edd4f9e3ecb7",
+      "nativeReportSha256": "2e598796f71f792994e61f36f24e722c7e568e7ca1b56618265a0870018802be",
+      "nativeRouteSha256": "ae3fbd27f8dc5c598110d1702bf24bd009b730c9bfe9f2bf48a953c42291fe77",
+      "runtimeEnvironmentOverrides": {
+        "BUN_JSC_forceRAMSize": "2147483648",
+        "BUN_JSC_miniVMHeapGrowthFactor": "1.05"
+      },
+      "nativeStatus": "solved",
+      "nativeSolved": true,
+      "requestedSignals": 47,
+      "routedSignals": 47,
+      "inputUnchanged": true,
+      "fixedPowerPreserved": true,
+      "fixedPowerTraces": 161,
+      "fixedPowerVias": 161,
+      "fixedPowerPadJoins": 161,
+      "solveMilliseconds": 986584.418208,
+      "milliseconds": 991018.6277770001,
+      "reviewedPng": {
+        "file": "outer-layers-solved.png",
+        "sha256": "716ab2b56349756cbe6b1d49bcc53cdbc762d3044bb7a412cd87214d208f7722",
+        "visuallyInspected": true
+      }
+    }
+  ]
+}

@@ -27,8 +27,8 @@ const placements = [
 
 interface Report {
   sample: string
-  cpu: { x: number; y: number }
-  ram: { x: number; y: number }
+  cpu: { x: number; y: number } | null
+  ram: { x: number; y: number } | null
   allowedLayers: string[] | null
   carrierLayerCounts: Record<string, number>
   status: string
@@ -53,9 +53,11 @@ async function invokeBenchmark(options: {
       // Execute the production CLI and modules with real missing files. Keep
       // the installed geometry implementation, but never mutate real fixtures.
       runner = join(directory, "missing-fixtures")
-      mkdirSync(join(runner, "scripts"), { recursive: true })
+      mkdirSync(join(runner, "scripts", "pr-benchmark"), { recursive: true })
       for (const file of [
         "benchmark.ts",
+        "coupled-offset-shortening-sample.ts",
+        "pr-benchmark/samples.json",
         "am3352-samples.ts",
         "am3352-carrier.ts",
         "am3352-ca-bus.ts",
@@ -136,10 +138,12 @@ async function invokeBenchmark(options: {
 }
 
 function expectManifest(reports: Report[]) {
-  expect(reports).toHaveLength(11)
-  expect(reports.map(({ sample, ram }) => ({ sample, ram }))).toEqual(
-    placements,
-  )
+  expect(reports).toHaveLength(12)
+  expect(
+    reports.slice(0, 11).map(({ sample, ram }) => ({ sample, ram })),
+  ).toEqual(placements)
+  expect(reports.at(-1)?.sample).toBe("coupled-offset-shortening")
+  expect(reports.at(-1)?.ram).toBeNull()
   for (const report of reports) {
     expect(report.allowedLayers).toEqual(
       report.sample === "control-inner1"
@@ -151,35 +155,40 @@ function expectManifest(reports: Report[]) {
             : null,
     )
     expect(report.carrierLayerCounts).toEqual({})
-    expect(report.cpu).toEqual({ x: 0, y: 0 })
-    expect(report.requestedSignals).toBe(47)
+    const reduced = report.sample === "coupled-offset-shortening"
+    expect(report.cpu).toEqual(reduced ? null : { x: 0, y: 0 })
+    expect(report.requestedSignals).toBe(reduced ? 2 : 47)
     expect(report.solved).toBe(false)
     expect(report.routedSignals).toBe(0)
   }
 }
 
 for (const strict of [false, true])
-  test(`${strict ? "strict" : "measurement"} benchmark retains all eleven timed-out AM3352 placements`, async () => {
+  test(`${strict ? "strict" : "measurement"} benchmark retains all twelve timed-out benchmark cases`, async () => {
     const result = await invokeBenchmark({ strict })
     expect(result.exitCode).toBe(strict ? 1 : 0)
     expectManifest(result.reports)
-    expect(result.stdout).toContain("AM3352 placements completed: 0/11")
+    expect(result.stdout).toContain("Benchmark cases completed: 0/12")
     const powerCount = result.reports[0].fixedPowerDogbones
     expect(powerCount).toBeGreaterThan(0)
     for (const report of result.reports) {
       expect(report.status).toBe("timed_out")
-      expect(report.fixedPowerDogbones).toBe(powerCount)
+      expect(report.fixedPowerDogbones).toBe(
+        report.sample === "coupled-offset-shortening" ? 0 : powerCount,
+      )
       expect(report.inputUnchanged).toBe(true)
       expect(report.fixedPowerPreserved).toBe(true)
       expect(report.validation?.fixedDrc.valid).toBe(true)
     }
   }, 75_000)
 
-test("fixture crashes fail measurement mode and retain every AM3352 placement", async () => {
+test("missing AM fixtures fail measurement mode but retain the independent reduced case", async () => {
   const result = await invokeBenchmark({ missingFixtures: true })
   expect(result.exitCode).toBe(1)
   expectManifest(result.reports)
-  for (const report of result.reports) {
+  expect(result.reports.at(-1)?.status).toBe("timed_out")
+  expect(result.reports.at(-1)?.validation?.fixedDrc.valid).toBe(true)
+  for (const report of result.reports.slice(0, 11)) {
     expect(report.status).toBe("validation_failed")
     expect(report.validation).toBeNull()
     expect(report.error).toBeTruthy()

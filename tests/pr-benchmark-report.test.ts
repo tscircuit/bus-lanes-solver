@@ -5,7 +5,6 @@ import { join } from "node:path"
 import {
   am3352SamplePlacements,
   loadAm3352Sample,
-  type Am3352SampleName,
 } from "../scripts/am3352-samples"
 import {
   SAMPLE_NAMES,
@@ -25,6 +24,7 @@ const prSha = "b".repeat(40)
 const controllerSha = "c".repeat(40)
 const inputSha256 = "d".repeat(64)
 const timeoutSeconds = 10
+const coupledOffsetSample = "coupled-offset-shortening"
 const metadata: PairMetadata = {
   order: ["main", "pr"],
   mainSha,
@@ -40,6 +40,9 @@ const metadata: PairMetadata = {
 // This is the trusted worker's report schema, with independent solve and wall
 // durations and current canonical power-fanout preservation evidence.
 function completedReport(sample: string, solveMilliseconds = 100) {
+  const reducedPair = sample === coupledOffsetSample
+  const signals = reducedPair ? 2 : 47
+  const fixedFanouts = reducedPair ? 0 : 161
   return {
     sample,
     timeoutSeconds,
@@ -47,9 +50,9 @@ function completedReport(sample: string, solveMilliseconds = 100) {
     solved: true,
     solveMilliseconds,
     milliseconds: solveMilliseconds + 20,
-    requestedSignals: 47,
-    routedSignals: 47,
-    fixedPowerDogbones: 161,
+    requestedSignals: signals,
+    routedSignals: signals,
+    fixedPowerDogbones: fixedFanouts,
     inputUnchanged: true,
     fixedPowerPreserved: true,
     inputSha256,
@@ -58,22 +61,32 @@ function completedReport(sample: string, solveMilliseconds = 100) {
       valid: true,
       complete: true,
       matched: true,
-      fixedPowerTraces: 161,
-      fixedPowerVias: 161,
-      fixedPowerPadJoins: 161,
+      fixedPowerTraces: fixedFanouts,
+      fixedPowerVias: fixedFanouts,
+      fixedPowerPadJoins: fixedFanouts,
       fixedDrc: { valid: true },
       combinedDrc: { valid: true },
-      busLengths: [
-        "DDR_BYTE0",
-        "DDR_BYTE1",
-        ...(sample === "inner-layers-complete-ca" ? ["DDR_ADDR_CTRL_CK"] : []),
-      ].map((busId) => ({
+      issues: [],
+      quality: null,
+      busLengths: (reducedPair
+        ? []
+        : [
+            "DDR_BYTE0",
+            "DDR_BYTE1",
+            ...(sample === "inner-layers-complete-ca"
+              ? ["DDR_ADDR_CTRL_CK"]
+              : []),
+          ]
+      ).map((busId) => ({
         busId,
         matched: true,
         skewMm: 0.01,
         toleranceMm: 0.635,
       })),
-      pairLengths: ["pair_0", "pair_1", "pair_2"].map((busId) => ({
+      pairLengths: (reducedPair
+        ? ["pair_0"]
+        : ["pair_0", "pair_1", "pair_2"]
+      ).map((busId) => ({
         busId,
         matched: true,
         skewMm: 0.002,
@@ -118,14 +131,18 @@ function options(samples: readonly SamplePairArtifact[]): ComparisonOptions {
   }
 }
 
-test("the shared canonical manifest contains every AM3352 benchmark sample", () => {
-  expect(SAMPLE_NAMES).toEqual(am3352SamplePlacements.map(({ name }) => name))
-  expect(SAMPLE_NAMES).toHaveLength(11)
+test("the shared canonical manifest preserves all AM3352 samples and appends the reduced pair", () => {
+  expect(SAMPLE_NAMES).toEqual([
+    ...am3352SamplePlacements.map(({ name }) => name),
+    coupledOffsetSample,
+  ])
+  expect(am3352SamplePlacements).toHaveLength(11)
+  expect(SAMPLE_NAMES).toHaveLength(12)
 })
 
 test("completion fixtures agree with canonical inputs on signal, bus and differential-pair requirements", async () => {
-  for (const sample of SAMPLE_NAMES) {
-    const { input } = await loadAm3352Sample(sample as Am3352SampleName)
+  for (const { name: sample } of am3352SamplePlacements) {
+    const { input } = await loadAm3352Sample(sample)
     const report = completedReport(sample)
     expect(input.connections.length).toBe(report.requestedSignals)
     expect(input.traces?.length).toBe(report.fixedPowerDogbones)
@@ -154,6 +171,153 @@ test("completion fixtures agree with canonical inputs on signal, bus and differe
   }
 })
 
+test("the reduced case accepts two signals, no fixed power or buses, and its one declared pair", () => {
+  const samples = allPairs()
+  const summary = summarizeComparison(options(samples))
+  const reduced = summary.samples[11]
+  expect(reduced.sample).toBe(coupledOffsetSample)
+  expect(reduced.main.accepted).toBeTrue()
+  expect(reduced.pr.accepted).toBeTrue()
+  expect(reduced.pr.busSkews).toEqual([])
+  expect(reduced.pr.pairSkews).toEqual([
+    { name: "pair_0", skewMm: 0.002, toleranceMm: 0.127 },
+  ])
+  const rendered = renderComparison(options(samples))
+  expect(rendered).toContain(
+    "| coupled-offset-shortening | accepted (2/2 signals; DRC passed)",
+  )
+  expect(rendered).toContain(
+    "| coupled-offset-shortening | none declared | none declared | pair&#95;0:",
+  )
+})
+
+test("the reduced case cannot forge AM3352 counts, fixed copper, buses, or pair requirements", () => {
+  const mutations: Array<(report: ReturnType<typeof completedReport>) => void> =
+    [
+      (r) => {
+        r.requestedSignals = 47
+        r.routedSignals = 47
+      },
+      (r) => {
+        r.requestedSignals = 0
+        r.routedSignals = 0
+      },
+      (r) => {
+        r.routedSignals = 1
+      },
+      (r) => {
+        r.fixedPowerDogbones = 161
+      },
+      (r) => {
+        r.validation.fixedPowerTraces = 1
+      },
+      (r) => {
+        r.validation.fixedPowerVias = 1
+      },
+      (r) => {
+        r.validation.fixedPowerPadJoins = 1
+      },
+      (r) => {
+        r.validation.busLengths.push({
+          busId: "DDR_BYTE0",
+          matched: true,
+          skewMm: 0.01,
+          toleranceMm: 0.635,
+        })
+      },
+      (r) => {
+        r.validation.pairLengths = []
+      },
+      (r) => {
+        r.validation.pairLengths.push({ ...r.validation.pairLengths[0] })
+      },
+      (r) => {
+        r.validation.pairLengths[0].busId = "pair_1"
+      },
+      (r) => {
+        r.validation.pairLengths[0].toleranceMm = 0.635
+      },
+      (r) => {
+        r.validation.pairLengths[0].matched = false
+      },
+      (r) => {
+        r.validation.pairLengths[0].skewMm = 0.2
+      },
+      (r) => {
+        r.validation.valid = false
+      },
+      (r) => {
+        r.validation.complete = false
+      },
+      (r) => {
+        r.validation.matched = false
+      },
+      (r) => {
+        r.validation.fixedDrc.valid = false
+      },
+      (r) => {
+        r.validation.combinedDrc.valid = false
+      },
+      (r) => {
+        r.inputUnchanged = false
+      },
+      (r) => {
+        r.fixedPowerPreserved = false
+      },
+    ]
+  for (const mutate of mutations) {
+    const sample = pair(coupledOffsetSample)
+    mutate(sample.pr.report)
+    const result = summarizeComparison(options([sample])).samples[11].pr
+    expect(result.accepted).toBeFalse()
+    expect(result.budgetedMilliseconds).toBe(10000)
+    expect(result.busSkews).toEqual([])
+    expect(result.pairSkews).toEqual([])
+  }
+  const disguisedAm3352 = pair("control")
+  disguisedAm3352.pr.report = {
+    ...completedReport(coupledOffsetSample),
+    sample: "control",
+  }
+  expect(
+    summarizeComparison(options([disguisedAm3352])).samples[0].pr.accepted,
+  ).toBeFalse()
+})
+
+test("a missing reduced-case artifact leaves all twelve cases incomplete", () => {
+  const summary = summarizeComparison(options(allPairs().slice(0, -1)))
+  expect(summary.artifactComplete).toBeFalse()
+  expect(summary.samples).toHaveLength(12)
+  expect(summary.main.accepted).toBe(11)
+  expect(summary.pr.accepted).toBe(11)
+  expect(summary.samples[11].main.status).toBe("missing")
+  expect(summary.samples[11].pr.status).toBe("missing")
+  expect(summary.samples[11].pr.budgetedMilliseconds).toBe(10000)
+  expect(summary.matched.count).toBe(11)
+  expect(summary.matched.main.p50).toBeNull()
+})
+
+test("the reduced-case regression remains visible as a lost or gained completion", () => {
+  const lost = allPairs()
+  lost[11].pr.report.validation.valid = false
+  const lostSummary = summarizeComparison(options(lost))
+  expect(lostSummary.lost).toEqual([coupledOffsetSample])
+  expect(lostSummary.gained).toEqual([])
+  expect(lostSummary.pr.accepted).toBe(11)
+  expect(lostSummary.samples[11].pr.budgetedMilliseconds).toBe(10000)
+  expect(lostSummary.matched.count).toBe(11)
+
+  const gained = allPairs()
+  gained[11].main.report.validation.valid = false
+  const gainedSummary = summarizeComparison(options(gained))
+  expect(gainedSummary.lost).toEqual([])
+  expect(gainedSummary.gained).toEqual([coupledOffsetSample])
+  expect(gainedSummary.main.accepted).toBe(11)
+  expect(gainedSummary.pr.accepted).toBe(12)
+  expect(gainedSummary.samples[11].main.budgetedMilliseconds).toBe(10000)
+  expect(gainedSummary.matched.count).toBe(11)
+})
+
 test("linear percentile interpolation handles boundaries, unsorted data, and empty sets", () => {
   expect(percentile([], 0.5)).toBeNull()
   expect(percentile([123], 0.95)).toBe(123)
@@ -173,15 +337,13 @@ test("linear percentile interpolation handles boundaries, unsorted data, and emp
 
 test("all accepted samples use solve duration and require the canonical signal counts", () => {
   const summary = summarizeComparison(options(allPairs()))
-  expect(summary.main.accepted).toBe(11)
-  expect(summary.pr.accepted).toBe(11)
-  expect(summary.main.budgeted).toEqual({
-    p50: 600,
-    p80: 900,
-    p90: 1000,
-    p95: 1050,
-  })
-  expect(summary.matched.count).toBe(11)
+  expect(summary.main.accepted).toBe(12)
+  expect(summary.pr.accepted).toBe(12)
+  expect(summary.main.budgeted.p50).toBe(650)
+  expect(summary.main.budgeted.p80).toBeCloseTo(980, 9)
+  expect(summary.main.budgeted.p90).toBeCloseTo(1090, 9)
+  expect(summary.main.budgeted.p95).toBeCloseTo(1145, 9)
+  expect(summary.matched.count).toBe(12)
   expect(summary.matched.main).toEqual(summary.main.budgeted)
   expect(summary.matched.deltaPercent).toEqual({
     p50: 0,
@@ -196,14 +358,14 @@ test("all accepted samples use solve duration and require the canonical signal c
   const rendered = renderComparison(options(allPairs()))
   expect(rendered).toContain("| Metric | Main | PR | Change |")
   expect(rendered).toContain(
-    "| Completion | 11/11 (100.0%) | 11/11 (100.0%) | 0.0 pp |",
+    "| Completion | 12/12 (100.0%) | 12/12 (100.0%) | 0.0 pp |",
   )
   expect(rendered).toContain("| Timeouts | 0 | 0 | 0 |")
   expect(rendered).toContain("| Other failures | 0 | 0 | 0 |")
-  expect(rendered).toContain("| P50 time | 0.600 s | 0.600 s | 0.0% |")
-  expect(rendered).toContain("| P80 time | 0.900 s | 0.900 s | 0.0% |")
-  expect(rendered).toContain("| P90 time | 1.000 s | 1.000 s | 0.0% |")
-  expect(rendered).toContain("| P95 time | 1.050 s | 1.050 s | 0.0% |")
+  expect(rendered).toContain("| P50 time | 0.650 s | 0.650 s | 0.0% |")
+  expect(rendered).toContain("| P80 time | 0.980 s | 0.980 s | 0.0% |")
+  expect(rendered).toContain("| P90 time | 1.090 s | 1.090 s | 0.0% |")
+  expect(rendered).toContain("| P95 time | 1.145 s | 1.145 s | 0.0% |")
 })
 
 test("a lost fast completion receives a budget penalty and survivor comparisons use the same cases", () => {
@@ -215,22 +377,22 @@ test("a lost fast completion receives a budget penalty and survivor comparisons 
   const summary = summarizeComparison(options(samples))
   expect(summary.lost).toEqual(["control"])
   expect(summary.gained).toEqual([])
-  expect(summary.pr.accepted).toBe(10)
+  expect(summary.pr.accepted).toBe(11)
   expect(summary.pr.failures).toBe(1)
   expect(summary.samples[0].pr.budgetedMilliseconds).toBe(10000)
-  expect(summary.pr.budgeted.p95).toBe(5275)
-  expect(summary.matched.count).toBe(10)
-  expect(summary.matched.main.p50).toBe(650)
-  expect(summary.matched.pr.p50).toBe(325)
+  expect(summary.pr.budgeted.p95).toBeCloseTo(4830, 9)
+  expect(summary.matched.count).toBe(11)
+  expect(summary.matched.main.p50).toBe(700)
+  expect(summary.matched.pr.p50).toBe(350)
   expect(summary.matched.deltaPercent.p50).toBe(-50)
   expect(summary.samples[0].pr.busSkews).toEqual([])
   const rendered = renderComparison(options(samples))
   expect(rendered).toContain(
-    "| Completion | 11/11 (100.0%) | 10/11 (90.9%) | -9.1 pp |",
+    "| Completion | 12/12 (100.0%) | 11/12 (91.7%) | -8.3 pp |",
   )
   expect(rendered).toContain("| Other failures | 0 | 1 | +1 |")
-  expect(rendered).toContain("| P50 time | 0.600 s | 0.350 s | -41.7% |")
-  expect(rendered).toContain("| P50 time | 0.650 s | 0.325 s | -50.0% |")
+  expect(rendered).toContain("| P50 time | 0.650 s | 0.375 s | -42.3% |")
+  expect(rendered).toContain("| P50 time | 0.700 s | 0.350 s | -50.0% |")
 })
 
 test("completion requires every trusted validation and fixed-power preservation check", () => {
@@ -328,7 +490,7 @@ test("worker timeout, reported timeout, crash and invalid reports retain raw dur
     "invalid",
     "invalid",
   ])
-  expect(summary.pr.accepted).toBe(5)
+  expect(summary.pr.accepted).toBe(6)
   expect(summary.pr.timeouts).toBe(2)
   expect(summary.pr.failures).toBe(4)
   for (const sample of summary.samples.slice(0, 6))
@@ -376,10 +538,10 @@ test("reaching or exceeding the solve budget is timed out, while actual elapsed 
   expect(summary.samples[0].pr.status).toBe("timed_out")
   expect(summary.samples[0].main.budgetedMilliseconds).toBe(10000)
   expect(summary.samples[0].main.solveMilliseconds).toBe(20000)
-  expect(summary.main.budgeted.p95).toBe(5550)
-  expect(summary.matched.count).toBe(10)
-  expect(summary.matched.main.p95).toBe(1055)
-  expect(summary.matched.pr.p95).toBe(1055)
+  expect(summary.main.budgeted.p95).toBeCloseTo(5160, 9)
+  expect(summary.matched.count).toBe(11)
+  expect(summary.matched.main.p95).toBe(1150)
+  expect(summary.matched.pr.p95).toBe(1150)
   const rendered = renderComparison(options(samples))
   expect(rendered).toContain("Budgeted time to valid completion")
   expect(rendered).toContain("not percentiles of actual elapsed durations")
@@ -388,9 +550,9 @@ test("reaching or exceeding the solve budget is timed out, while actual elapsed 
 
 test("missing canonical artifacts remain visible and suppress matched-duration comparisons", () => {
   const summary = summarizeComparison(options([pair("right")]))
-  expect(summary.samples).toHaveLength(11)
+  expect(summary.samples).toHaveLength(12)
   expect(summary.main.accepted).toBe(1)
-  expect(summary.main.failures).toBe(10)
+  expect(summary.main.failures).toBe(11)
   expect(summary.main.budgeted.p50).toBe(10000)
   expect(summary.samples[0].main.status).toBe("missing")
   expect(summary.matched.count).toBe(1)
@@ -419,7 +581,7 @@ test("a missing revision worker preserves its paired result and suppresses match
   expect(summary.samples[0].pr.status).toBe("missing")
   expect(summary.samples[0].pr.wallMilliseconds).toBeNull()
   expect(summary.samples[0].pr.budgetedMilliseconds).toBe(10000)
-  expect(summary.matched.count).toBe(10)
+  expect(summary.matched.count).toBe(11)
   expect(summary.matched.main.p50).toBeNull()
   expect(renderComparison(options(parsed))).toContain(
     "missing canonical samples or revision workers",
@@ -441,8 +603,8 @@ test("different input hashes invalidate both paired results and disable comparis
   expect(summary.samples[0].main.status).toBe("invalid")
   expect(summary.samples[0].pr.status).toBe("invalid")
   expect(summary.samples[0].main.budgetedMilliseconds).toBe(10000)
-  expect(summary.main.accepted).toBe(10)
-  expect(summary.pr.accepted).toBe(10)
+  expect(summary.main.accepted).toBe(11)
+  expect(summary.pr.accepted).toBe(11)
   expect(summary.matched.main.p50).toBeNull()
   expect(renderComparison(options(samples))).toContain("Input mismatch")
   samples[0].pr.report.inputSha256 = inputSha256.toUpperCase()
@@ -518,14 +680,14 @@ test("gain/loss accounting distinguishes successful validation from a fast failu
   const summary = summarizeComparison(options(samples))
   expect(summary.gained).toEqual(["control"])
   expect(summary.lost).toEqual(["control-inner1"])
-  expect(summary.matched.count).toBe(9)
+  expect(summary.matched.count).toBe(10)
   expect(renderComparison(options(samples))).toContain("| control | failed")
 })
 
 test("zero-duration successful baseline leaves percentage changes undefined", () => {
   const samples = SAMPLE_NAMES.map((sample) => pair(sample, 0, 100))
   const summary = summarizeComparison(options(samples))
-  expect(summary.main.accepted).toBe(11)
+  expect(summary.main.accepted).toBe(12)
   expect(summary.matched.main.p50).toBe(0)
   expect(summary.matched.deltaPercent.p50).toBeNull()
 })
