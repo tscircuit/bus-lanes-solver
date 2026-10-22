@@ -80,13 +80,11 @@ function refine(maxLength?: number, fixedLength = 0) {
   return { input, routes: step.value as Trace[] | null }
 }
 
-// Expected failures document the bug without leaving the reproduction PR red.
-// The stacked fix must turn these into ordinary passing tests.
-test.failing("refinement cannot detour crossing 6 mm nets within a 6 mm cap", () => {
+test("refinement cannot detour crossing 6 mm nets within a 6 mm cap", () => {
   expect(refine(6).routes).toBeNull()
 })
 
-test.failing("refinement deducts immutable fanout length from the carrier budget", () => {
+test("refinement deducts immutable fanout length from the carrier budget", () => {
   expect(refine(7, 1).routes).toBeNull()
 })
 

@@ -1,3 +1,5 @@
+import { length } from "./geometry"
+import { maximumCarrierLength } from "./route-lengths"
 import { GridVisibilitySearch } from "./grid-visibility"
 import { routeCoupledPair } from "./coupled-pair-routing"
 import { reduceOrdinaryTurns } from "./reduce-ordinary-turns"
@@ -68,7 +70,15 @@ export function* refineRouteCandidates(
           } finally {
             if (!step.done) generator.return(null)
           }
-          if (step.done && step.value) {
+          if (
+            step.done &&
+            step.value &&
+            step.value.every(
+              (trace) =>
+                length(trace.route) <=
+                maximumCarrierLength(input, trace.connection_name!) + 1e-7,
+            )
+          ) {
             const before = candidates.revisionNumber
             candidates.add(name, step.value)
             added += Number(candidates.revisionNumber !== before)
@@ -106,6 +116,13 @@ export function* refineRouteCandidates(
             scene,
             connection.pointsToConnect[0],
             connection.pointsToConnect[1],
+            [],
+            4,
+            undefined,
+            {
+              maxLength: maximumCarrierLength(input, name),
+              paretoLength: Number.isFinite(maximumCarrierLength(input, name)),
+            },
           )
           try {
             while (
@@ -123,6 +140,8 @@ export function* refineRouteCandidates(
           }
           if (!search.solved) continue
           const points = reduceOrdinaryTurns(search.result, scene)
+          if (length(points) > maximumCarrierLength(input, name) + 1e-7)
+            continue
           // margin already includes the candidate's half-width. Self spacing
           // adds the other half-width, for width + requested clearance.
           if (!tuningPathIsSelfClear(points, width / 2 + scene.margin)) continue
