@@ -1,3 +1,4 @@
+import { reuseNativeSurfacePair } from "./reuse-native-surface-pair"
 import { surfaceRepairKey } from "./surface-repair-key"
 import {
   planOrdinaryRepairCandidates,
@@ -61,12 +62,49 @@ export function* repairSurfacePairEscape(
 
       candidates = legacy ? [legacy] : []
     }
+    const peerChecks = new Map<FlexibleSignalState, boolean>()
+    function* blocksPeer(
+      ordinary: FlexibleSignalState,
+    ): Generator<void, boolean> {
+      if (!nativeRepair) return false
+      if (!peerChecks.has(ordinary))
+        peerChecks.set(
+          ordinary,
+          yield* ordinaryRepairBlocksPeer(released, ordinary, blocked),
+        )
+      return peerChecks.get(ordinary)!
+    }
+    // Test every compatible ordinary prefix with the current pair before
+    // spending a fresh pair-search budget on any one reservation.
+    if (nativeRepair)
+      for (const ordinary of candidates) {
+        const candidate: FlexibleSignalState = {
+          ...state,
+          retained: [
+            ...retained,
+            ...state.retained.filter((trace) =>
+              names.has(trace.connection_name!),
+            ),
+          ],
+          traces: [...released.traces, ...ordinary.traces],
+          escapes: [
+            ...escapes,
+            ...state.escapes.filter((trace) =>
+              names.has(trace.connection_name!),
+            ),
+            ...ordinary.escapes.filter(
+              (trace) => trace.connection_name === blocked,
+            ),
+          ],
+        }
+        if (excluded.has(surfaceRepairKey(candidate))) continue
+        if (yield* blocksPeer(ordinary)) continue
+        if (reuseNativeSurfacePair(state.native, pair, candidate))
+          return candidate
+        yield
+      }
     for (const ordinary of candidates) {
-      if (
-        nativeRepair &&
-        (yield* ordinaryRepairBlocksPeer(released, ordinary, blocked))
-      )
-        continue
+      if (yield* blocksPeer(ordinary)) continue
       const ordinaryEscapes = ordinary.escapes.filter(
         (trace) => trace.connection_name === blocked,
       )

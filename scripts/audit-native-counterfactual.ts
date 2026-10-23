@@ -49,6 +49,28 @@ export function nativeSignalsConnected(
     return seen.has(target)
   })
 }
+/** One complete carrier per ordinary signal; keep every owned escape in
+ * fixed copper so it contributes to absolute pad-to-pad planar length. */
+export function nativePrefixLengthReports(
+  input: SimpleRouteJson,
+  escapes: Trace[],
+  carriers: Trace[],
+) {
+  const names = new Set(carriers.map((t) => t.connection_name))
+  return busLengthReports(
+    {
+      ...input,
+      traces: [...(input.traces ?? []), ...escapes],
+      buses: input.buses
+        ?.map((b) => ({
+          ...b,
+          connectionNames: b.connectionNames.filter((n) => names.has(n)),
+        }))
+        .filter((b) => b.connectionNames.length),
+    },
+    carriers,
+  )
+}
 export function completedCounterfactualControl() {
   const r = loadNativeCounterfactual(),
     choice = r.probes
@@ -78,7 +100,9 @@ export function completedCounterfactualControl() {
     clearance: input.minTraceToPadEdgeClearance!,
     allowBlindAndBuriedVias: false,
   })
-  const buses = busLengthReports(scoped, traces),
+  const buses = nativePrefixLengthReports(input, choice.choice.escapes, [
+      choice.choice.trace,
+    ]),
     firstBuses = busLengthReports(r.sample.firstInput, fixed),
     firstPairs = pairLengthReports(r.sample.firstInput, fixed),
     firstCoupling = exteriorPairSpacingReports(r.sample.firstInput, fixed)

@@ -8,7 +8,10 @@ import { negotiateSignalSites } from "../lib/negotiate-signal-sites"
 import { repairSurfacePairEscape } from "../lib/repair-surface-pair-escape"
 import { surfaceRepairKey } from "../lib/surface-repair-key"
 import { ordinaryRepairBlocksPeer } from "../lib/plan-ordinary-repair-candidates"
-import { nativeSignalsConnected } from "./audit-native-counterfactual"
+import {
+  nativeSignalsConnected,
+  nativePrefixLengthReports,
+} from "./audit-native-counterfactual"
 import { busLengthReports } from "../lib/route-lengths"
 import { validateRoutedCopperDrc } from "@tscircuit/fanout-solver"
 import type { FlexibleSignalState } from "../lib/flexible-signal-state"
@@ -82,7 +85,7 @@ export function completedNativeCounterfactualRepair() {
     })),
   }
   const ordinaryCopper = [...repaired.escapes, ...repaired.traces],
-    buses = busLengthReports(scoped, ordinaryCopper)
+    buses = nativePrefixLengthReports(input, repaired.escapes, repaired.traces)
   const pairAudit = auditSequentialNativePair(sample, repaired.retained)
   const empty = drive(
     ordinaryRepairBlocksPeer(

@@ -21,9 +21,9 @@
       "lengths": [
         {
           "name": "source_trace_14",
-          "carrierLengthMm": 0.5656854249492398,
-          "fixedLengthMm": 0,
-          "totalLengthMm": 0.5656854249492398
+          "carrierLengthMm": 23.242640687119287,
+          "fixedLengthMm": 1.1313107460558907,
+          "totalLengthMm": 24.37395143317518
         }
       ]
     }
@@ -65,7 +65,8 @@
     }
   ],
   "inputUnchanged": true,
-  "repairYields": 28106,
+  "repairYields": 3836,
+  "repairAndAuditSeconds": 22.400470386000002,
   "ordinaryPrefix": ["source_trace_14"],
   "pairUnchanged": true,
   "peersHaveNoEmptyDomain": true,
@@ -265,6 +266,5 @@
         "separatedExteriorLengthMm": 0
       }
     ]
-  },
-  "repairAndAuditSeconds": 59.844655452000005
+  }
 }
