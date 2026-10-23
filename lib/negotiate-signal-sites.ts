@@ -32,6 +32,11 @@ import {
 } from "./vector-scene"
 
 interface SignalSiteOptions {
+  onCandidate?: (candidate: {
+    connection: Connection
+    trace: Trace
+    escapes: Trace[]
+  }) => void
   checkEscapeCompatibility?: boolean
   allowExpandedSites?: boolean
   expandEmptyDomainsOnly?: boolean
@@ -571,6 +576,7 @@ export function* negotiateSignalSites(
     if (!seen) signatures.set(name, (seen = new Set()))
     if (seen.has(key)) return
     seen.add(key)
+    options.onCandidate?.(candidate)
     let pool = pools.get(name)
     if (!pool) pools.set(name, (pool = []))
     pool.push(candidate)

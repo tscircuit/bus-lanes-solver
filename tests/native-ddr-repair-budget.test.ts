@@ -1,3 +1,5 @@
+import { ordinaryRepairBlocksPeer } from "../lib/plan-ordinary-repair-candidates"
+import { surfaceRepairKey } from "../lib/surface-repair-key"
 import { expect, test } from "bun:test"
 import {
   loadSequentialNativeDdr,
@@ -58,12 +60,27 @@ test("native pair repair recovers validated progress around a computed ordinary 
     repairSurfacePairEscape(
       state,
       blocked[0],
-      new Set([JSON.stringify(paired!.map((t) => t.route))]),
+      new Set([surfaceRepairKey(state)]),
     ),
   )
   expect(repair.value).not.toBeNull()
-  expect(repair.value!.retained).not.toEqual(state.retained)
+  expect(surfaceRepairKey(repair.value!)).not.toEqual(surfaceRepairKey(state))
+  // A compatible ordinary reservation is progress even with the same pair.
+  expect(repair.value!.traces[0].route[0]).toMatchObject({ layer: "bottom" })
+  expect(repair.steps).toBeLessThan(100000)
   const recovered = repair.value!
+  expect(
+    surfaceRepairKey({
+      ...recovered,
+      retained: [...recovered.retained].reverse(),
+      traces: [...recovered.traces].reverse(),
+      escapes: [...recovered.escapes].reverse(),
+    }),
+  ).toBe(surfaceRepairKey(recovered))
+  const reservation = { ...state, retained: [], traces: [], escapes: [] }
+  expect(
+    drive(ordinaryRepairBlocksPeer(reservation, recovered, blocked[0])).value,
+  ).toBe(false)
   expect(recovered.retained).toHaveLength(2)
   expect(recovered.traces).toHaveLength(1)
   expect(auditSequentialNativePair(sample, recovered.retained).valid).toBe(true)

@@ -137,10 +137,7 @@
   ],
   "firstCoupling": [
     {
-      "connectionNames": [
-        "source_trace_27",
-        "source_trace_26"
-      ],
+      "connectionNames": ["source_trace_27", "source_trace_26"],
       "applicable": true,
       "matched": true,
       "maxExteriorEdgeGapMm": 0.13774616136918438,

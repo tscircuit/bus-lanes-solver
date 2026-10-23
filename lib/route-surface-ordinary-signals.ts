@@ -1,3 +1,4 @@
+import { surfaceRepairKey } from "./surface-repair-key"
 import type { FlexibleSignalState } from "./flexible-signal-state"
 import { negotiateSignalSites } from "./negotiate-signal-sites"
 import { repairSurfacePairEscape } from "./repair-surface-pair-escape"
@@ -22,9 +23,7 @@ export function* routeSurfaceOrdinarySignals(
       options.maxSteps ?? 250000,
     )
   let state = initial
-  const seen = new Set([
-    JSON.stringify(state.retained.map((trace) => trace.route)),
-  ])
+  const seen = new Set([surfaceRepairKey(state)])
   for (let repair = 0; repair <= (options.maxPairRepairs ?? 6); repair++) {
     let blocked: string | undefined
     const routed = yield* runBoundedRouting(
@@ -44,7 +43,7 @@ export function* routeSurfaceOrdinarySignals(
     if (!blocked || repair === (options.maxPairRepairs ?? 6)) return null
     const repaired = yield* repairSurfacePairEscape(state, blocked, seen)
     if (!repaired) return null
-    seen.add(JSON.stringify(repaired.retained.map((trace) => trace.route)))
+    seen.add(surfaceRepairKey(repaired))
     state = repaired
   }
   return null

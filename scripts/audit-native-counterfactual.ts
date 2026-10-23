@@ -3,7 +3,10 @@ import { busLengthReports, pairLengthReports } from "../lib/route-lengths"
 import { exteriorPairSpacingReports } from "../lib/exterior-pair-spacing"
 import type { SimpleRouteJson, Trace } from "../lib/types"
 import { loadNativeCounterfactual } from "./native-counterfactual"
-function connected(input: SimpleRouteJson, traces: Trace[]) {
+export function nativeSignalsConnected(
+  input: SimpleRouteJson,
+  traces: Trace[],
+) {
   return input.connections.every((c) => {
     const edges = new Map<string, Set<string>>()
     const key = (x: number, y: number, layer: string) =>
@@ -83,7 +86,7 @@ export function completedCounterfactualControl() {
     inputUnchanged: r.inputUnchanged,
     scope:
       "Completed D0 net only around freshly solved BYTE1; full BYTE0 and SBC incomplete",
-    connected: connected(scoped, traces),
+    connected: nativeSignalsConnected(scoped, traces),
     drc,
     buses,
     firstBuses,
