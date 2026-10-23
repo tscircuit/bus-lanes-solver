@@ -1,4 +1,7 @@
-import { planNativePairSeed } from "./plan-native-pair-seed"
+import {
+  planNativePairSeed,
+  nativePairSeedEligible,
+} from "./plan-native-pair-seed"
 import { routeSurfaceOrdinarySignals } from "./route-surface-ordinary-signals"
 import { finishSurfaceTiming } from "./finish-surface-timing"
 import { insertNativeSurfaceSignal } from "./insert-native-surface-signal"
@@ -37,6 +40,7 @@ export interface SurfaceRoutingSeed {
   controlOrdersComplete?: boolean
 }
 export interface SurfaceSeedOptions {
+  allowFirstPhaseNativeSeed?: boolean
   maxControlAttempts?: number
   maxControlIterations?: number
 }
@@ -51,12 +55,46 @@ export function* routeFreshSurfaceBuses(
   terminalLayers: ReadonlyMap<string, string[]>,
   options: SolverOptions,
 ): Generator<void, RepairedBusDogbones | null> {
+  const args = [
+    native,
+    allocation,
+    originalEscapes,
+    terminalLayers,
+    options,
+  ] as const
+  // Keep established fast first-phase routes (and their downstream geometry).
+  // Cancel each bounded generator before starting another to release grid scratch.
+  if (!native.traces?.length && nativePairSeedEligible(native, true)) {
+    const preferred = yield* runBoundedRouting(
+      routeFreshSurfaceBusesImpl(...args),
+      35000,
+    )
+    if (preferred) return preferred
+    const alternate = yield* runBoundedRouting(
+      routeFreshSurfaceBusesImpl(...args, { allowFirstPhaseNativeSeed: true }),
+      100000,
+    )
+    if (alternate) return alternate
+    // Neither bounded strategy completed: retain the original unrestricted search.
+  }
+  return yield* routeFreshSurfaceBusesImpl(...args)
+}
+
+function* routeFreshSurfaceBusesImpl(
+  native: SimpleRouteJson,
+  allocation: SimpleRouteJson,
+  originalEscapes: Trace[],
+  terminalLayers: ReadonlyMap<string, string[]>,
+  options: SolverOptions,
+  seedOptions: SurfaceSeedOptions = {},
+): Generator<void, RepairedBusDogbones | null> {
   const seeds = routeFreshSurfaceSeeds(
     native,
     allocation,
     originalEscapes,
     terminalLayers,
     options,
+    seedOptions,
   )
   let next = seeds.next()
   let matchedTiming: FlexibleSignalState | undefined
@@ -208,6 +246,7 @@ export function* routeFreshSurfaceSeeds(
     timingAllocation,
     pairEscapes,
     terminalLayers,
+    seedOptions.allowFirstPhaseNativeSeed,
   )
   let plan = plans.next()
   let greatest: FlexibleSignalState | null = null
@@ -366,8 +405,11 @@ function* freshPairPlans(
   allocation: SimpleRouteJson,
   escapes: Trace[],
   terminalLayers: ReadonlyMap<string, string[]>,
+  allowFirstPhase = false,
 ): Generator<SurfacePairPlan | void> {
-  const paired = yield* planNativePairSeed(native)
+  const paired = yield* planNativePairSeed(native, undefined, {
+    allowFirstPhase,
+  })
   if (paired) yield { traces: paired, escapes: [], nativeSeed: true }
   const original = priorityPairPlans(allocation, terminalLayers)
   let next = original.next()
