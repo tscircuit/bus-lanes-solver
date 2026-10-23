@@ -15,7 +15,7 @@ export function drive<T>(work: Generator<unknown, T>) {
   }
   return { value: next.value, steps }
 }
-test("first native phase skips an independently valid native pair seed", () => {
+test("first native phase keeps its default contract and offers an explicit native alternative", () => {
   const input = loadFirstPhaseNativeByte(),
     before = structuredClone(input)
   expect(input.traces ?? []).toHaveLength(0)
@@ -23,5 +23,9 @@ test("first native phase skips an independently valid native pair seed", () => {
   const control = drive(firstPhasePairControl(input))
   expect(control.value).not.toBeNull()
   expect(auditFirstPhasePair(input, control.value!).valid).toBe(true)
+  const alternate = drive(
+    planNativePairSeed(input, undefined, { allowFirstPhase: true }),
+  )
+  expect(alternate.value).toEqual(control.value)
   expect(input).toEqual(before)
 }, 180000)
