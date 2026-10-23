@@ -1,0 +1,51 @@
+{
+  "scope": "Completed native DQS1 pair only; BYTE1 and full SBC incomplete",
+  "connected": true,
+  "drc": {
+    "valid": true,
+    "checkedTraceCount": 2,
+    "checkedSegmentCount": 98,
+    "checkedViaCount": 0,
+    "issues": []
+  },
+  "withinLimits": true,
+  "pairs": [
+    {
+      "busId": "pair_0",
+      "minLengthMm": null,
+      "aboveMinimumLength": true,
+      "maxLengthMm": null,
+      "withinLengthLimit": true,
+      "toleranceMm": 0.127,
+      "skewMm": 0.1269999999999918,
+      "matched": true,
+      "lengths": [
+        {
+          "name": "source_trace_27",
+          "carrierLengthMm": 28.4804262631916,
+          "fixedLengthMm": 0,
+          "totalLengthMm": 28.4804262631916
+        },
+        {
+          "name": "source_trace_26",
+          "carrierLengthMm": 28.60742626319159,
+          "fixedLengthMm": 0,
+          "totalLengthMm": 28.60742626319159
+        }
+      ]
+    }
+  ],
+  "coupling": [
+    {
+      "connectionNames": ["source_trace_27", "source_trace_26"],
+      "applicable": true,
+      "matched": true,
+      "maxExteriorEdgeGapMm": 0.1377487501231079,
+      "maxSamplingErrorMm": 0.0009999387871979565,
+      "separatedExteriorLengthMm": 0
+    }
+  ],
+  "valid": true,
+  "pairSearchYields": 283,
+  "inputsUnchanged": true
+}
