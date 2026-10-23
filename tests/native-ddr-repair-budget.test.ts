@@ -1,3 +1,8 @@
+import { reuseNativeSurfacePair } from "../lib/reuse-native-surface-pair"
+import { nativePrefixLengthReports } from "../scripts/audit-native-counterfactual"
+import { length } from "../lib/geometry"
+import { ordinaryRepairBlocksPeer } from "../lib/plan-ordinary-repair-candidates"
+import { surfaceRepairKey } from "../lib/surface-repair-key"
 import { expect, test } from "bun:test"
 import {
   loadSequentialNativeDdr,
@@ -58,12 +63,27 @@ test("native pair repair recovers validated progress around a computed ordinary 
     repairSurfacePairEscape(
       state,
       blocked[0],
-      new Set([JSON.stringify(paired!.map((t) => t.route))]),
+      new Set([surfaceRepairKey(state)]),
     ),
   )
   expect(repair.value).not.toBeNull()
-  expect(repair.value!.retained).not.toEqual(state.retained)
+  expect(surfaceRepairKey(repair.value!)).not.toEqual(surfaceRepairKey(state))
+  // A compatible ordinary reservation is progress even with the same pair.
+  expect(repair.value!.traces[0].route[0]).toMatchObject({ layer: "bottom" })
+  expect(repair.steps).toBeLessThan(10000)
   const recovered = repair.value!
+  expect(
+    surfaceRepairKey({
+      ...recovered,
+      retained: [...recovered.retained].reverse(),
+      traces: [...recovered.traces].reverse(),
+      escapes: [...recovered.escapes].reverse(),
+    }),
+  ).toBe(surfaceRepairKey(recovered))
+  const reservation = { ...state, retained: [], traces: [], escapes: [] }
+  expect(
+    drive(ordinaryRepairBlocksPeer(reservation, recovered, blocked[0])).value,
+  ).toBe(false)
   expect(recovered.retained).toHaveLength(2)
   expect(recovered.traces).toHaveLength(1)
   expect(auditSequentialNativePair(sample, recovered.retained).valid).toBe(true)
@@ -89,6 +109,67 @@ test("native pair repair recovers validated progress around a computed ordinary 
     allowBlindAndBuriedVias: false,
   })
   expect(drc.valid).toBe(true)
+  const lengths = nativePrefixLengthReports(
+    sample.secondInput,
+    recovered.escapes,
+    recovered.traces,
+  )[0].lengths[0]
+  expect(lengths.carrierLengthMm).toBeGreaterThan(20)
+  expect(lengths.fixedLengthMm).toBeGreaterThan(1)
+  expect(lengths.totalLengthMm).toBeCloseTo(
+    length(recovered.traces[0].route) +
+      recovered.escapes
+        .filter(
+          (t) => t.connection_name === recovered.traces[0].connection_name,
+        )
+        .reduce((sum, t) => sum + length(t.route), 0),
+    8,
+  )
+  const next = drive(
+    repairSurfacePairEscape(
+      recovered,
+      blocked[0],
+      new Set([surfaceRepairKey(state), surfaceRepairKey(recovered)]),
+    ),
+  )
+  expect(next.value).not.toBeNull()
+  expect(next.steps).toBeLessThan(10000)
+  expect(surfaceRepairKey(next.value!)).not.toBe(surfaceRepairKey(recovered))
+  const nextDrc = validateRoutedCopperDrc({
+    inputSrj: combined as never,
+    routedSrj: {
+      ...combined,
+      traces: [
+        ...sample.secondInput.traces!,
+        ...next.value!.escapes,
+        ...next.value!.retained,
+        ...next.value!.traces,
+      ],
+    } as never,
+    clearance: sample.secondInput.minTraceToPadEdgeClearance!,
+    allowBlindAndBuriedVias: false,
+  })
+  expect(nextDrc.valid).toBe(true)
+  expect(auditSequentialNativePair(sample, next.value!.retained).valid).toBe(
+    true,
+  )
+  const invalid = structuredClone(recovered)
+  invalid.retained[0].route[0].x += 0.1
+  expect(
+    reuseNativeSurfacePair(
+      sample.secondInput,
+      sample.secondInput.differentialPairs![0],
+      invalid,
+    ),
+  ).toBe(false)
+  const stricter = structuredClone(
+    sample.secondInput,
+  ) as typeof sample.secondInput & { minTraceToHoleEdgeClearance: number }
+  stricter.minTraceToHoleEdgeClearance = 0.25
+  expect(
+    reuseNativeSurfacePair(stricter, stricter.differentialPairs![0], recovered),
+  ).toBe(false)
+
   expect(state).toEqual(stateBefore)
   expect(sample).toEqual(before)
 }, 900000)
