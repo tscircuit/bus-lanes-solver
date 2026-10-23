@@ -3,7 +3,10 @@ import { busLengthReports, pairLengthReports } from "../lib/route-lengths"
 import { exteriorPairSpacingReports } from "../lib/exterior-pair-spacing"
 import type { SimpleRouteJson, Trace } from "../lib/types"
 import { loadNativeCounterfactual } from "./native-counterfactual"
-function connected(input: SimpleRouteJson, traces: Trace[]) {
+export function nativeSignalsConnected(
+  input: SimpleRouteJson,
+  traces: Trace[],
+) {
   return input.connections.every((c) => {
     const edges = new Map<string, Set<string>>()
     const key = (x: number, y: number, layer: string) =>
@@ -46,6 +49,28 @@ function connected(input: SimpleRouteJson, traces: Trace[]) {
     return seen.has(target)
   })
 }
+/** One complete carrier per ordinary signal; keep every owned escape in
+ * fixed copper so it contributes to absolute pad-to-pad planar length. */
+export function nativePrefixLengthReports(
+  input: SimpleRouteJson,
+  escapes: Trace[],
+  carriers: Trace[],
+) {
+  const names = new Set(carriers.map((t) => t.connection_name))
+  return busLengthReports(
+    {
+      ...input,
+      traces: [...(input.traces ?? []), ...escapes],
+      buses: input.buses
+        ?.map((b) => ({
+          ...b,
+          connectionNames: b.connectionNames.filter((n) => names.has(n)),
+        }))
+        .filter((b) => b.connectionNames.length),
+    },
+    carriers,
+  )
+}
 export function completedCounterfactualControl() {
   const r = loadNativeCounterfactual(),
     choice = r.probes
@@ -75,7 +100,9 @@ export function completedCounterfactualControl() {
     clearance: input.minTraceToPadEdgeClearance!,
     allowBlindAndBuriedVias: false,
   })
-  const buses = busLengthReports(scoped, traces),
+  const buses = nativePrefixLengthReports(input, choice.choice.escapes, [
+      choice.choice.trace,
+    ]),
     firstBuses = busLengthReports(r.sample.firstInput, fixed),
     firstPairs = pairLengthReports(r.sample.firstInput, fixed),
     firstCoupling = exteriorPairSpacingReports(r.sample.firstInput, fixed)
@@ -83,7 +110,7 @@ export function completedCounterfactualControl() {
     inputUnchanged: r.inputUnchanged,
     scope:
       "Completed D0 net only around freshly solved BYTE1; full BYTE0 and SBC incomplete",
-    connected: connected(scoped, traces),
+    connected: nativeSignalsConnected(scoped, traces),
     drc,
     buses,
     firstBuses,

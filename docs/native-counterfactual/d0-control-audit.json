@@ -22,9 +22,9 @@
       "lengths": [
         {
           "name": "source_trace_14",
-          "carrierLengthMm": 0.5656854249492398,
-          "fixedLengthMm": 0,
-          "totalLengthMm": 0.5656854249492398
+          "carrierLengthMm": 23.242640687119287,
+          "fixedLengthMm": 1.1313107460558907,
+          "totalLengthMm": 24.37395143317518
         }
       ]
     }
@@ -137,10 +137,7 @@
   ],
   "firstCoupling": [
     {
-      "connectionNames": [
-        "source_trace_27",
-        "source_trace_26"
-      ],
+      "connectionNames": ["source_trace_27", "source_trace_26"],
       "applicable": true,
       "matched": true,
       "maxExteriorEdgeGapMm": 0.13774616136918438,

@@ -11,3 +11,5 @@ This establishes individual reachability, not a joint BYTE0 or SBC solve. The in
 The eventual repair must consider ordinary seed copper when detecting duplicate states: a compatible new ordinary prefix is progress even if the pair is unchanged. Simply selecting the shortest candidate while retaining a pair-only duplicate key discards these alternatives. Any replacement must still check pair geometry and future escape access, keep fixed input copper immutable, bound child work and pass the full legacy benchmark.
 
 Benchmark effect: tests and validation only; production solver unchanged. Every PR must have a fresh paired Blacksmith 11/11 comparison, reported before readiness.
+
+The scoped length audit counts the carrier and both owned escapes: D0 is 23.242641 mm + 1.131311 mm = 24.373951 mm, below its unchanged 26.600277 mm limit. The regression checks these contributions independently. Via depth/package delay are not inferred from planar XY coordinates.
