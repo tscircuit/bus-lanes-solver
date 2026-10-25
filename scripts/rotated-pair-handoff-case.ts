@@ -45,9 +45,12 @@ export function runRotatedPairHandoffCase(route: typeof routeCoupledPair) {
     const drc = validateRoutedCopperDrc({
         inputSrj: input,
         routedSrj: { ...input, traces },
-        clearance: input.minTraceToPadEdgeClearance,
+        clearance:
+          input.minTraceToPadEdgeClearance ??
+          input.defaultObstacleMargin ??
+          0.075,
         allowBlindAndBuriedVias: false,
-      }),
+      } as unknown as Parameters<typeof validateRoutedCopperDrc>[0]),
       pairs = pairLengthReports(input, traces),
       coupling = pairCouplingReports(input, traces)
     return {
