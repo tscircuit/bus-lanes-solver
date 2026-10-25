@@ -172,6 +172,16 @@ export function* routeCoupledPair(
       (o) => o.componentId && o.connectedTo.includes(c.name),
     ),
   )
+  const extent = (o: SimpleRouteJson["obstacles"][number], axis: "x" | "y") => {
+    const angle = ((o.ccwRotationDegrees ?? 0) * Math.PI) / 180
+    return (
+      (axis === "x"
+        ? Math.abs(Math.cos(angle)) * o.width +
+          Math.abs(Math.sin(angle)) * o.height
+        : Math.abs(Math.sin(angle)) * o.width +
+          Math.abs(Math.cos(angle)) * o.height) / 2
+    )
+  }
   const pairInBus = (input.buses ?? []).some((b) =>
     pair.connectionNames.some((n) => b.connectionNames.includes(n)),
   )
@@ -190,28 +200,20 @@ export function* routeCoupledPair(
     const s = i === 0 ? sign : -sign
     const edge = field.length
       ? s > 0
-        ? Math.max(
-            ...field.map(
-              (o) => o.center[axis] + (vertical ? o.height : o.width) / 2,
-            ),
-          )
-        : Math.min(
-            ...field.map(
-              (o) => o.center[axis] - (vertical ? o.height : o.width) / 2,
-            ),
-          )
+        ? Math.max(...field.map((o) => o.center[axis] + extent(o, axis)))
+        : Math.min(...field.map((o) => o.center[axis] - extent(o, axis)))
       : p[axis]
     const margin = 2 * width + gap + clearance
     const front = { ...p, [axis]: edge + s * margin }
     if (!field.length) return [front]
     const left =
-      Math.min(...field.map((o) => o.center.x - o.width / 2)) - margin
+      Math.min(...field.map((o) => o.center.x - extent(o, "x"))) - margin
     const right =
-      Math.max(...field.map((o) => o.center.x + o.width / 2)) + margin
+      Math.max(...field.map((o) => o.center.x + extent(o, "x"))) + margin
     const bottom =
-      Math.min(...field.map((o) => o.center.y - o.height / 2)) - margin
+      Math.min(...field.map((o) => o.center.y - extent(o, "y"))) - margin
     const top =
-      Math.max(...field.map((o) => o.center.y + o.height / 2)) + margin
+      Math.max(...field.map((o) => o.center.y + extent(o, "y"))) + margin
     const openFront = pairInBus
       ? front
       : i === 0
