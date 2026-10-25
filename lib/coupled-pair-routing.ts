@@ -115,7 +115,25 @@ export function* routeCoupledPair(
   )
   if (members.some((c) => !c || c.pointsToConnect.length !== 2))
     throw Error("Pair requires two two-terminal connections")
-  const nativePairPads = pairHasUnroutedNativePads(input, pair)
+  const nativePairPads =
+    pairHasUnroutedNativePads(input, pair) ||
+    members.every((member) =>
+      member.pointsToConnect.every((terminal) =>
+        (input.traces ?? []).some((escape) => {
+          if (escape.connection_name !== member.name) return false
+          const vias = escape.route.filter((p) => p.route_type === "via")
+          if (vias.length !== 1 || distance(vias[0], terminal) > 1e-7)
+            return false
+          return input.obstacles.some(
+            (pad) =>
+              pad.componentId &&
+              pad.shape !== "circle" &&
+              Math.abs(pad.width - pad.height) > 1e-8 &&
+              distance(pad.center, escape.route[0]) < 1e-5,
+          )
+        }),
+      ),
+    )
   const requireNativePackageCoupling =
     nativePairPads && !negotiation?.allowProvisionalPairTuning
   const widths = members.map(
@@ -186,13 +204,30 @@ export function* routeCoupledPair(
     pair.connectionNames.some((n) => b.connectionNames.includes(n)),
   )
   const handoffChoices = centers.map((p, i) => {
-    const pads = originalPads
-      .flat()
-      .filter(
-        (o) =>
-          Math.abs(o.center[axis] - p[axis]) <
-          Math.abs(centers[1][axis] - centers[0][axis]) / 2,
+    const pads = members.flatMap((member, memberIndex) => {
+      const terminal = member.pointsToConnect[i]
+      const escape = (input.traces ?? []).find(
+        (t) =>
+          (t.connection_name === member.name ||
+            t.source_trace_id === member.name) &&
+          t.route.some(
+            (point) =>
+              point.route_type === "via" && distance(point, terminal) < 1e-7,
+          ),
       )
+      const native = escape?.route[0] ?? terminal
+      const candidates = originalPads[memberIndex]
+      const physical = candidates.filter(
+        (o) => distance(o.center, native) < 1e-5,
+      )
+      return physical.length
+        ? physical
+        : [...candidates]
+            .sort(
+              (a, b) => distance(a.center, native) - distance(b.center, native),
+            )
+            .slice(0, 1)
+    })
     const ids = new Set(pads.map((o) => o.componentId))
     const field = input.obstacles.filter(
       (o) => o.componentId && ids.has(o.componentId),
@@ -203,8 +238,22 @@ export function* routeCoupledPair(
         ? Math.max(...field.map((o) => o.center[axis] + extent(o, axis)))
         : Math.min(...field.map((o) => o.center[axis] - extent(o, axis)))
       : p[axis]
-    const margin = 2 * width + gap + clearance
-    const front = { ...p, [axis]: edge + s * margin }
+    const rectangular = field.some(
+      (o) => o.shape !== "circle" && Math.abs(o.width - o.height) > 1e-8,
+    )
+    const margin = rectangular
+      ? width + gap / 2 + clearance
+      : 2 * width + gap + clearance
+    const nativeFront = edge + s * margin
+    const terminalFront = p[axis] + (s * (width + gap)) / 2
+    const front = {
+      ...p,
+      [axis]: rectangular
+        ? s > 0
+          ? Math.max(nativeFront, terminalFront)
+          : Math.min(nativeFront, terminalFront)
+        : nativeFront,
+    }
     if (!field.length) return [front]
     const left =
       Math.min(...field.map((o) => o.center.x - extent(o, "x"))) - margin
@@ -461,9 +510,23 @@ export function* routeCoupledPair(
               ...negotiation.copper,
             ])
           : scene
-        const direct = connectors(ends[0], ends[1]).find((p) =>
-          visibleScene.pathVisible(p),
-        )
+        const mid = (ends[0][axis] + ends[1][axis]) / 2
+        const forward = sign * (ends[1][axis] - ends[0][axis])
+        const directed =
+          originalPads.every((pads) => pads.length) &&
+          forward > 0 &&
+          forward < 2 * Math.abs(ends[1][crossAxis] - ends[0][crossAxis])
+            ? [
+                ends[0],
+                { ...ends[0], [axis]: mid },
+                { ...ends[1], [axis]: mid },
+                ends[1],
+              ]
+            : undefined
+        const direct = [
+          ...(directed ? [directed] : []),
+          ...connectors(ends[0], ends[1]),
+        ].find((p) => visibleScene.pathVisible(p))
         const centerSearch = direct
           ? {
               solved: true,
@@ -505,12 +568,36 @@ export function* routeCoupledPair(
           })
           continue
         }
-        const centerPath = reduceOrdinaryTurns(
-          centerSearch.result,
-          visibleScene,
-          centerAlternative,
-          nativePairPads,
-        )
+        let centerPath =
+          directed && direct === directed
+            ? directed
+            : reduceOrdinaryTurns(
+                centerSearch.result,
+                visibleScene,
+                centerAlternative,
+                nativePairPads,
+              )
+        // Bevel the common centerline before offsetting both rails together.
+        // This preserves the designed pair gap around an octilinear bend.
+        const bevel: Point[] = [centerPath[0]]
+        for (let i = 1; i < centerPath.length - 1; i++) {
+          const a = centerPath[i - 1],
+            b = centerPath[i],
+            c = centerPath[i + 1]
+          const ab = distance(a, b),
+            bc = distance(b, c)
+          const u = { x: (b.x - a.x) / ab, y: (b.y - a.y) / ab },
+            v = { x: (c.x - b.x) / bc, y: (c.y - b.y) / bc }
+          if (Math.abs(u.x * v.x + u.y * v.y) < 1e-8) {
+            const trim = Math.min(envelope, ab * 0.49, bc * 0.49)
+            bevel.push(
+              { x: b.x - u.x * trim, y: b.y - u.y * trim },
+              { x: b.x + v.x * trim, y: b.y + v.y * trim },
+            )
+          } else bevel.push(b)
+        }
+        bevel.push(centerPath[centerPath.length - 1])
+        if (visibleScene.pathVisible(bevel)) centerPath = bevel
         // Grid endpoint attachments can briefly backtrack at a blocked
         // handoff. Reject that candidate instead of aborting the whole phase
         // when the parallel offset has no finite intersection.
