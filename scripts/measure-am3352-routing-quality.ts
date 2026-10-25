@@ -4,6 +4,8 @@ import { exteriorPairSpacingReports } from "../lib/exterior-pair-spacing"
 import type { Point, SimpleRouteJson, Trace, Wire } from "../lib"
 import { distance } from "../lib/geometry"
 import { sharedPairSpacingReports } from "../lib/shared-pair-spacing"
+import { carrierCompactionView } from "../lib/carrier-compaction-view"
+import { createTerminalViaClearanceChecker } from "../lib/terminal-via-clearance"
 
 const angleDifference = (a: number, b: number) =>
   Math.abs(((((a - b + 180) % 360) + 360) % 360) - 180)
@@ -141,6 +143,21 @@ export function measureAm3352RoutingQuality(
       )
   }
   const pairGaps = sharedPairSpacingReports(input, traces)
+  // Inspect fixed terminal lands too, including approaches left unchanged by
+  // matching. An unchanged self-short must never count as benchmark success.
+  const carrierView = carrierCompactionView(input, traces)
+  const terminalViaShortcuts =
+    carrierView?.carriers.map((trace) => ({
+      connectionName: trace.connection_name,
+      clear: createTerminalViaClearanceChecker(carrierView.input, trace, {
+        preserveExistingApproach: false,
+      })(trace.route.filter((point) => point.route_type === "wire")),
+    })) ?? []
+  for (const report of terminalViaShortcuts)
+    if (!report.clear)
+      issues.push(
+        `${report.connectionName}: signal shortcuts its terminal via land`,
+      )
   for (const pair of pairGaps) {
     if (!pair.matched)
       issues.push(
@@ -163,6 +180,7 @@ export function measureAm3352RoutingQuality(
     illegalOrdinaryCorners: sum("illegalOrdinaryCorners"),
     nonOctilinearOrdinarySegments: sum("nonOctilinearOrdinarySegments"),
     pairGaps,
+    terminalViaShortcuts,
     exteriorPairGaps,
     issues,
   }
