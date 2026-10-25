@@ -13,6 +13,7 @@ jobs:
           path: base
       - uses: actions/checkout@v4
         with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
           path: head
       - uses: oven-sh/setup-bun@v2
         with:

@@ -33,6 +33,18 @@ while (
     await new Promise((resolve) => setTimeout(resolve, 0))
 }
 const report = {
+  solverRevision: Bun.spawnSync([
+    "git",
+    "-C",
+    resolve(process.argv[2] ?? "lib/index.ts", "../.."),
+    "rev-parse",
+    "HEAD",
+  ])
+    .stdout.toString()
+    .trim(),
+  runtime: Bun.version,
+  searchBudget: 2_000_000,
+  wallBudgetSeconds: 3600,
   fixtureSha256: createHash("sha256").update(raw).digest("hex"),
   entry: process.argv[2] ?? "lib/index.ts",
   solved: solver.solved,
