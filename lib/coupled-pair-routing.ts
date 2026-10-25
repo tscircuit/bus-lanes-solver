@@ -190,6 +190,16 @@ export function* routeCoupledPair(
       (o) => o.componentId && o.connectedTo.includes(c.name),
     ),
   )
+  // Preserve established BGA/square-pad planning. The new corridor proposals
+  // address native long rectangular SMT package approaches only.
+  const smtPackages = originalPads.every(
+    (pads) =>
+      pads.length > 0 &&
+      pads.every(
+        (pad) =>
+          pad.shape !== "circle" && Math.abs(pad.width - pad.height) > 1e-8,
+      ),
+  )
   const extent = (o: SimpleRouteJson["obstacles"][number], axis: "x" | "y") => {
     const angle = ((o.ccwRotationDegrees ?? 0) * Math.PI) / 180
     return (
@@ -205,6 +215,13 @@ export function* routeCoupledPair(
   )
   const handoffChoices = centers.map((p, i) => {
     const pads = members.flatMap((member, memberIndex) => {
+      if (!smtPackages)
+        return originalPads[memberIndex].filter(
+          (o) =>
+            Math.abs(o.center[axis] - p[axis]) <
+            Math.abs(centers[1][axis] - centers[0][axis]) / 2,
+        )
+
       const terminal = member.pointsToConnect[i]
       const escape = (input.traces ?? []).find(
         (t) =>
@@ -238,9 +255,11 @@ export function* routeCoupledPair(
         ? Math.max(...field.map((o) => o.center[axis] + extent(o, axis)))
         : Math.min(...field.map((o) => o.center[axis] - extent(o, axis)))
       : p[axis]
-    const rectangular = field.some(
-      (o) => o.shape !== "circle" && Math.abs(o.width - o.height) > 1e-8,
-    )
+    const rectangular =
+      smtPackages &&
+      field.some(
+        (o) => o.shape !== "circle" && Math.abs(o.width - o.height) > 1e-8,
+      )
     const margin = rectangular
       ? width + gap / 2 + clearance
       : 2 * width + gap + clearance
@@ -513,6 +532,7 @@ export function* routeCoupledPair(
         const mid = (ends[0][axis] + ends[1][axis]) / 2
         const forward = sign * (ends[1][axis] - ends[0][axis])
         const directed =
+          smtPackages &&
           originalPads.every((pads) => pads.length) &&
           forward > 0 &&
           forward < 2 * Math.abs(ends[1][crossAxis] - ends[0][crossAxis])
@@ -597,7 +617,7 @@ export function* routeCoupledPair(
           } else bevel.push(b)
         }
         bevel.push(centerPath[centerPath.length - 1])
-        if (visibleScene.pathVisible(bevel)) centerPath = bevel
+        if (smtPackages && visibleScene.pathVisible(bevel)) centerPath = bevel
         // Grid endpoint attachments can briefly backtrack at a blocked
         // handoff. Reject that candidate instead of aborting the whole phase
         // when the parallel offset has no finite intersection.
