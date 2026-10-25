@@ -71,9 +71,12 @@ export function runNativeSmtPairCase(Solver = BusLanesPipelineSolver) {
         ...physicalInput,
         traces: [...(input.traces ?? []), ...traces],
       },
-      clearance: input.minTraceToPadEdgeClearance,
+      clearance:
+        input.minTraceToPadEdgeClearance ??
+        input.defaultObstacleMargin ??
+        0.075,
       allowBlindAndBuriedVias: false,
-    }),
+    } as unknown as Parameters<typeof validateRoutedCopperDrc>[0]),
     pairs: pairLengthReports(input, traces),
     coupling: pairCouplingReports(input, traces),
     exterior: exteriorPairSpacingReports(input, traces),
