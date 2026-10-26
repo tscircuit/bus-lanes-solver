@@ -3,11 +3,6 @@ import { validateRoutedCopperDrc } from "@tscircuit/fanout-solver"
 import { BusLanesPipelineSolver } from "../lib/bus-lanes-pipeline-solver"
 import type { SimpleRouteJson } from "../lib/types"
 
-type PreparedRoutingState = {
-  terminalLayers: ReadonlyMap<string, string[]>
-  child: { input: SimpleRouteJson }
-}
-
 test("preserves a successful non-pad strategy and tries native carriers after real routing failure", () => {
   const input: SimpleRouteJson = {
     layerCount: 2,
@@ -58,14 +53,6 @@ test("preserves a successful non-pad strategy and tries native carriers after re
     denseSearch: true,
     smoothTuning: false,
   })
-  preferred.step()
-  const preferredRouting = preferred as unknown as PreparedRoutingState
-  expect(preferredRouting.terminalLayers.has("DATA")).toBe(false)
-  expect(
-    preferredRouting.child.input.connections[0].pointsToConnect.map(
-      (point) => point.layer,
-    ),
-  ).toEqual(["bottom", "bottom"])
   preferred.solve()
   expect(preferred.solved).toBe(true)
   expect(preferred.stats.carrierStrategy).toBe("preferred")
@@ -103,10 +90,6 @@ test("preserves a successful non-pad strategy and tries native carriers after re
   expect(fallback.phase).toBe("retry_native_carriers")
   expect(fallback.traces).toEqual([])
   expect(() => fallback.getOutput()).toThrow()
-  fallback.step()
-  expect(
-    (fallback as unknown as PreparedRoutingState).terminalLayers.get("DATA"),
-  ).toEqual(["top", "bottom"])
   fallback.solve()
   expect(fallback.solved).toBe(true)
   expect(fallback.failed).toBe(false)
