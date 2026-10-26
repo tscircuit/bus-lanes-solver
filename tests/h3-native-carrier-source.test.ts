@@ -2,7 +2,7 @@ import { expect, test } from "bun:test"
 import { readFileSync, writeFileSync } from "node:fs"
 import { runH3NativeCarrierRepro } from "../scripts/repro-h3-native-carrier"
 
-test.failing("freshly route the unchanged real H3 eleven-signal byte and export its actual SVG", () => {
+test("freshly route the unchanged real H3 eleven-signal byte and export its actual SVG", () => {
   const report = runH3NativeCarrierRepro()
   const snapshot = new URL("../docs/h3-native-carrier/result.snap.svg", import.meta.url)
   if (process.env.BUN_UPDATE_SNAPSHOTS === "1") writeFileSync(snapshot, report.svg)

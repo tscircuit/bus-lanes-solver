@@ -772,8 +772,6 @@ export class BusLanesPipelineSolver extends BaseSolver {
           ) &&
           vias.every(
             (via) =>
-              (layer !== via.from_layer ||
-                this.routingInput.allowedLayers?.includes(layer)) &&
               (
                 via.layers ??
                 physicalLayers.slice(
