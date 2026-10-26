@@ -356,11 +356,20 @@ export class BusLanesPipelineSolver extends BaseSolver {
   private siteRematch?: Generator<void, RematchedSignalDogbones>
   private packageCoupling?: Generator<void, Trace[]>
   private terminalLayers = new Map<string, string[]>()
+  private hasNativeCarrierAlternatives = false
+  private carrierStrategy:
+    | { name: "preferred"; startedAtIteration: 0 }
+    | {
+        name: "native_fallback"
+        startedAtIteration: number
+        reason: string
+      } = { name: "preferred", startedAtIteration: 0 }
   constructor(input: SimpleRouteJson, options: BusLanesPipelineOptions = {}) {
     super()
     this.input = structuredClone(input)
     this.routingInput = withInferredSurfaceLayers(this.input)
     this.options = { smoothTuning: true, denseSearch: true, ...options }
+    this.stats = { carrierStrategy: this.carrierStrategy.name }
     // Surface routing negotiates carrier layers and owned approaches before
     // matching and control repair. Its aggregate work reserve includes those
     // stages; an explicitly supplied search budget remains authoritative.
@@ -448,6 +457,45 @@ export class BusLanesPipelineSolver extends BaseSolver {
       maxSearchIterations:
         this.options.maxSearchIterations ?? Math.max(1, remaining - reserve),
     }
+  }
+  private retryWithNativeCarriers(reason: string): boolean {
+    if (
+      this.carrierStrategy.name !== "preferred" ||
+      !this.hasNativeCarrierAlternatives ||
+      this.acceptedTraces ||
+      this.iterations >= this.MAX_ITERATIONS
+    )
+      return false
+    this.sharedPackages?.return(null)
+    this.sharedPackages = undefined
+    this.backwardPackages?.return(null)
+    this.backwardPackages = undefined
+    this.packageCoupling?.return([])
+    this.packageCoupling = undefined
+    this.siteRematch?.return({ connections: [], escapes: [] })
+    this.siteRematch = undefined
+    this.child?.tryFinalAcceptance()
+    this.child = undefined
+    this.escapes = []
+    this.completedLanes = []
+    this.remainingInput = undefined
+    this.followingInput = undefined
+    this.attempt = 0
+    this.carrierStrategy = {
+      name: "native_fallback",
+      startedAtIteration: this.iterations,
+      reason,
+    }
+    this.phase = "retry_native_carriers"
+    this.progress = 0
+    this.stats = {
+      ...this.stats,
+      carrierStrategy: this.carrierStrategy.name,
+      carrierStrategyStartedAtIteration:
+        this.carrierStrategy.startedAtIteration,
+      carrierStrategyReason: reason,
+    }
+    return true
   }
   private *finishPackageCoupling(
     input: SimpleRouteJson,
@@ -749,6 +797,7 @@ export class BusLanesPipelineSolver extends BaseSolver {
     // Only newly created, two-ended dogbones may change signal layers during
     // congestion negotiation. Existing handoffs always keep their fixed layer.
     const terminalLayers = new Map<string, string[]>()
+    this.hasNativeCarrierAlternatives = false
     for (const connection of this.routingInput.connections) {
       const explicitPadLayer = connection.pointsToConnect.every((point) =>
         this.routingInput.allowedLayers?.includes(point.layer),
@@ -762,7 +811,7 @@ export class BusLanesPipelineSolver extends BaseSolver {
         .filter((t) => t.connection_name === connection.name)
         .flatMap((t) => t.route.filter((p) => p.route_type === "via"))
       if (vias.length !== 2) continue
-      const available = layers.filter(
+      const supported = layers.filter(
         (layer) =>
           (this.routingInput.buses ?? []).every(
             (bus) =>
@@ -786,6 +835,19 @@ export class BusLanesPipelineSolver extends BaseSolver {
             ).includes(layer),
           ),
       )
+      // Preserve the established non-pad search first. Newly supported native
+      // carriers participate only after that strategy has actually failed.
+      const available = supported.filter(
+        (layer) =>
+          this.carrierStrategy.name === "native_fallback" ||
+          vias.every(
+            (via) =>
+              layer !== via.from_layer ||
+              this.routingInput.allowedLayers?.includes(layer),
+          ),
+      )
+      if (available.length < supported.length)
+        this.hasNativeCarrierAlternatives = true
       if (available.length > 1) terminalLayers.set(connection.name, available)
     }
     this.terminalLayers = terminalLayers
@@ -1091,6 +1153,12 @@ export class BusLanesPipelineSolver extends BaseSolver {
       this.phase = `lanes_${this.child!.phase}`
       this.stats = {
         ...this.child!.stats,
+        carrierStrategy: this.carrierStrategy.name,
+        carrierStrategyStartedAtIteration:
+          this.carrierStrategy.startedAtIteration,
+        ...(this.carrierStrategy.name === "native_fallback"
+          ? { carrierStrategyReason: this.carrierStrategy.reason }
+          : {}),
         layerAttempt: this.attempt,
         dogbones: this.escapes.length,
         routingStage: this.completedLanes.length
@@ -1235,6 +1303,16 @@ export class BusLanesPipelineSolver extends BaseSolver {
         this.phase = "retry_layers"
         return
       }
+      if (
+        this.child?.failed &&
+        [
+          "no_planar_route",
+          "coupled_routing_failed",
+          "search_budget_exhausted",
+        ].includes(this.child.failureCode ?? "") &&
+        this.retryWithNativeCarriers(this.child.failureCode!)
+      )
+        return
       this.failureCode = this.child?.failureCode ?? "local_dogbone_failed"
       this.error = error instanceof Error ? error.message : String(error)
       this.failed = true
