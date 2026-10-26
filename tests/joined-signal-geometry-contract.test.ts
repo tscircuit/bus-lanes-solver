@@ -47,6 +47,10 @@ test("joined geometry preserves explicit unsmoothed corners but checks returning
     })),
   }
   expect(
-    joinedSignalGeometryIsValid({ input, trace: returning, smoothTuning: false }),
+    joinedSignalGeometryIsValid({
+      input,
+      trace: returning,
+      smoothTuning: false,
+    }),
   ).toBe(false)
 })

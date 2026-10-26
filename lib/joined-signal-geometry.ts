@@ -26,7 +26,8 @@ export function joinedSignalGeometryIsValid(params: {
         run.length > 1 &&
         !tuningPathIsSelfClear(
           run,
-          run.reduce((width, point) => Math.max(width, point.width), 0) + clearance,
+          run.reduce((width, point) => Math.max(width, point.width), 0) +
+            clearance,
         )
       )
         return false
