@@ -770,21 +770,20 @@ export class BusLanesPipelineSolver extends BaseSolver {
               !bus.allowedLayers ||
               bus.allowedLayers.includes(layer),
           ) &&
-          vias.every(
-            (via) =>
-              (
-                via.layers ??
-                physicalLayers.slice(
-                  Math.min(
-                    physicalLayers.indexOf(via.from_layer),
-                    physicalLayers.indexOf(via.to_layer),
-                  ),
-                  Math.max(
-                    physicalLayers.indexOf(via.from_layer),
-                    physicalLayers.indexOf(via.to_layer),
-                  ) + 1,
-                )
-              ).includes(layer),
+          vias.every((via) =>
+            (
+              via.layers ??
+              physicalLayers.slice(
+                Math.min(
+                  physicalLayers.indexOf(via.from_layer),
+                  physicalLayers.indexOf(via.to_layer),
+                ),
+                Math.max(
+                  physicalLayers.indexOf(via.from_layer),
+                  physicalLayers.indexOf(via.to_layer),
+                ) + 1,
+              )
+            ).includes(layer),
           ),
       )
       if (available.length > 1) terminalLayers.set(connection.name, available)
