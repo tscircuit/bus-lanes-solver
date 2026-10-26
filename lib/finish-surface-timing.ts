@@ -29,6 +29,11 @@ export function* finishSurfaceTiming(
   const paired = new Set(
     native.differentialPairs?.flatMap((pair) => pair.connectionNames),
   )
+  const coupledPairs = native.differentialPairs?.filter(
+    (pair) =>
+      pair.traceGap !== undefined || pair.maxUncoupledLength !== undefined,
+  )
+  const coupled = new Set(coupledPairs?.flatMap((pair) => pair.connectionNames))
   const timing = new Set([
     ...(native.buses?.flatMap((bus) => bus.connectionNames) ?? []),
     ...paired,
@@ -98,7 +103,8 @@ export function* finishSurfaceTiming(
       for (let index = 0; index < prepared.traces.length; index++) {
         const trace = prepared.traces[index]
         if (
-          paired.has(trace.connection_name!) ||
+          coupled.has(trace.connection_name!) ||
+          trace.coupledSection ||
           protectedNames.has(trace.connection_name!)
         )
           continue
@@ -153,9 +159,10 @@ export function* finishSurfaceTiming(
           report.withinLengthLimit &&
           report.aboveMinimumLength,
       ) &&
-      exteriorPairSpacingReports(prepared.input, prepared.traces).every(
-        (report) => report.applicable && report.matched,
-      )
+      exteriorPairSpacingReports(
+        { ...prepared.input, differentialPairs: coupledPairs },
+        prepared.traces,
+      ).every((report) => report.applicable && report.matched)
     if (policy.preserveTiming && !accepted()) {
       const tuned = yield* runBoundedRouting(
         tuneGeneratedOrdinaryEscapes(

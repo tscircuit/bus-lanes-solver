@@ -12,6 +12,11 @@ import { initialSignalDogbones } from "./initial-signal-dogbones"
 import { independentBusGroups } from "./route-independent-buses"
 import { retargetGeneratedEscape } from "./retarget-generated-escape"
 import { joinSignalEscapes } from "./join-signal-escapes"
+import {
+  finishGeneratedSurfaceCarriers,
+  type CompletedGeneratedSurfaceCarriers,
+} from "./finish-generated-surface-carriers"
+import { joinedSignalGeometryIsValid } from "./joined-signal-geometry"
 import { tuneGeneratedPairEscapes } from "./tune-generated-pair-escapes"
 import { routeFreshSurfaceBuses } from "./route-fresh-surface-buses"
 import { rebalancePairEscapes } from "./rebalance-pair-escapes"
@@ -36,7 +41,7 @@ import { routeBackwardPackageBuses } from "./route-backward-package-buses"
 import type { RepairedBusDogbones } from "./repair-bus-dogbones"
 import { exteriorPairSpacingReports } from "./exterior-pair-spacing"
 import { shortenPairApproaches } from "./shorten-pair-approaches"
-import { busLengthReports } from "./route-lengths"
+import { busLengthReports, pairLengthReports } from "./route-lengths"
 import { extendPackageCoupling } from "./extend-package-coupling"
 import { routeAlternateSignalDogbones } from "./alternate-signal-dogbones"
 import { backwardFacingPackageTerminals } from "./backward-facing-package-terminals"
@@ -180,6 +185,17 @@ export class BusLanesPipelineSolver extends BaseSolver {
               continue
             }
             const complete = view.join(carriers)
+            if (
+              complete.some(
+                (trace) =>
+                  !joinedSignalGeometryIsValid({
+                    input: this.routingInput,
+                    trace,
+                    smoothTuning: this.options.smoothTuning,
+                  }),
+              )
+            )
+              continue
             const after = signalEnvelope(complete)
             if (
               !Number.isFinite(after.areaMm2) ||
@@ -272,6 +288,17 @@ export class BusLanesPipelineSolver extends BaseSolver {
           )) {
             if (carriers) {
               const complete = view.join(carriers)
+              if (
+                complete.some(
+                  (trace) =>
+                    !joinedSignalGeometryIsValid({
+                      input: this.routingInput,
+                      trace,
+                      smoothTuning: this.options.smoothTuning,
+                    }),
+                )
+              )
+                continue
               const area = signalEnvelope(complete).areaMm2
               if (
                 area < signalEnvelope(this.acceptedTraces!).areaMm2 - 1e-6 &&
@@ -335,7 +362,19 @@ export class BusLanesPipelineSolver extends BaseSolver {
     } catch (error) {
       this.stats = { ...this.stats, optimizationCleanupError: String(error) }
     }
-    this.traces = structuredClone(this.acceptedTraces!)
+    if (
+      !this.acceptedTraces ||
+      this.acceptedTraces.some(
+        (trace) =>
+          !joinedSignalGeometryIsValid({
+            input: this.routingInput,
+            trace,
+            smoothTuning: this.options.smoothTuning,
+          }),
+      )
+    )
+      throw Error("Final pad-to-pad signal geometry is invalid")
+    this.traces = structuredClone(this.acceptedTraces)
     this.solved = true
     this.failed = false
     this.error = null
@@ -364,6 +403,10 @@ export class BusLanesPipelineSolver extends BaseSolver {
         startedAtIteration: number
         reason: string
       } = { name: "preferred", startedAtIteration: 0 }
+  private surfaceFinishing?: Generator<
+    void,
+    CompletedGeneratedSurfaceCarriers | null
+  >
   constructor(input: SimpleRouteJson, options: BusLanesPipelineOptions = {}) {
     super()
     this.input = structuredClone(input)
@@ -430,6 +473,8 @@ export class BusLanesPipelineSolver extends BaseSolver {
       this.finishAccepted(true)
       return
     }
+    this.surfaceFinishing?.return(null)
+    this.surfaceFinishing = undefined
     this.nativeSingleCarrier?.return(null)
     this.nativeSingleCarrier = undefined
     this.sharedPackages?.return(null)
@@ -466,6 +511,8 @@ export class BusLanesPipelineSolver extends BaseSolver {
       this.iterations >= this.MAX_ITERATIONS
     )
       return false
+    this.surfaceFinishing?.return(null)
+    this.surfaceFinishing = undefined
     this.sharedPackages?.return(null)
     this.sharedPackages = undefined
     this.backwardPackages?.return(null)
@@ -1093,6 +1140,20 @@ export class BusLanesPipelineSolver extends BaseSolver {
       return
     }
     try {
+      if (this.surfaceFinishing) {
+        const state = this.surfaceFinishing.next()
+        this.phase = "finish_native_surface_carriers"
+        this.stats = { ...this.stats, routingStage: "native_surface_geometry" }
+        if (!state.done) return
+        this.surfaceFinishing = undefined
+        if (!state.value)
+          throw Error(
+            "Generated native surface approaches could not satisfy full-path geometry and matching",
+          )
+        this.escapes = state.value.escapes
+        this.acceptGeneratedTraces(state.value.traces)
+        return
+      }
       if (this.envelopeOptimization) {
         const step = this.envelopeOptimization.next()
         if (step.done) this.finishAccepted(false)
@@ -1267,14 +1328,25 @@ export class BusLanesPipelineSolver extends BaseSolver {
           return joinSignalEscapes(lane, escapes)
         })
         if (
-          busLengthReports(this.routingInput, this.traces).some(
-            (b) => !b.withinLengthLimit || !b.aboveMinimumLength,
+          this.traces.some(
+            (trace) =>
+              !joinedSignalGeometryIsValid({
+                input: this.routingInput,
+                trace,
+                smoothTuning: this.options.smoothTuning,
+              }),
           )
-        )
-          throw Error("Final absolute bus length violation")
-        this.acceptedTraces = structuredClone(this.traces)
-        this.phase = "optimize_envelope"
-        this.envelopeOptimization = this.optimizeEnvelope()
+        ) {
+          this.surfaceFinishing = finishGeneratedSurfaceCarriers({
+            input: this.routingInput,
+            carriers: refined,
+            escapes: this.escapes,
+            options: this.childOptions(),
+            maxSteps: Math.max(1, this.MAX_ITERATIONS - this.iterations),
+          })
+          return
+        }
+        this.acceptGeneratedTraces(this.traces)
       }
     } catch (error) {
       if (this.acceptedTraces) {
@@ -1288,6 +1360,8 @@ export class BusLanesPipelineSolver extends BaseSolver {
       this.backwardPackages = undefined
       this.packageCoupling?.return([])
       this.packageCoupling = undefined
+      this.surfaceFinishing?.return(null)
+      this.surfaceFinishing = undefined
       this.siteRematch?.return({ connections: [], escapes: [] })
       this.siteRematch = undefined
       this.attempt++
@@ -1319,6 +1393,35 @@ export class BusLanesPipelineSolver extends BaseSolver {
       this.phase = "failed"
       this.traces = []
     }
+  }
+  private acceptGeneratedTraces(traces: Trace[]): void {
+    if (
+      traces.some(
+        (trace) =>
+          !joinedSignalGeometryIsValid({
+            input: this.routingInput,
+            trace,
+            smoothTuning: this.options.smoothTuning,
+          }),
+      )
+    )
+      throw Error("Generated pad-to-pad signal geometry is invalid")
+    if (
+      [
+        ...busLengthReports(this.routingInput, traces),
+        ...pairLengthReports(this.routingInput, traces),
+      ].some(
+        (bus) =>
+          !bus.withinLengthLimit ||
+          !bus.aboveMinimumLength ||
+          (bus.toleranceMm !== null && !bus.matched),
+      )
+    )
+      throw Error("Final full-copper bus length violation")
+    this.traces = traces
+    this.acceptedTraces = structuredClone(traces)
+    this.phase = "optimize_envelope"
+    this.envelopeOptimization = this.optimizeEnvelope()
   }
   visualize() {
     return (
