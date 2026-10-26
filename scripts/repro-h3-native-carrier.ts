@@ -11,9 +11,21 @@ export function runH3NativeCarrierRepro(): {
 } {
   const input = loadH3NativeCarrierInput()
   const original = JSON.stringify(input)
-  const solver = new BusLanesPipelineSolver(input, { goal: "matched", smoothTuning: true, denseSearch: true, maxSearchIterations: 2_000_000 })
+  const solver = new BusLanesPipelineSolver(input, {
+    goal: "matched",
+    smoothTuning: true,
+    denseSearch: true,
+    maxSearchIterations: 2_000_000,
+  })
   solver.solve()
-  const validation = solver.solved ? validateH3NativeCarrier({ input, output: solver.getOutput() }) : null
+  const validation = solver.solved
+    ? validateH3NativeCarrier({ input, output: solver.getOutput() })
+    : null
   const svg = snapshotH3NativeCarrier({ input, solver, validation })
-  return { solver, inputUnchanged: JSON.stringify(input) === original, validation, svg }
+  return {
+    solver,
+    inputUnchanged: JSON.stringify(input) === original,
+    validation,
+    svg,
+  }
 }
