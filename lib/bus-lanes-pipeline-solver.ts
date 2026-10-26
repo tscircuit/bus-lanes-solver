@@ -185,17 +185,6 @@ export class BusLanesPipelineSolver extends BaseSolver {
               continue
             }
             const complete = view.join(carriers)
-            if (
-              complete.some(
-                (trace) =>
-                  !joinedSignalGeometryIsValid({
-                    input: this.routingInput,
-                    trace,
-                    smoothTuning: this.options.smoothTuning,
-                  }),
-              )
-            )
-              continue
             const after = signalEnvelope(complete)
             if (
               !Number.isFinite(after.areaMm2) ||
@@ -205,6 +194,17 @@ export class BusLanesPipelineSolver extends BaseSolver {
                   after.maxX > previousBounds.maxX + 1e-8 ||
                   after.minY < previousBounds.minY - 1e-8 ||
                   after.maxY > previousBounds.maxY + 1e-8))
+            )
+              continue
+            if (
+              complete.some(
+                (trace) =>
+                  !joinedSignalGeometryIsValid({
+                    input: this.routingInput,
+                    trace,
+                    smoothTuning: this.options.smoothTuning,
+                  }),
+              )
             )
               continue
             const validator = BusLanesSolver.forValidation(
