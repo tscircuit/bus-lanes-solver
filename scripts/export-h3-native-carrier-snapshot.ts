@@ -2,6 +2,13 @@ import { mkdirSync, writeFileSync } from "node:fs"
 import { runH3NativeCarrierRepro } from "./repro-h3-native-carrier"
 
 const report = runH3NativeCarrierRepro()
+if (
+  !report.inputUnchanged ||
+  (report.solver.solved && !report.validation?.valid)
+)
+  throw Error(
+    "Refusing to export independently rejected H3 copper or route quality",
+  )
 if (!report.solver.solved && !process.argv.includes("--allow-failed"))
   throw Error(
     "An explicitly requested failed diagnostic requires --allow-failed",

@@ -8,9 +8,6 @@ test("freshly route the unchanged real H3 eleven-signal byte and export its actu
     "../docs/h3-native-carrier/result.snap.svg",
     import.meta.url,
   )
-  if (process.env.BUN_UPDATE_SNAPSHOTS === "1")
-    writeFileSync(snapshot, report.svg)
-  expect(report.svg).toBe(readFileSync(snapshot, "utf8"))
   expect(report.inputUnchanged).toBe(true)
   expect(report.svg).toContain("479 original pads (443 circles)")
   expect(report.solver.solved).toBe(true)
@@ -21,6 +18,13 @@ test("freshly route the unchanged real H3 eleven-signal byte and export its actu
   expect(report.validation?.connectivity.issues).toEqual([])
   expect(report.validation?.copperDrc.issues).toEqual([])
   expect(report.validation?.drillPadOverlaps).toEqual([])
+  expect(report.validation?.routeQuality.issues).toEqual([])
+  expect(report.validation?.routeQuality.valid).toBe(true)
+  expect(report.validation?.valid).toBe(true)
   expect(report.svg).toContain("COMPLETED: 11/11 physically connected")
   expect(report.svg).toContain("copper DRC 0 | drill/pad overlaps 0")
+  expect(report.svg).toContain("route quality 0 issues")
+  if (process.env.BUN_UPDATE_SNAPSHOTS === "1")
+    writeFileSync(snapshot, report.svg)
+  expect(report.svg).toBe(readFileSync(snapshot, "utf8"))
 })
