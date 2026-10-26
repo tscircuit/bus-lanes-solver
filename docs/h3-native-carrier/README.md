@@ -4,7 +4,9 @@ The original eleven-signal H3 CPU–DDR reference input leaves carrier layers un
 
 Run `bun test tests/pipeline-unrestricted-native-carrier.test.ts tests/h3-native-carrier-source.test.ts --timeout 9999999`. Each file contains one desired-behavior test. Run the ordinary tests first to see the incorrect completion result fail, then mark the same tests `test.failing` for the isolated reproduction. The stacked fix removes `.failing` without weakening the assertions.
 
-`bun scripts/repro-h3-native-carrier.ts` freshly solves the real reference fixture and writes the actual SVG before the completion assertion. The explicitly requested [failed diagnostic](source-failure.svg) is labelled **FAILED / UNACCEPTED**, with no accepted output and no claimed DRC pass. Visible partial copper is the solver's failed preview, not saved routing or a successful artifact. Completed exports are guarded by physical connectivity, native copper DRC and drill/pad checks and are written separately as `completed.svg`.
+The real source test freshly solves the fixture, compares its actual SVG against the committed [golden snapshot](result.snap.svg), then asserts successful completion. Normal test runs never write the golden. Update it only with `BUN_UPDATE_SNAPSHOTS=1 bun test tests/h3-native-carrier-source.test.ts --timeout 9999999` or the explicit CLI `bun scripts/export-h3-native-carrier-snapshot.ts --allow-failed`.
+
+This explicitly requested reproduction golden is labelled **FAILED / UNACCEPTED**, with no accepted output and no claimed DRC pass. Visible partial copper is the solver's failed preview, not saved routing or a successful artifact. The stacked fix replaces this same golden path with actual completed routing, guarded by physical connectivity, native copper DRC and drill/pad checks. Imported runner code has no filesystem writes.
 
 See [source attribution and import limits](../../tests/fixtures/h3-native-carrier/PROVENANCE.md). This reference is not established as manufactured or boot-tested hardware. The original bus has no skew bound; these tests do not claim DDR electrical timing closure.
 
