@@ -1,0 +1,12 @@
+diff --git a/lib/match-native-carrier-signals.ts b/lib/match-native-carrier-signals.ts
+index 29a3214..d7bc157 100644
+--- a/lib/match-native-carrier-signals.ts
++++ b/lib/match-native-carrier-signals.ts
+@@ -273,6 +273,7 @@ export function* matchNativeCarrierSignals(
+             // Retrying it unchanged cannot improve the state: charge its carrier
+             // corridor so the next search explores a different tunable topology.
+             if (
++              false && // Ablation only: disable untunable corridor feedback.
+               !candidate &&
+               length(raw.trace.route) < (minimums.get(c.name) ?? 0) - 1e-8
+             ) {

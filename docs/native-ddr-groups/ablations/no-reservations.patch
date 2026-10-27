@@ -1,0 +1,14 @@
+diff --git a/lib/route-native-groups.ts b/lib/route-native-groups.ts
+index 4128099..1f94fcb 100644
+--- a/lib/route-native-groups.ts
++++ b/lib/route-native-groups.ts
+@@ -224,7 +224,8 @@ export function* routeNativeGroups(
+     ])
+     const fixed = [
+       ...completed,
+-      ...reservations.traces.filter((t) => !seen.has(t.connection_name)),
++      // Ablation only: do not reserve later groups.
++      ...[],
+     ] as Trace[]
+     const preferred = layerByGroup.get(group)!
+     const layers = [preferred, ...group.layers.filter((l) => l !== preferred)]
