@@ -13,6 +13,8 @@ import type { Connection, Point, SimpleRouteJson, Trace } from "./types"
 export interface NativePairedCarrierOptions {
   /** One centerline per differential pair, in the input pair order. */
   centerlines?: Point[][]
+  /** Original package fields; temporary reservation vias must not enlarge uncoupled regions. */
+  packageRegions?: ReturnType<typeof packageApproachRegions>
   busTargetLength?: number
   gridStep?: number
   maxApproachPasses?: number
@@ -40,9 +42,15 @@ function pairedFieldMargin(input: SimpleRouteJson) {
 /** Flare paired backbones at the larger package so ordinary signals retain
  * pad escape space. Axis-aligned packages use their immutable copper fields;
  * callers can provide octilinear centerlines for other arrangements. */
-function defaultCenterlines(native: SimpleRouteJson, step: number): Point[][] {
+function defaultCenterlines(
+  native: SimpleRouteJson,
+  step: number,
+  packageRegions?: ReturnType<typeof packageApproachRegions>,
+): Point[][] {
   const pairs = native.differentialPairs!,
-    regions = packageApproachRegions(native, pairedFieldMargin(native))
+    regions =
+      packageRegions ??
+      packageApproachRegions(native, pairedFieldMargin(native))
   const connection = native.connections.find(
     (c) => c.name === pairs[0].connectionNames[0],
   )!
@@ -143,10 +151,14 @@ export function* planNativePairedCarriers(
     carrier = native.allowedLayers![0],
     step = options.gridStep ?? native.minTraceWidth
   if (!pairs.length) return []
-  const centers = options.centerlines ?? defaultCenterlines(native, step)
+  const centers =
+    options.centerlines ??
+    defaultCenterlines(native, step, options.packageRegions)
   if (centers.length !== pairs.length)
     throw Error("Supply exactly one backbone for each differential pair")
-  const regions = packageApproachRegions(native, pairedFieldMargin(native)),
+  const regions =
+      options.packageRegions ??
+      packageApproachRegions(native, pairedFieldMargin(native)),
     pairedNames = new Set(pairs.flatMap((p) => p.connectionNames))
   const legs: Connection[] = [],
     trunks: Trace[] = [],
@@ -466,7 +478,16 @@ export function* planNativePairedCarriers(
       .map((pair) => ({
         busId: `native_${bus.busId}`,
         connectionNames: pair.connectionNames,
-        minLength: Math.max(target, bus.minLength ?? 0),
+        minLength: Math.max(
+          options.busTargetLength === undefined
+            ? Math.min(
+                target,
+                (bus.maxLength ?? Infinity) - (pair.lengthTolerance ?? 0),
+              )
+            : target,
+          bus.minLength ?? 0,
+        ),
+        maxLength: bus.maxLength,
         maxLengthSkew: pair.lengthTolerance,
       })),
   )

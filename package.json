@@ -22,7 +22,7 @@
   "devDependencies": {
     "@biomejs/biome": "2.5.15",
     "@flatten-js/core": "1.6.2",
-    "@tscircuit/checks": "0.0.237",
+    "@tscircuit/checks": "0.0.264",
     "@tscircuit/circuit-json-util": "0.0.119",
     "@tscircuit/fanout-solver": "github:tscircuit/fanout-solver#15857f17beed0f228b2e29544f7ce393af297c86",
     "@tscircuit/math-utils": "^0.0.38",

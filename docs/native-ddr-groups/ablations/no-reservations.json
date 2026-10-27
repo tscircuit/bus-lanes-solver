@@ -1,0 +1,31 @@
+{
+  "sample": "ram-minus29",
+  "status": "failed",
+  "scope": "all_47_ddr_connections",
+  "wholeBoardComplete": false,
+  "solverPath": "/workspace/work/ddr-no-reservations/lib/index.ts",
+  "solverRevision": "97f804169f102c39a0c662259c1eb3241f76616c",
+  "solverDiffSha256": "905392dde3a2aecc104a74ffb26c395e4aeccf607307b41333389c46e0f1d40e",
+  "runtime": "1.4.0",
+  "budgetSeconds": 300,
+  "inputSha256": "fc21ec12fae8a4ec33c883043b72dc1a34bb390e62b727e64f512df26ffffd73",
+  "inputUnchanged": true,
+  "solveMilliseconds": 9101.78121,
+  "totalMilliseconds": 9112.360472,
+  "iterations": 865,
+  "routedConnections": 0,
+  "error": "Error: Native carrier matching exhausted its routing plans",
+  "failureCode": "native_group_matching_failed",
+  "stats": {
+    "carrierStrategy": "preferred",
+    "nativeGroups": {
+      "stage": "native_pair_approaches",
+      "pass": 0,
+      "collisions": 0,
+      "unfinished": [],
+      "groupName": "DDR_BYTE1",
+      "completedConnections": 11
+    }
+  },
+  "validation": null
+}

@@ -1,0 +1,444 @@
+{
+  "sample": "ram-minus25",
+  "status": "failed",
+  "scope": "all_47_ddr_connections",
+  "wholeBoardComplete": false,
+  "solverPath": "/workspace/work/ddr-production-base/lib/index.ts",
+  "solverRevision": "992e0448aee2c40b0d8fa1d3f0537f364b0e60cc",
+  "solverDiffSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "runtime": "1.4.0",
+  "budgetSeconds": 300,
+  "inputSha256": "bb2685f70c76a6464b41759b1de63e2c656d572a4728dee2ce72e4513a39ed7a",
+  "inputUnchanged": true,
+  "solveMilliseconds": 64676.290817999994,
+  "totalMilliseconds": 64684.756333,
+  "iterations": 118837,
+  "routedConnections": 0,
+  "error": "Negotiated lane search exhausted without a complete route",
+  "failureCode": "no_planar_route",
+  "stats": {
+    "busLengths": [
+      {
+        "busId": "DDR_BYTE0",
+        "minLengthMm": 0,
+        "aboveMinimumLength": false,
+        "maxLengthMm": 24.600277000000002,
+        "withinLengthLimit": false,
+        "toleranceMm": 0.635,
+        "skewMm": null,
+        "matched": false,
+        "lengths": [
+          {
+            "name": "source_trace_14",
+            "carrierLengthMm": null,
+            "fixedLengthMm": 1.131387116547382,
+            "totalLengthMm": null
+          },
+          {
+            "name": "source_trace_30",
+            "carrierLengthMm": null,
+            "fixedLengthMm": 1.1312400377648344,
+            "totalLengthMm": null
+          },
+          {
+            "name": "source_trace_3",
+            "carrierLengthMm": null,
+            "fixedLengthMm": 1.1312456951919412,
+            "totalLengthMm": null
+          },
+          {
+            "name": "source_trace_40",
+            "carrierLengthMm": null,
+            "fixedLengthMm": 1.1313107596691383,
+            "totalLengthMm": null
+          },
+          {
+            "name": "source_trace_17",
+            "carrierLengthMm": null,
+            "fixedLengthMm": 1.1313545940268892,
+            "totalLengthMm": null
+          },
+          {
+            "name": "source_trace_41",
+            "carrierLengthMm": null,
+            "fixedLengthMm": 1.1313489362746552,
+            "totalLengthMm": null
+          },
+          {
+            "name": "source_trace_4",
+            "carrierLengthMm": null,
+            "fixedLengthMm": 1.1311749964507838,
+            "totalLengthMm": null
+          },
+          {
+            "name": "source_trace_31",
+            "carrierLengthMm": null,
+            "fixedLengthMm": 1.1312782191439663,
+            "totalLengthMm": null
+          },
+          {
+            "name": "source_trace_29",
+            "carrierLengthMm": null,
+            "fixedLengthMm": 1.131310746055889,
+            "totalLengthMm": null
+          },
+          {
+            "name": "source_trace_15",
+            "carrierLengthMm": 23.016284264712578,
+            "fixedLengthMm": 1.1313164178032358,
+            "totalLengthMm": 24.147600682515815
+          },
+          {
+            "name": "source_trace_16",
+            "carrierLengthMm": 23.14335495461293,
+            "fixedLengthMm": 1.1312457279028685,
+            "totalLengthMm": 24.2746006825158
+          }
+        ]
+      },
+      {
+        "busId": "DDR_BYTE1",
+        "minLengthMm": 0,
+        "aboveMinimumLength": false,
+        "maxLengthMm": 18.200131,
+        "withinLengthLimit": false,
+        "toleranceMm": 0.635,
+        "skewMm": null,
+        "matched": false,
+        "lengths": [
+          {
+            "name": "source_trace_28",
+            "carrierLengthMm": null,
+            "fixedLengthMm": 1.131201858964199,
+            "totalLengthMm": null
+          },
+          {
+            "name": "source_trace_12",
+            "carrierLengthMm": null,
+            "fixedLengthMm": 1.131348938127347,
+            "totalLengthMm": null
+          },
+          {
+            "name": "source_trace_39",
+            "carrierLengthMm": null,
+            "fixedLengthMm": 1.131343280318542,
+            "totalLengthMm": null
+          },
+          {
+            "name": "source_trace_2",
+            "carrierLengthMm": null,
+            "fixedLengthMm": 1.1312782195824442,
+            "totalLengthMm": null
+          },
+          {
+            "name": "source_trace_25",
+            "carrierLengthMm": null,
+            "fixedLengthMm": 1.1312343814835049,
+            "totalLengthMm": null
+          },
+          {
+            "name": "source_trace_1",
+            "carrierLengthMm": null,
+            "fixedLengthMm": 1.1312400389671935,
+            "totalLengthMm": null
+          },
+          {
+            "name": "source_trace_38",
+            "carrierLengthMm": null,
+            "fixedLengthMm": 1.1312344141950867,
+            "totalLengthMm": null
+          },
+          {
+            "name": "source_trace_11",
+            "carrierLengthMm": null,
+            "fixedLengthMm": 1.131507324699504,
+            "totalLengthMm": null
+          },
+          {
+            "name": "source_trace_13",
+            "carrierLengthMm": null,
+            "fixedLengthMm": 1.1312782441584266,
+            "totalLengthMm": null
+          },
+          {
+            "name": "source_trace_27",
+            "carrierLengthMm": null,
+            "fixedLengthMm": 1.1312725624806719,
+            "totalLengthMm": null
+          },
+          {
+            "name": "source_trace_26",
+            "carrierLengthMm": null,
+            "fixedLengthMm": 1.1311636827425877,
+            "totalLengthMm": null
+          }
+        ]
+      },
+      {
+        "busId": "DDR_ADDR_CTRL_CK",
+        "minLengthMm": 39.750161000000006,
+        "aboveMinimumLength": false,
+        "maxLengthMm": 42.290161000000005,
+        "withinLengthLimit": false,
+        "toleranceMm": 0.635,
+        "skewMm": null,
+        "matched": false,
+        "lengths": [
+          {
+            "name": "source_trace_0",
+            "carrierLengthMm": null,
+            "fixedLengthMm": 1.1314309615582336,
+            "totalLengthMm": null
+          },
+          {
+            "name": "source_trace_5",
+            "carrierLengthMm": null,
+            "fixedLengthMm": 1.131251351473282,
+            "totalLengthMm": null
+          },
+          {
+            "name": "source_trace_6",
+            "carrierLengthMm": null,
+            "fixedLengthMm": 1.1311806520245893,
+            "totalLengthMm": null
+          },
+          {
+            "name": "source_trace_7",
+            "carrierLengthMm": null,
+            "fixedLengthMm": 1.1312895328524593,
+            "totalLengthMm": null
+          },
+          {
+            "name": "source_trace_8",
+            "carrierLengthMm": null,
+            "fixedLengthMm": 1.131218828628458,
+            "totalLengthMm": null
+          },
+          {
+            "name": "source_trace_9",
+            "carrierLengthMm": null,
+            "fixedLengthMm": 1.1313277168095635,
+            "totalLengthMm": null
+          },
+          {
+            "name": "source_trace_18",
+            "carrierLengthMm": null,
+            "fixedLengthMm": 1.1312838993504672,
+            "totalLengthMm": null
+          },
+          {
+            "name": "source_trace_19",
+            "carrierLengthMm": null,
+            "fixedLengthMm": 1.1313927728288642,
+            "totalLengthMm": null
+          },
+          {
+            "name": "source_trace_20",
+            "carrierLengthMm": null,
+            "fixedLengthMm": 1.1313220733773621,
+            "totalLengthMm": null
+          },
+          {
+            "name": "source_trace_21",
+            "carrierLengthMm": null,
+            "fixedLengthMm": 1.1312513827693702,
+            "totalLengthMm": null
+          },
+          {
+            "name": "source_trace_22",
+            "carrierLengthMm": null,
+            "fixedLengthMm": 1.131360249983019,
+            "totalLengthMm": null
+          },
+          {
+            "name": "source_trace_23",
+            "carrierLengthMm": null,
+            "fixedLengthMm": 1.131289554599121,
+            "totalLengthMm": null
+          },
+          {
+            "name": "source_trace_24",
+            "carrierLengthMm": null,
+            "fixedLengthMm": 1.1313984291669255,
+            "totalLengthMm": null
+          },
+          {
+            "name": "source_trace_34",
+            "carrierLengthMm": null,
+            "fixedLengthMm": 1.131245694102756,
+            "totalLengthMm": null
+          },
+          {
+            "name": "source_trace_35",
+            "carrierLengthMm": null,
+            "fixedLengthMm": 1.1312838758638413,
+            "totalLengthMm": null
+          },
+          {
+            "name": "source_trace_36",
+            "carrierLengthMm": null,
+            "fixedLengthMm": 1.1312131709325826,
+            "totalLengthMm": null
+          },
+          {
+            "name": "source_trace_37",
+            "carrierLengthMm": null,
+            "fixedLengthMm": 1.1313220602028267,
+            "totalLengthMm": null
+          },
+          {
+            "name": "source_trace_42",
+            "carrierLengthMm": null,
+            "fixedLengthMm": 1.1313545922873556,
+            "totalLengthMm": null
+          },
+          {
+            "name": "source_trace_43",
+            "carrierLengthMm": null,
+            "fixedLengthMm": 1.13128389619629,
+            "totalLengthMm": null
+          },
+          {
+            "name": "source_trace_44",
+            "carrierLengthMm": null,
+            "fixedLengthMm": 1.1313927718530943,
+            "totalLengthMm": null
+          },
+          {
+            "name": "source_trace_45",
+            "carrierLengthMm": null,
+            "fixedLengthMm": 1.1313220709871312,
+            "totalLengthMm": null
+          },
+          {
+            "name": "source_trace_46",
+            "carrierLengthMm": null,
+            "fixedLengthMm": 1.1312782221036923,
+            "totalLengthMm": null
+          },
+          {
+            "name": "source_trace_32",
+            "carrierLengthMm": 26.22204188028642,
+            "fixedLengthMm": 1.131207514920088,
+            "totalLengthMm": 27.353249395206507
+          },
+          {
+            "name": "source_trace_33",
+            "carrierLengthMm": 26.094932992105424,
+            "fixedLengthMm": 1.1313164031010712,
+            "totalLengthMm": 27.226249395206494
+          }
+        ]
+      }
+    ],
+    "pairLengths": [
+      {
+        "busId": "pair_0",
+        "minLengthMm": null,
+        "aboveMinimumLength": true,
+        "maxLengthMm": null,
+        "withinLengthLimit": true,
+        "toleranceMm": 0.127,
+        "skewMm": 0.12699999999998468,
+        "matched": true,
+        "lengths": [
+          {
+            "name": "source_trace_15",
+            "carrierLengthMm": 23.016284264712578,
+            "fixedLengthMm": 1.1313164178032358,
+            "totalLengthMm": 24.147600682515815
+          },
+          {
+            "name": "source_trace_16",
+            "carrierLengthMm": 23.14335495461293,
+            "fixedLengthMm": 1.1312457279028685,
+            "totalLengthMm": 24.2746006825158
+          }
+        ]
+      },
+      {
+        "busId": "pair_1",
+        "minLengthMm": null,
+        "aboveMinimumLength": true,
+        "maxLengthMm": null,
+        "withinLengthLimit": true,
+        "toleranceMm": 0.127,
+        "skewMm": null,
+        "matched": false,
+        "lengths": [
+          {
+            "name": "source_trace_27",
+            "carrierLengthMm": null,
+            "fixedLengthMm": 1.1312725624806719,
+            "totalLengthMm": null
+          },
+          {
+            "name": "source_trace_26",
+            "carrierLengthMm": null,
+            "fixedLengthMm": 1.1311636827425877,
+            "totalLengthMm": null
+          }
+        ]
+      },
+      {
+        "busId": "pair_2",
+        "minLengthMm": null,
+        "aboveMinimumLength": true,
+        "maxLengthMm": null,
+        "withinLengthLimit": true,
+        "toleranceMm": 0.127,
+        "skewMm": 0.1270000000000131,
+        "matched": true,
+        "lengths": [
+          {
+            "name": "source_trace_32",
+            "carrierLengthMm": 26.22204188028642,
+            "fixedLengthMm": 1.131207514920088,
+            "totalLengthMm": 27.353249395206507
+          },
+          {
+            "name": "source_trace_33",
+            "carrierLengthMm": 26.094932992105424,
+            "fixedLengthMm": 1.1313164031010712,
+            "totalLengthMm": 27.226249395206494
+          }
+        ]
+      }
+    ],
+    "traceLengthsMm": [
+      {
+        "name": "source_trace_15",
+        "length": 23.016284264712578
+      },
+      {
+        "name": "source_trace_16",
+        "length": 23.14335495461293
+      },
+      {
+        "name": "source_trace_32",
+        "length": 26.22204188028642
+      },
+      {
+        "name": "source_trace_33",
+        "length": 26.094932992105424
+      }
+    ],
+    "phase": "failed",
+    "algorithm": "octilinear_visibility",
+    "attempt": 0,
+    "lane": 4,
+    "totalLanes": 46,
+    "congestionPass": 3,
+    "conflictingLanes": 42,
+    "vertices": 0,
+    "expandedVertices": 0,
+    "frontier": 0,
+    "failureCode": "no_planar_route",
+    "carrierStrategy": "preferred",
+    "carrierStrategyStartedAtIteration": 0,
+    "layerAttempt": 5,
+    "dogbones": 94,
+    "routingStage": "matched_buses"
+  },
+  "validation": null
+}

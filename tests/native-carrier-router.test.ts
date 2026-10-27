@@ -97,3 +97,15 @@ test("via placement checks copper on unused physical planes", () => {
   })
   expect(route(input)).toBeNull()
 })
+
+test("native carrier keeps drill holes outside its own pads by default", () => {
+  const input = nativeInput()
+  input.allowViaInPad = false
+  const trace = route(input)!
+  expect(trace).not.toBeNull()
+  for (const via of trace.route.filter((p) => p.route_type === "via"))
+    for (const pad of input.obstacles)
+      expect(
+        Math.hypot(via.x - pad.center.x, via.y - pad.center.y),
+      ).toBeGreaterThanOrEqual(pad.width / 2 + input.minViaHoleDiameter! / 2)
+})
