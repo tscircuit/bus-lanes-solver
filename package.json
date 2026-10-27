@@ -17,7 +17,8 @@
     "build:site": "cosmos-export",
     "build": "tsup && dts-bundle-generator --config dts-bundle.config.json",
     "test:package": "bun run build && bun scripts/check-package.ts",
-    "benchmark:shared-pairs": "bun scripts/benchmark-am3352-shared-pairs.ts"
+    "benchmark:shared-pairs": "bun scripts/benchmark-am3352-shared-pairs.ts",
+    "repro:am3352-1gb": "bun scripts/repro-am3352-1gb-outer-layers.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",
