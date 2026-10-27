@@ -10,15 +10,7 @@ export function snapshotH3NativeCarrier(params: {
   validation: H3NativeCarrierValidation | null
 }): string {
   const { input, solver, validation } = params
-  if (
-    solver.solved &&
-    (!validation?.connectivity.valid ||
-      !validation.copperDrc.valid ||
-      validation.drillPadOverlaps.length)
-  )
-    throw Error(
-      "Refusing a completed snapshot of independently rejected H3 copper",
-    )
+  const accepted = solver.solved && validation?.valid
   // The explicitly requested failed reproduction is a diagnostic preview,
   // labelled unaccepted. A completed snapshot uses only actual final copper.
   const graphics: GraphicsObject = solver.solved
@@ -30,31 +22,40 @@ export function snapshotH3NativeCarrier(params: {
   }))
   const centerX = (input.bounds.minX + input.bounds.maxX) / 2
   const status = validation
-    ? `COMPLETED: ${validation.connectivity.connectedConnectionCount}/11 physically connected | copper DRC ${validation.copperDrc.issues.length} | drill/pad overlaps ${validation.drillPadOverlaps.length}`
+    ? `${accepted ? "COMPLETED" : "UNACCEPTED"}: ${validation.connectivity.connectedConnectionCount}/11 physically connected | copper DRC ${validation.copperDrc.issues.length} | drill/pad overlaps ${validation.drillPadOverlaps.length}`
     : `FAILED / UNACCEPTED: ${solver.failureCode} | accepted output 0/11 | DRC not evaluated`
   graphics.texts = [
     {
       x: centerX,
-      y: input.bounds.maxY + 4.5,
+      y: input.bounds.maxY + 5,
       text: "H3 CPU-to-DDR reference: original eleven-signal byte lane",
       fontSize: 0.7,
     },
     {
       x: centerX,
-      y: input.bounds.maxY + 3.2,
+      y: input.bounds.maxY + 3.7,
       text: status,
-      color: validation ? "#166534" : "#b91c1c",
+      color: accepted ? "#166534" : "#b91c1c",
       fontSize: 0.6,
     },
     {
       x: centerX,
-      y: input.bounds.maxY + 2,
+      y: input.bounds.maxY + 2.6,
       text: "479 original pads (443 circles), native 2 layers, source clearance 0.0889 mm, wires 0.1143 mm",
       fontSize: 0.55,
     },
     {
       x: centerX,
-      y: input.bounds.maxY + 0.9,
+      y: input.bounds.maxY + 1.5,
+      text: validation
+        ? `route quality ${validation.routeQuality.issues.length} issues: whole-path turns, ordinary geometry and same-layer self-clearance`
+        : "route quality not evaluated",
+      color: accepted ? "#166534" : "#b91c1c",
+      fontSize: 0.55,
+    },
+    {
+      x: centerX,
+      y: input.bounds.maxY + 0.4,
       text: validation
         ? "Original bus has no skew bound; this does not establish electrical timing closure."
         : "Partial copper below is the actual failed solver preview, never an accepted route.",

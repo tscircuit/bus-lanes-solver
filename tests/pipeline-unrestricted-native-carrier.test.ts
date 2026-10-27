@@ -3,7 +3,7 @@ import { validateRoutedCopperDrc } from "@tscircuit/fanout-solver"
 import { BusLanesPipelineSolver } from "../lib/bus-lanes-pipeline-solver"
 import type { SimpleRouteJson } from "../lib/types"
 
-test.failing("fresh escapes can use their native surface when global carrier layers are omitted", () => {
+test("fresh escapes can use their native surface when global carrier layers are omitted", () => {
   const input: SimpleRouteJson = {
     layerCount: 2,
     minTraceWidth: 0.12,
