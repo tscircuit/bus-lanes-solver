@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises"
+import { mkdir, readFile, writeFile, rm } from "node:fs/promises"
 import { gzipSync } from "node:zlib"
 import { resolve, join } from "node:path"
 import { pathToFileURL } from "node:url"
@@ -26,6 +26,12 @@ if (!Number.isFinite(budget) || budget <= 0)
   throw Error("Invalid routing budget")
 await mkdir(output, { recursive: true })
 if (!args.includes("--worker")) {
+  // A failed rerun must never reuse an earlier successful report or route.
+  await Promise.all(
+    ["report.json", "routes.json.gz"].map((name) =>
+      rm(join(output, name), { force: true }),
+    ),
+  )
   let timedOut = false,
     phase = "routing"
   const started = performance.now()
@@ -68,7 +74,26 @@ if (!args.includes("--worker")) {
         2,
       ),
     )
-  console.log(await readFile(join(output, "report.json"), "utf8"))
+  let reportText: string
+  try {
+    reportText = await readFile(join(output, "report.json"), "utf8")
+  } catch {
+    reportText = JSON.stringify(
+      {
+        sample,
+        status: "worker_failed",
+        exitCode,
+        phase,
+        solverPath,
+        budgetSeconds: budget / 1000,
+        wholeBoardComplete: false,
+      },
+      null,
+      2,
+    )
+    await writeFile(join(output, "report.json"), reportText)
+  }
+  console.log(reportText)
   process.exit(exitCode === 0 && !timedOut ? 0 : 1)
 }
 const { input, native } = loadNativeGroupFixture(sample)
