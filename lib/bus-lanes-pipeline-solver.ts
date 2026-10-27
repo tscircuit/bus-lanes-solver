@@ -1,3 +1,4 @@
+import { nativeGroupsEligible, routeNativeGroups } from "./route-native-groups"
 import {
   SingleLayerConnectivitySolver,
   type SingleLayerConnectivityOptions,
@@ -57,6 +58,9 @@ import type { SimpleRouteJson, SolverOptions, Trace } from "./types"
 
 export interface BusLanesPipelineOptions extends SolverOptions {
   fanout?: "auto" | "none"
+  /** Elapsed routing budget, checked at each cooperative solver step. Native
+   * multi-group routing defaults to five minutes, including failed alternatives. */
+  maxRoutingTimeMs?: number
   /** Default matched goal includes timing and differential coupling. Connectivity
    * explicitly requests only pad-to-pad routing and copper DRC on one carrier. */
   goal?: "matched" | "connectivity"
@@ -105,6 +109,8 @@ export class BusLanesPipelineSolver extends BaseSolver {
   failureCode: string | null = null
   private connectivitySolver?: SingleLayerConnectivitySolver
   private nativeSingleCarrier?: Generator<void, Trace[] | null>
+  private routingDeadline = Infinity
+  private nativeGroupsActive = false
   private acceptedTraces?: Trace[]
   private envelopeOptimization?: Generator<void, void>
   /** Runs only after a complete accepted route exists. A budget interrupt or
@@ -409,6 +415,16 @@ export class BusLanesPipelineSolver extends BaseSolver {
   >
   constructor(input: SimpleRouteJson, options: BusLanesPipelineOptions = {}) {
     super()
+    if (
+      options.maxRoutingTimeMs !== undefined &&
+      (!Number.isFinite(options.maxRoutingTimeMs) ||
+        options.maxRoutingTimeMs <= 0)
+    )
+      throw Error("Routing time budget must be a positive finite number")
+    this.routingDeadline =
+      options.maxRoutingTimeMs === undefined
+        ? Infinity
+        : performance.now() + options.maxRoutingTimeMs
     this.input = structuredClone(input)
     this.routingInput = withInferredSurfaceLayers(this.input)
     this.options = { smoothTuning: true, denseSearch: true, ...options }
@@ -432,6 +448,33 @@ export class BusLanesPipelineSolver extends BaseSolver {
         options.connectivity,
       )
       this.phase = "connectivity_route"
+    } else if (
+      options.fanout !== "none" &&
+      nativeGroupsEligible(this.routingInput)
+    ) {
+      this.nativeGroupsActive = true
+      this.routingDeadline =
+        performance.now() + (options.maxRoutingTimeMs ?? 300000)
+      this.nativeSingleCarrier = routeNativeGroups(
+        this.routingInput,
+        options.singleCarrier,
+        (state) => {
+          this.phase = state.stage
+          this.traces = state.traces
+          this.stats = {
+            ...this.stats,
+            nativeGroups: {
+              stage: state.stage,
+              pass: state.pass,
+              collisions: state.collisions,
+              unfinished: state.unfinished,
+              groupName: state.groupName,
+              completedConnections: state.completedConnections,
+            },
+          }
+        },
+      )
+      this.phase = "native_group_escapes"
     } else if (
       options.fanout !== "none" &&
       nativeSingleCarrierEligible(this.routingInput)
@@ -1100,15 +1143,22 @@ export class BusLanesPipelineSolver extends BaseSolver {
       )
   }
   _step() {
+    if (performance.now() >= this.routingDeadline) {
+      this.nativeSingleCarrier?.return(null)
+      this.nativeSingleCarrier = undefined
+      this.failed = true
+      this.error = "Routing exceeded its elapsed-time budget"
+      this.failureCode = "routing_timeout"
+      this.phase = "failed"
+      return
+    }
     if (this.nativeSingleCarrier) {
       try {
         const result = this.nativeSingleCarrier.next()
         if (result.done) {
           this.nativeSingleCarrier = undefined
           if (!result.value)
-            throw Error(
-              "Native single-carrier matching exhausted its routing plans",
-            )
+            throw Error("Native carrier matching exhausted its routing plans")
           this.acceptedTraces = structuredClone(result.value)
           this.finishAccepted(false)
         }
@@ -1117,7 +1167,9 @@ export class BusLanesPipelineSolver extends BaseSolver {
         this.nativeSingleCarrier = undefined
         this.failed = true
         this.error = String(error)
-        this.failureCode = "native_single_carrier_matching_failed"
+        this.failureCode = this.nativeGroupsActive
+          ? "native_group_matching_failed"
+          : "native_single_carrier_matching_failed"
         this.phase = "failed"
       }
       return

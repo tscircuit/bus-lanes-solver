@@ -1,0 +1,18 @@
+{
+  "ram-minus29.input.json.gz": {
+    "sha256": "fc21ec12fae8a4ec33c883043b72dc1a34bb390e62b727e64f512df26ffffd73",
+    "bytes": 445108
+  },
+  "ram-minus29.native.json.gz": {
+    "sha256": "00f74feea9b40e532de4579aec1740ed6303a5fa114a139c195d44f4ed2d5152",
+    "bytes": 2236139
+  },
+  "ram-minus25.input.json.gz": {
+    "sha256": "bb2685f70c76a6464b41759b1de63e2c656d572a4728dee2ce72e4513a39ed7a",
+    "bytes": 445234
+  },
+  "ram-minus25.native.json.gz": {
+    "sha256": "319259e4ea6a0b41e5cfd202599f1a0ff272ac891e80819c0aa015fc3498eaff",
+    "bytes": 2236377
+  }
+}

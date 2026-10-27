@@ -74,6 +74,8 @@ export interface SimpleRouteJson {
   minViaPadDiameter?: number
   minViaHoleDiameter?: number
   minViaHoleEdgeToViaHoleEdgeClearance?: number
+  /** Whether drilled holes may overlap SMT pads (requires suitable fabrication). */
+  allowViaInPad?: boolean
   allowBlindAndBuriedVias?: boolean
   bounds: { minX: number; maxX: number; minY: number; maxY: number }
   connections: Connection[]

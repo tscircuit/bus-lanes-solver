@@ -14,6 +14,18 @@ export interface Copper {
   owners: string[]
   rect?: { minX: number; maxX: number; minY: number; maxY: number }
 }
+// Scene copper ownership is immutable; index large alias lists once per array.
+const ownerIndexes = new WeakMap<string[], Set<string>>()
+function sharesOwner(aliases: string[], owners: Set<string>): boolean {
+  if (aliases.length <= 16) return aliases.some((alias) => owners.has(alias))
+  let index = ownerIndexes.get(aliases)
+  if (!index) {
+    index = new Set(aliases)
+    ownerIndexes.set(aliases, index)
+  }
+  for (const owner of owners) if (index.has(owner)) return true
+  return false
+}
 export function fixedCopper(input: SimpleRouteJson): Copper[] {
   const result: Copper[] = []
   for (const o of input.obstacles) {
@@ -316,7 +328,7 @@ export class VectorScene {
     this.copper = all.filter(
       (c) =>
         c.layer === connection.pointsToConnect[0].layer &&
-        !c.owners.some((n) => this.owners.has(n)),
+        !sharesOwner(c.owners, this.owners),
     )
     this.margin =
       width / 2 +

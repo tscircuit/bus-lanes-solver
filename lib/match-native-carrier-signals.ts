@@ -27,6 +27,8 @@ export interface NativeCarrierMatchingOptions {
   maxStrictExpansionsPerRoute?: number
 }
 export interface NativeCarrierProgress {
+  groupName?: string
+  completedConnections?: number
   stage: string
   pass: number
   collisions: number
@@ -55,7 +57,6 @@ export function* matchNativeCarrierSignals(
     connections: original.connections.filter((c) => !pairedNames.has(c.name)),
     traces: [...(original.traces ?? []), ...paired],
   }
-  if (!input.connections.length) return paired
   const minimums = new Map<string, number>(),
     maximums = new Map<string, number>()
   for (const bus of original.buses ?? []) {
@@ -163,6 +164,7 @@ export function* matchNativeCarrierSignals(
       allowBlindAndBuriedVias: false,
     } as unknown as Parameters<typeof validateRoutedCopperDrc>[0]).valid
   }
+  if (!input.connections.length) return valid([]) ? paired : null
   function* negotiate(
     seed: Trace[],
     frozen: Trace[],
@@ -267,6 +269,27 @@ export function* matchNativeCarrierSignals(
                   raw.bankCost,
                 )
               : cleanNativeCarrierSignal(local, c, raw.trace, others, true)
+            // A hard-clear shortest path can have no room for its timing bank.
+            // Retrying it unchanged cannot improve the state: charge its carrier
+            // corridor so the next search explores a different tunable topology.
+            if (
+              !candidate &&
+              length(raw.trace.route) < (minimums.get(c.name) ?? 0) - 1e-8
+            ) {
+              for (const wire of physical(raw.trace)) {
+                if (wire.layer !== input.allowedLayers![0]) continue
+                projector.penalizeIntersection(
+                  history[1],
+                  wire.a,
+                  wire.b,
+                  wire.a,
+                  wire.b,
+                  wire.radius + clearance,
+                  true,
+                  2,
+                )
+              }
+            }
             // An honest provisional path supplies connectivity for later
             // repairs when its first bank cannot fit. It is still unfinished.
             if (!candidate && !old) candidate = raw.trace
