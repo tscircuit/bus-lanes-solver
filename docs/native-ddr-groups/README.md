@@ -36,12 +36,15 @@ Other inputs keep the existing solver path. No capacitor is moved automatically.
 | Layout | Upstream | Production change |
 | --- | --- | --- |
 | RAM (0, -29) mm | Failed after 81.160 s, `no_planar_route` | **47/47, 136.981 s routing; 163.288 s including independent audit** |
-| RAM (0, -25) mm | Comparison pending | Earlier attempt failed; final comparison pending |
+| RAM (0, -25) mm | Failed after 64.676 s, `no_planar_route` | Failed after 44.564 s, `native_group_matching_failed` |
 
 The first comparison establishes completion where upstream fails, not a speedup
 between two successful runs. Both runs start without routes, use identical input
 hashes and a 300-second budget. Input bytes remain unchanged. The second layout
 is included to expose the remaining placement sensitivity, not counted as a pass.
+Aggregate completion improves from 0/2 to 1/2; no previously solved case in this
+two-layout comparison regresses. Failed cases have no accepted connectivity,
+DRC, skew or coupling result.
 
 For the accepted route:
 
