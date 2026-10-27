@@ -28,6 +28,23 @@ const routed = solver.getOutput()
 
 The `BusLanesSolver` core requires exactly two terminals on the same fixed layer and emits a planar carrier without vias. The integrated pipeline composes this core with owned terminal escapes and can add manufactured surface transitions for explicit TOP/BOTTOM inputs. Existing copper and obstacles remain fixed. Geometric winding sweeps, seam rotations and reverse searches choose lane order; planar congestion, crossed lane orders, unsupported constraints, and exhausted search budgets produce explicit failures. A bounded visibility-graph search failure is not a proof that no continuous planar solution exists.
 
+## AM3352 1 GB outer-layer repro
+
+The [captured 50-signal case](tests/fixtures/am3352-1gb-outer-layers/README.md)
+preserves the exact input and both observed timeouts from bus-lanes-solver
+0.0.35. It uses four physical layers, top/bottom signal carriers, and 0.45/0.25 mm
+vias. The case includes no reference pours or power fanouts.
+
+```sh
+bun run repro:am3352-1gb --steps 10000 --seconds 30
+```
+
+The opt-in CLI defaults to local source and records bounded diagnostic results
+under `.cache`. `--recorded-bundle` verifies and replays the original 0.0.35
+bundle. The Cosmos fixture **am3352-1gb-outer-layers** loads the same hash-checked
+input for interactive debugging. Loading the fixture and its integrity test
+do not run a long solve. See the case README for full replay instructions.
+
 ## Matched single-layer routing
 
 The `control-inner1` AM3352 sample uses the pipeline's default matched goal.
