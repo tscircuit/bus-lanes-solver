@@ -22,8 +22,19 @@ test("real TSX pads and bus produce a complete matched pipeline output", async (
   expect(measureReturnGap(traces).edgeGap).toBeGreaterThanOrEqual(0.1 - 1e-8)
 })
 
-test.failing("TSX pipeline retains the documented three-width return-leg spacing", async () => {
+test("omitting the option preserves legacy smooth spacing", async () => {
   const { solver } = await solved
+  expect(measureReturnGap(solver.getOutput().traces!).edgeGap).toBeCloseTo(
+    0.14,
+    8,
+  )
+})
+
+test("TSX pipeline honors an explicit three-width return-leg spacing", async () => {
+  const input = { ...(await meanderReturnGapInput()), minMeanderGap: 0.2 }
+  const solver = new BusLanesPipelineSolver(input, { fanout: "none" })
+  solver.solve()
+  expect(solver.solved).toBe(true)
   expect(
     measureReturnGap(solver.getOutput().traces!).edgeGap,
   ).toBeGreaterThanOrEqual(0.2 - 1e-8)

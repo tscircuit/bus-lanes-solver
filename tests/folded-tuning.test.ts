@@ -75,7 +75,7 @@ test("additional folds fit the same correction in a shorter, taller pocket", () 
   expect(foldedPairedLobes(a, b, 0, 0.1, 3, 1, 0.12)).toBeNull()
 })
 
-test("the tuner uses a folded cell inside a blocked pocket without widening the route", async () => {
+test("the tuner refuses a sub-3W pocket and matches in a wider clear pocket", async () => {
   const { tuneSmoothLengths } = await import("../lib/smooth-length-tuning")
   const { VectorScene, fixedCopper, routeCopper } = await import(
     "../lib/vector-scene"
@@ -91,6 +91,7 @@ test("the tuner uses a folded cell inside a blocked pocket without widening the 
     layerCount: 2,
     minTraceWidth: 0.1,
     minTraceToPadEdgeClearance: 0.075,
+    minMeanderGap: 0.2,
     bounds: { minX: -1, maxX: 11, minY: -1, maxY: 5 },
     connections: [
       { name: "D", pointsToConnect: t.route as import("../lib/types").Wire[] },
@@ -119,20 +120,23 @@ test("the tuner uses a folded cell inside a blocked pocket without widening the 
       },
     ],
   }
+  // The old 0.775 mm pocket only fit sub-3W returns. Reject it honestly.
+  expect(() =>
+    tuneSmoothLengths(input, [t], new Map([["D", 18]]), {
+      packMeanders: true,
+      maxCandidates: 4096,
+    }),
+  ).toThrow("Insufficient tuning clearance")
+  input.obstacles[1].center.y = 1.6
   const before = structuredClone(input)
   const result = tuneSmoothLengths(input, [t], new Map([["D", 18]]), {
     packMeanders: true,
     maxCandidates: 4096,
   })
   expect(length(result[0].route)).toBeCloseTo(18, 8)
-  expect(
-    result[0].route.some(
-      (p, i) => i > 0 && p.x < result[0].route[i - 1].x - 0.01,
-    ),
-  ).toBe(true)
-  expect(Math.max(...result[0].route.map((p) => p.y))).toBeLessThan(0.775)
+  expect(Math.max(...result[0].route.map((p) => p.y))).toBeLessThan(0.975)
   expect(routeAnglesAreConventional(result)).toBe(true)
-  expect(tuningPathIsSelfClear(result[0].route, 0.175)).toBe(true)
+  expect(tuningPathIsSelfClear(result[0].route, 0.3)).toBe(true)
   expect(
     new VectorScene(input, input.connections[0], 0.1, [
       ...fixedCopper(input),

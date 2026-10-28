@@ -1,3 +1,4 @@
+import { meanderReturnSpacing } from "./meander-spacing"
 import { createTerminalViaClearanceChecker } from "./terminal-via-clearance"
 import { routeAnglesAreConventional } from "./route-angle-validation"
 import { foldedTuningLobes } from "./folded-tuning"
@@ -74,8 +75,10 @@ export function tuneSmoothLengths(
             width + (pair.traceGap ?? clearance) / 2 + clearance,
           )
         : []
-    const returnSpacing = width + clearance
-    const pitch = 4 * Math.max(width * 1.2, clearance)
+    const returnSpacing = meanderReturnSpacing(input, width)
+    const minRadius = Math.max(width * 1.2, clearance)
+    const returnRadius = Math.max(minRadius, returnSpacing / 2)
+    const pitch = 4 * minRadius
     // Tune the long interior runs before considering short terminal approaches.
     const segments = t.route
       .slice(1)
@@ -87,7 +90,7 @@ export function tuneSmoothLengths(
           span > 1e-8
             ? { x: -(p.y - a.y) / span, y: (p.x - a.x) / span }
             : { x: 0, y: 0 }
-        const height = 2 * Math.max(width * 1.2, clearance)
+        const height = 2 * minRadius
         const openSides = [-1, 1].filter((side) =>
           scene.visible(midpoint, {
             x: midpoint.x + side * normal.x * height,
@@ -218,7 +221,12 @@ export function tuneSmoothLengths(
                 delta,
                 teeth,
                 side,
-                Math.max(width * 1.2, clearance),
+                // A single lobe has no adjacent cells: its span supplies the
+                // return gap. Repeated/folded cells need the wider radius.
+                createLobes === smoothTuningLobes ||
+                  (createLobes === roundedTuningLobes && teeth === 1)
+                  ? minRadius
+                  : returnRadius,
               )
               if (
                 !lobes ||

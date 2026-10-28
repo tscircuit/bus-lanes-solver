@@ -1,3 +1,4 @@
+import { meanderReturnSpacing } from "./meander-spacing"
 import { offsetPath } from "./coupled-pair-routing"
 import { distance } from "./geometry"
 import { tuningPathIsSelfClear } from "./length-tuning"
@@ -84,7 +85,7 @@ export function roundCoupledReturnBends(
       if (
         radius <
         halfSpacing / Math.cos(Math.PI / (2 * chords)) +
-          (width + clearance) / 2 +
+          meanderReturnSpacing(input, width) / 2 +
           1e-8
       )
         continue
@@ -133,7 +134,10 @@ export function roundCoupledReturnBends(
       if (
         candidate.some(
           (t) =>
-            !tuningPathIsSelfClear(t.route, width + clearance) ||
+            !tuningPathIsSelfClear(
+              t.route,
+              meanderReturnSpacing(input, width),
+            ) ||
             !new VectorScene(
               input,
               input.connections.find((c) => c.name === t.connection_name)!,

@@ -143,6 +143,25 @@ The main review path is:
 - `buses[].traceWidth`: explicit width in millimeters; otherwise uses connection `nominalTraceWidth` / `width`, then `minTraceWidth`.
 - `buses[].allowedLayers`: must contain the fixed terminal layer.
 - `differentialPairs[].lengthTolerance`: supported as a routed-length constraint. Pairs with `traceGap` use a shared corridor. An explicit `maxUncoupledLength` bounds total uncoupled copper, including fixed fanouts.
+- `minMeanderGap`: optional minimum **edge-to-edge** gap, in millimetres, between returning arms of a trace. It applies during tuning and final output validation. Omission preserves legacy behavior: the octilinear tuner defaults to two trace widths of edge gap, while smooth tuning uses the existing electrical clearance floor. Smooth tuning therefore does **not** guarantee 3W centerline spacing by default. To request 3W for 0.1 mm copper, set `minMeanderGap: 0.2`. The existing clearance floor always applies (`minTraceToPadEdgeClearance`, then `defaultObstacleMargin`, then 0.075 mm), even with a smaller requested value. This does not enlarge pad clearance or the gap between differential rails (`traceGap`).
+
+For wider, less frequent returning bends, supply the gap on the routing input:
+
+```ts
+const solver = new BusLanesPipelineSolver({ ...input, minMeanderGap: 0.5 })
+solver.solve()
+if (!solver.solved) throw Error(solver.error ?? "Routing failed")
+```
+
+With a 0.1 mm trace, this requests at least 0.5 mm between copper edges / 0.6 mm
+between centerlines. Smooth, octilinear, packed and shared-pair tuners use the
+same spacing rule, including generated terminal corrections and final matched
+output validation for an explicit request. Smooth chords on a continuous local bend are not separate
+returning arms; a shallow correction can retain its existing bend radius.
+Supplied fixed copper is not moved. A finite nonnegative value is required;
+infeasible matching or exhausted search fails instead of relaxing the gap.
+The existing connectivity-only goal does not perform length tuning.
+See the [annotated TSX reproduction and after images](docs/meander-return-gap/README.md).
 
 Matching includes both fixed fanouts and the routes produced by this phase. It measures XY copper length; via depth, layer-dependent propagation velocity, and package delays are not inferred. No impedance or delay defaults are supplied. Matching uses the existing core SRJ fields: bus `maxLengthSkew` and differential-pair `lengthTolerance` (mapped from the JSX pair’s `maxLengthSkew`). Routes already inside the bound remain untuned; shorter routes grow only to the permitted lower bound. Overlapping bus and pair constraints are resolved together without forcing exact equality.
 
@@ -334,7 +353,7 @@ This spends available longitudinal space on more cells, reducing transverse
 excursion without tightening bend radii or separating pairs. Existing fanouts
 remain fixed, and wider candidates remain available when compact packing fails.
 
-Length tuning prioritizes long runs over short terminal approaches and centers evenly pitched serpentine lobes along them. The integrated preset uses rounded curves for both individual lanes and shared pair centerlines. Lobe count scales with the required added length, spreading large corrections without turning small corrections into dense teeth. Chamfers scale with lobe dimensions instead of a fixed microscopic corner cut. Returning arms retain at least three trace widths of center-to-center spacing (and the requested copper clearance). When the shortest lanes leave no room, the router opens an octilinear central corridor in winding order and rematches all affected bus lengths. Endpoints and fixed fanouts remain unchanged.
+Length tuning prioritizes long runs over short terminal approaches and centers evenly pitched serpentine lobes along them. The integrated preset uses rounded curves for both individual lanes and shared pair centerlines. Lobe count scales with the required added length, spreading large corrections without turning small corrections into dense teeth. Chamfers scale with lobe dimensions instead of a fixed microscopic corner cut. Returning arms honor `minMeanderGap` and electrical clearance; request an edge gap of two trace widths for 3W center-to-center spacing. Omitting the option preserves legacy tuner spacing. When the shortest lanes leave no room, the router opens an octilinear central corridor in winding order and rematches all affected bus lengths. Endpoints and fixed fanouts remain unchanged.
 
 The [routed artifacts](./docs/routed-ddr) contain complete boards. All new carrier bends in the DDR samples are checked to turn by at most 45 degrees; length matching and combined-copper DRC remain mandatory.
 

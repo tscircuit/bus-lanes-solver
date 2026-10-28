@@ -92,6 +92,18 @@ test("rejects a return whose inner rail would violate self clearance", () => {
   expect(roundCoupledReturnBends(input, traces)).toEqual(traces)
 })
 
+test("a larger requested gap prevents rounding an underspaced paired return", () => {
+  const { input, traces } = fixture([
+    { x: 0.69, y: 0.69 },
+    { x: 0, y: 0 },
+    { x: 0.68, y: 0 },
+    { x: 1.94, y: 1.26 },
+  ])
+  expect(
+    roundCoupledReturnBends({ ...input, minMeanderGap: 0.2 }, traces),
+  ).toEqual(traces)
+})
+
 test("fixed copper inside the rounded path prevents the replacement", () => {
   const { input, traces } = fixture([
     { x: 3, y: 0 },

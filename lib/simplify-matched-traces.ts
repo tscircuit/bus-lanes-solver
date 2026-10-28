@@ -1,3 +1,4 @@
+import { meanderReturnSpacing } from "./meander-spacing"
 import { distance, length, simplify } from "./geometry"
 import { fixedCopper, routeCopper, VectorScene } from "./vector-scene"
 import { tuningPathIsSelfClear } from "./length-tuning"
@@ -117,7 +118,12 @@ export function simplifyMatchedTraces(
               })),
               ...trace.route.slice(j + 1),
             ]
-            if (!tuningPathIsSelfClear(candidate, width / 2 + scene.margin))
+            if (
+              !tuningPathIsSelfClear(
+                candidate,
+                meanderReturnSpacing(input, width),
+              )
+            )
               continue
             const delta = replacement.length - (j - i + 1)
             trace.route = candidate
