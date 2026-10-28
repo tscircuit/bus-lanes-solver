@@ -76,7 +76,6 @@ export function tuneSmoothLengths(
           )
         : []
     const returnSpacing = meanderReturnSpacing(input, width)
-    const traceSpacing = meanderReturnSpacing(input, width, 0)
     const minRadius = Math.max(width * 1.2, clearance)
     const returnRadius = Math.max(minRadius, returnSpacing / 2)
     const pitch = 4 * minRadius
@@ -222,10 +221,12 @@ export function tuneSmoothLengths(
                 delta,
                 teeth,
                 side,
-                // A shallow cosine can fit a small correction without a
-                // returning leg. Rounded/folded cells need the wider radius;
-                // every shape still passes the same return-spacing predicate.
-                createLobes === smoothTuningLobes ? minRadius : returnRadius,
+                // A single lobe has no adjacent cells: its span supplies the
+                // return gap. Repeated/folded cells need the wider radius.
+                createLobes === smoothTuningLobes ||
+                  (createLobes === roundedTuningLobes && teeth === 1)
+                  ? minRadius
+                  : returnRadius,
               )
               if (
                 !lobes ||
@@ -237,22 +238,9 @@ export function tuneSmoothLengths(
                 continue
               const bump: Point[] = [a, ...lobes, b]
               if (!scene.pathVisible(bump)) continue
-              const proposed = [
-                ...t.route.slice(0, i),
-                ...bump,
-                ...t.route.slice(i + 2),
-              ]
-              if (
-                returnSpacing > traceSpacing &&
-                !tuningPathIsSelfClear(proposed, returnSpacing, [
-                  i,
-                  i + bump.length - 2,
-                ])
-              )
-                continue
               const next = (
                 t.coupledSection ? (points: Point[]) => points : simplify
-              )(proposed)
+              )([...t.route.slice(0, i), ...bump, ...t.route.slice(i + 2)])
               if (
                 Math.abs(length(next) + fixedLength - (currentLength + delta)) >
                 1e-6
@@ -260,7 +248,7 @@ export function tuneSmoothLengths(
                 continue
               if (
                 !terminalViaCopperIsClear(next) ||
-                !tuningPathIsSelfClear(next, traceSpacing)
+                !tuningPathIsSelfClear(next, returnSpacing)
               )
                 continue
               const candidate: Trace = {

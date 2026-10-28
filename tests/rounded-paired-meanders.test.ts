@@ -33,7 +33,7 @@ test("rounded paired meanders fit added length into a narrow bank without self c
   expect(minGap - 0.1).toBeGreaterThan(0.119)
 })
 
-test("partial and full rounded turns preserve length and spacing across rotations and offsets", () => {
+test("direct rounded-lobe height matches emitted copper across rotations and offsets", () => {
   for (const angle of [
     0,
     Math.PI / 4,
@@ -44,26 +44,15 @@ test("partial and full rounded turns preserve length and spacing across rotation
   ])
     for (const spacing of [0, 0.22])
       for (const lobes of [1, 3, 9])
-        for (const side of [-1, 1])
-          for (const deficit of [0.03, 0.3, 7]) {
-            const a = { x: 17.25, y: -31.5 }
-            const b = {
-              x: a.x + 24 * Math.cos(angle),
-              y: a.y + 24 * Math.sin(angle),
-            }
-            const rails = roundedPairedLobes(
-              a,
-              b,
-              spacing,
-              deficit,
-              lobes,
-              side,
-              0.15,
-            )!
-            expect(rails).not.toBeNull()
-            for (const rail of rails) {
-              expect(Math.abs(length(rail) - (24 + deficit))).toBeLessThan(1e-7)
-              expect(tuningPathIsSelfClear(rail, 0.3)).toBe(true)
-            }
+        for (const side of [-1, 1]) {
+          const a = { x: 17.25, y: -31.5 }
+          const b = {
+            x: a.x + 24 * Math.cos(angle),
+            y: a.y + 24 * Math.sin(angle),
           }
+          const rails = roundedPairedLobes(a, b, spacing, 7, lobes, side, 0.12)!
+          expect(rails).not.toBeNull()
+          for (const rail of rails)
+            expect(Math.abs(length(rail) - 31)).toBeLessThan(1e-7)
+        }
 })

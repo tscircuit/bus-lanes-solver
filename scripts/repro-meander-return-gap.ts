@@ -5,13 +5,13 @@ import { BusLanesPipelineSolver, busLengthReports } from "../lib"
 import { meanderReturnGapInput } from "../tests/fixtures/meander-return-gap"
 import { measureReturnGap } from "../tests/fixtures/measure-return-gap"
 
-const mode = process.argv[2] ?? "default"
-if (!["default", "wide", "paired"].includes(mode))
-  throw Error("Expected default, wide, or paired")
-const requestedGap = mode === "default" ? 0.2 : 0.5
+const mode = process.argv[2] ?? "three-widths"
+if (!["three-widths", "wide", "paired"].includes(mode))
+  throw Error("Expected three-widths, wide, or paired")
+const requestedGap = mode === "three-widths" ? 0.2 : 0.5
 const input = {
   ...(await meanderReturnGapInput({ paired: mode === "paired" })),
-  ...(mode === "default" ? {} : { minMeanderGap: requestedGap }),
+  minMeanderGap: requestedGap,
 }
 const solver = new BusLanesPipelineSolver(input, { fanout: "none" })
 solver.solve()
@@ -57,7 +57,7 @@ const tick = (p: typeof a) =>
 const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="740" viewBox="0 0 1200 740">
 <rect width="1200" height="740" fill="#101a26"/>
 <g fill="#e8eef5" font-family="sans-serif">
-<text x="40" y="48" font-size="28">${mode === "default" ? "Corrected default" : mode === "wide" ? "Requested wider gap" : "Shared pair with wider return gap"}: smooth meanders</text>
+<text x="40" y="48" font-size="28">${mode === "three-widths" ? "Requested 3W spacing" : mode === "wide" ? "Requested wider gap" : "Shared pair with wider return gap"}: smooth meanders</text>
 <text x="40" y="82" font-size="17">Real TSX → core SRJ conversion → BusLanesPipelineSolver · top copper · all dimensions in mm</text>
 <text x="40" y="130" font-size="20">Complete routed board · ${traces.length} / ${traces.length} signals</text>
 <text x="680" y="130" font-size="20">Measured returning straight legs</text>

@@ -77,7 +77,7 @@ function validate(input: SimpleRouteJson, before: Trace[], after: Trace[]) {
         t.route,
       ),
     ).toBe(true)
-    expect(tuningPathIsSelfClear(t.route, 0.3)).toBe(true)
+    expect(tuningPathIsSelfClear(t.route, 0.2)).toBe(true)
   }
 }
 
@@ -89,7 +89,7 @@ test("packed single-lane meanders use the available run to reduce transverse hei
   const packed = tuneSmoothLengths(input, traces, targets, {
     packMeanders: true,
   })
-  expect(height(packed[0])).toBeLessThan(height(wide[0]) * 0.75)
+  expect(height(packed[0])).toBeLessThan(height(wide[0]) * 0.7)
   validate(input, traces, packed)
   expect(traces).toEqual(original)
 })

@@ -145,8 +145,11 @@ test("unsmoothed paired tuning fails honestly when it cannot preserve the corrid
   expect(() => solver.getOutput()).toThrow()
 })
 
-test("default spacing follows actual trace width under a 45-degree TSX placement", async () => {
-  const input = await meanderReturnGapInput({ width: 0.15, rotation: 45 })
+test("edge gap uses actual copper width under a 45-degree TSX placement", async () => {
+  const input = {
+    ...(await meanderReturnGapInput({ width: 0.15, rotation: 45 })),
+    minMeanderGap: 0.3,
+  }
   const solver = new BusLanesPipelineSolver(input, { fanout: "none" })
   solver.solve()
   expect(solver.error).toBeNull()

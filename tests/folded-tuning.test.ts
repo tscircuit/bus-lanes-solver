@@ -91,6 +91,7 @@ test("the tuner refuses a sub-3W pocket and matches in a wider clear pocket", as
     layerCount: 2,
     minTraceWidth: 0.1,
     minTraceToPadEdgeClearance: 0.075,
+    minMeanderGap: 0.2,
     bounds: { minX: -1, maxX: 11, minY: -1, maxY: 5 },
     connections: [
       { name: "D", pointsToConnect: t.route as import("../lib/types").Wire[] },

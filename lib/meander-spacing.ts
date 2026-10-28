@@ -2,13 +2,11 @@ import type { SimpleRouteJson } from "./types"
 
 /** Centerline distance for returning arms of one trace, in mm. This does not
  * change the spacing between differential rails or any obstacle clearance.
- * New tuning defaults to 3W centerline. Pass defaultGap=0 when validating or
- * rounding existing geometry: retain its physical clearance unless the caller
- * explicitly requests a larger gap. */
+ * Omission preserves each tuner's existing default and electrical clearance. */
 export function meanderReturnSpacing(
   input: SimpleRouteJson,
   width: number,
-  defaultGap = 2 * width,
+  defaultGap = 0,
 ) {
   const gap = input.minMeanderGap ?? defaultGap
   if (!Number.isFinite(gap) || gap < 0)

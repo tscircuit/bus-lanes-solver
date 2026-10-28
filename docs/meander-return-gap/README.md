@@ -5,7 +5,7 @@
 Run `bun install`, then
 `bun test tests/meander-return-gap.test.ts tests/min-meander-gap.test.ts`.
 Generate the corrected images with
-`bun scripts/repro-meander-return-gap.ts default`,
+`bun scripts/repro-meander-return-gap.ts three-widths`,
 `bun scripts/repro-meander-return-gap.ts wide`, and
 `bun scripts/repro-meander-return-gap.ts paired`.
 The preserved before image comes from the reproduction commit `18c72ec`;
@@ -23,16 +23,17 @@ with a 0.100 mm trace. The documented three-width centerline floor would require
 0.300 mm center-to-center / 0.200 mm edge-to-edge. Pad clearance is a separate
 constraint. Both signals are complete and their bus skew is 0.010 mm.
 
-The ordinary tests prove the fixture solves and meets the documented spacing.
-The reproduction commit marked only the spacing assertion `test.failing`;
-the fix removes that marker.
+The ordinary tests prove the fixture solves, preserves legacy spacing when the
+option is omitted, and meets 3W when `minMeanderGap: 0.2` is supplied. The
+reproduction commit marked the old blanket 3W assertion `test.failing`; the fix
+corrects that documentation and tests the explicit request without that marker.
 `measure-return-gap.ts` independently measures overlapping antiparallel long
 segments, excluding sampled arc chords; it does not call the solver's spacing
 predicate. `before.json` records the measured points and complete bus report.
 
-## After: default and requested spacing
+## After: explicitly requested spacing
 
-![Corrected default: 0.200 mm edge gap](default.png)
+![Requested 3W: 0.200 mm edge gap](three-widths.png)
 
 ![Requested 0.500 mm edge gap](wide.png)
 
@@ -40,8 +41,8 @@ predicate. `before.json` records the measured points and complete bus report.
 
 | Case | Measured edge gap | Centerline spacing | Bus skew |
 | --- | ---: | ---: | ---: |
-| Before | 0.140 mm | 0.240 mm | 0.010 mm |
-| Corrected default | 0.200 mm | 0.300 mm | 0.010 mm |
+| Before / unchanged default | 0.140 mm | 0.240 mm | 0.010 mm |
+| `minMeanderGap: 0.2` (3W) | 0.200 mm | 0.300 mm | 0.010 mm |
 | `minMeanderGap: 0.5` | 0.500 mm | 0.600 mm | 0.010 mm |
 | Shared pair, `minMeanderGap: 0.5` | 0.516 mm | 0.616 mm | 0.010 mm |
 
@@ -60,28 +61,19 @@ successful but uncoupled/underspaced route. Smooth shared-pair tuning succeeds.
 
 ## Benchmark effect
 
-The reproduction changes no solver implementation or AM3352 fixtures. The
-stacked fix tightens the smooth tuner's formerly inconsistent default, so its
-routing geometry and search behavior can change. A pocket that only fits the
-old 0.140 mm returns may now fail; the confined-pocket regression checks that
-failure and a successful wider pocket without lowering any clearance or timing
-check. The packed-bank height comparison permits 25% rather than 30% savings
-while strengthening its self-spacing assertion from 0.200 to 0.300 mm.
+The reproduction changes no solver implementation or AM3352 fixtures. The fix
+preserves legacy behavior when the option is absent: octilinear tuning defaults
+to a 2W edge gap, while smooth tuning retains its electrical clearance floor.
+The public AM3352 inputs remain unchanged. No electrical, timing, coupling or
+connectivity check is lowered.
 
-Rounded cells also support partial turns, retaining their radius when a small
-length correction cannot accommodate four full quarter-turns. Rotated and paired
-cases check their emitted length and self-spacing; small real-TSX corrections
-also pass native copper DRC and bus/pair matching.
-
-The default edge gap for new tuning is two trace widths. Existing native-route
-corners retain their electrical clearance; each new bank is checked against
-the whole route without retroactively imposing the new default on unrelated
-geometry. An explicit `minMeanderGap` also applies to whole-output validation.
-It replaces the default preference but never lowers electrical clearance.
-The compact generated-stub and folded-budget unit fixtures opt
-into their original physical clearance (0.100/0.075 mm); their electrical,
-timing and coupling assertions are unchanged. Public AM3352 benchmark inputs
-are unchanged and exercise the stricter default with fresh solves.
+An explicit value applies during smooth, octilinear, packed/folded and paired
+tuning and at final output acceptance. A pocket that only fits the legacy
+0.140 mm returns can fail when 0.200 mm is requested. The confined-pocket test
+checks that failure and a successful wider pocket. Small corrections may use
+a shallow curve or a single lobe at the existing radius if its returning arms
+already satisfy the requested gap; repeated cells use a larger radius when
+necessary. Small real-TSX cases also pass copper DRC and bus/pair matching.
 
 Fresh base/head AM3352 runs remain required by `AGENTS.md`. Each PR's Blacksmith
 matrix runs all 11 samples with 3,600 seconds per solver/sample and retains the
