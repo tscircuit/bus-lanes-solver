@@ -185,7 +185,7 @@ export function* tuneGeneratedOrdinaryEscapes(
         !scene.pathVisible(tuned.route) ||
         !tuningPathIsSelfClear(
           tuned.route,
-          meanderReturnSpacing(input, pad.width),
+          meanderReturnSpacing(input, pad.width, 0),
         ) ||
         !createTerminalViaClearanceChecker(stubInput, stub, {
           preserveExistingApproach: false,

@@ -9,7 +9,7 @@ import {
   type Trace,
 } from "../lib"
 import { joinedSignalGeometryIsValid } from "../lib/joined-signal-geometry"
-import { tuneLengths } from "../lib/length-tuning"
+import { tuneLengths, tuningPathIsSelfClear } from "../lib/length-tuning"
 import { minimumLengthTargets } from "../lib/route-lengths"
 import { sharedPairSpacingReports } from "../lib/shared-pair-spacing"
 import { tuneSmoothLengths } from "../lib/smooth-length-tuning"
@@ -83,12 +83,12 @@ for (const kind of [
     validate(input, result, 0.5)
   })
 
-test("a smaller explicit gap cannot weaken the default three-width floor", async () => {
+test("an explicit smaller gap retains the existing electrical clearance", async () => {
   const input = { ...(await inputs[0]), minMeanderGap: 0 }
   const solver = new BusLanesPipelineSolver(input, { fanout: "none" })
   solver.solve()
   expect(solver.solved).toBe(true)
-  validate(input, solver.getOutput().traces!, 0.2)
+  validate(input, solver.getOutput().traces!, 0.1)
 })
 
 test("final carrier and joined-signal validators reject a matched but too-narrow meander", async () => {
@@ -153,3 +153,32 @@ test("default spacing follows actual trace width under a 45-degree TSX placement
   expect(solver.solved).toBe(true)
   validate(input, solver.getOutput().traces!, 0.3)
 })
+
+test.each([false, true])(
+  "small TSX corrections retain a wide gap without full returning legs (paired=%s)",
+  async (paired) => {
+    const input = {
+      ...(await meanderReturnGapInput({ paired, extraLength: 0.3 })),
+      minMeanderGap: 0.5,
+    }
+    const solver = new BusLanesPipelineSolver(input, { fanout: "none" })
+    solver.solve()
+    expect(solver.error).toBeNull()
+    expect(solver.solved).toBe(true)
+    const traces = solver.getOutput().traces!
+    expect(traces.some((t) => t.curvedSegments?.length)).toBe(true)
+    expect(traces.every((t) => tuningPathIsSelfClear(t.route, 0.6))).toBe(true)
+    expect(busLengthReports(input, traces).every((r) => r.matched)).toBe(true)
+    expect(pairLengthReports(input, traces).every((r) => r.matched)).toBe(true)
+    expect(
+      sharedPairSpacingReports(input, traces).every((r) => r.matched),
+    ).toBe(true)
+    expect(
+      validateRoutedCopperDrc({
+        inputSrj: input,
+        routedSrj: solver.getOutput(),
+        clearance: 0.1,
+      } as unknown as Parameters<typeof validateRoutedCopperDrc>[0]).valid,
+    ).toBe(true)
+  },
+)

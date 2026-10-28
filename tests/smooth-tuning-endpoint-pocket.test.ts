@@ -53,7 +53,7 @@ test("a compact smooth bank uses a terminal pocket when the remaining approach h
     tuned.route.slice(index - 1, index + 1),
   )
   expect(Math.max(...curvedPoints.map((point) => point.x))).toBeLessThan(0.8)
-  expect(tuningPathIsSelfClear(tuned.route, 0.2)).toBe(true)
+  expect(tuningPathIsSelfClear(tuned.route, 0.3)).toBe(true)
   expect(
     new VectorScene(
       input,

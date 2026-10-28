@@ -76,6 +76,7 @@ export function tuneSmoothLengths(
           )
         : []
     const returnSpacing = meanderReturnSpacing(input, width)
+    const traceSpacing = meanderReturnSpacing(input, width, 0)
     const minRadius = Math.max(width * 1.2, clearance)
     const returnRadius = Math.max(minRadius, returnSpacing / 2)
     const pitch = 4 * minRadius
@@ -236,9 +237,22 @@ export function tuneSmoothLengths(
                 continue
               const bump: Point[] = [a, ...lobes, b]
               if (!scene.pathVisible(bump)) continue
+              const proposed = [
+                ...t.route.slice(0, i),
+                ...bump,
+                ...t.route.slice(i + 2),
+              ]
+              if (
+                returnSpacing > traceSpacing &&
+                !tuningPathIsSelfClear(proposed, returnSpacing, [
+                  i,
+                  i + bump.length - 2,
+                ])
+              )
+                continue
               const next = (
                 t.coupledSection ? (points: Point[]) => points : simplify
-              )([...t.route.slice(0, i), ...bump, ...t.route.slice(i + 2)])
+              )(proposed)
               if (
                 Math.abs(length(next) + fixedLength - (currentLength + delta)) >
                 1e-6
@@ -246,7 +260,7 @@ export function tuneSmoothLengths(
                 continue
               if (
                 !terminalViaCopperIsClear(next) ||
-                !tuningPathIsSelfClear(next, returnSpacing)
+                !tuningPathIsSelfClear(next, traceSpacing)
               )
                 continue
               const candidate: Trace = {

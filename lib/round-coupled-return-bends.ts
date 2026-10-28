@@ -85,7 +85,7 @@ export function roundCoupledReturnBends(
       if (
         radius <
         halfSpacing / Math.cos(Math.PI / (2 * chords)) +
-          meanderReturnSpacing(input, width) / 2 +
+          meanderReturnSpacing(input, width, 0) / 2 +
           1e-8
       )
         continue
@@ -136,7 +136,7 @@ export function roundCoupledReturnBends(
           (t) =>
             !tuningPathIsSelfClear(
               t.route,
-              meanderReturnSpacing(input, width),
+              meanderReturnSpacing(input, width, 0),
             ) ||
             !new VectorScene(
               input,

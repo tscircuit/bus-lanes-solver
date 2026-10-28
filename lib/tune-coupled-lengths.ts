@@ -54,6 +54,7 @@ export function tuneCoupledLengths(
       clearance =
         input.minTraceToPadEdgeClearance ?? input.defaultObstacleMargin ?? 0.075
     const returnSpacing = meanderReturnSpacing(input, width)
+    const traceSpacing = meanderReturnSpacing(input, width, 0)
     const minRadius = Math.max(width * 1.2, clearance, returnSpacing / 2)
     let accepted: Trace[] | undefined
     for (const folded of options.packMeanders ? [false, true] : [false]) {
@@ -200,7 +201,12 @@ export function tuneCoupledLengths(
                     width,
                     copper,
                   ).pathVisible(t.route) ||
-                  !tuningPathIsSelfClear(t.route, returnSpacing) ||
+                  (returnSpacing > traceSpacing &&
+                    !tuningPathIsSelfClear(t.route, returnSpacing, [
+                      k === 0 ? i : j,
+                      (k === 0 ? i : j) + ordered[k].length,
+                    ])) ||
+                  !tuningPathIsSelfClear(t.route, traceSpacing) ||
                   total(t) < targets.get(t.connection_name!)! - 1e-6,
               )
             )

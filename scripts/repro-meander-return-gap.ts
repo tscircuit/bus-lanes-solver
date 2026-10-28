@@ -11,7 +11,7 @@ if (!["default", "wide", "paired"].includes(mode))
 const requestedGap = mode === "default" ? 0.2 : 0.5
 const input = {
   ...(await meanderReturnGapInput({ paired: mode === "paired" })),
-  minMeanderGap: requestedGap,
+  ...(mode === "default" ? {} : { minMeanderGap: requestedGap }),
 }
 const solver = new BusLanesPipelineSolver(input, { fanout: "none" })
 solver.solve()

@@ -77,6 +77,9 @@ function fixture() {
     layerCount: 4,
     allowedLayers: ["top", "bottom"],
     minTraceWidth: 0.1,
+    // This compact ownership fixture uses the existing physical clearance.
+    // The default 0.2 mm return gap cannot fit the fixed terminal stub.
+    minMeanderGap: 0.1,
     minTraceToPadEdgeClearance: 0.1,
     minViaPadDiameter: 0.3,
     minViaHoleDiameter: 0.15,

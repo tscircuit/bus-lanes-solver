@@ -23,6 +23,7 @@ export function joinedSignalGeometryIsValid(params: {
       meanderReturnSpacing(
         input,
         run.reduce((w, p) => Math.max(w, p.width), 0),
+        0,
       ),
     )
   for (const point of trace.route) {

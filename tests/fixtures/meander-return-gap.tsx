@@ -2,7 +2,7 @@ import { Circuit, getSimpleRouteJsonFromCircuitJson, type Board } from "@tscircu
 import type { SimpleRouteJson } from "../../lib"
 
 /** Two physical one-pin pads at each end; the shorter lane needs 10 mm of tuning. */
-export async function meanderReturnGapInput({ paired = false, width = 0.1, rotation = 0 } = {}) {
+export async function meanderReturnGapInput({ paired = false, width = 0.1, rotation = 0, extraLength = 10 } = {}) {
   const angle = rotation * Math.PI / 180
   const circuit = new Circuit()
   circuit.add(
@@ -11,7 +11,7 @@ export async function meanderReturnGapInput({ paired = false, width = 0.1, rotat
         ["A", -10, -3],
         ["B", 0, -3],
         ["C", -10, 3],
-        ["D", 10, 3],
+        ["D", extraLength, 3],
         ...(paired ? [["E", -10, -3.22], ["F", 0, -3.22]] : []),
       ].map(([name, x, y]) => (
         <chip

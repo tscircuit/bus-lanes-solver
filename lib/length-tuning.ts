@@ -152,8 +152,14 @@ export function tuneLengths(
 }
 
 /** Returning arms must retain clearance; adjacent monotone corner geometry
- * belongs to the same uninterrupted copper body. */
-export function tuningPathIsSelfClear(path: Point[], required: number) {
+ * belongs to the same uninterrupted copper body. An optional inclusive segment
+ * range checks interactions involving newly inserted tuning; callers must also
+ * validate the entire path at its existing electrical clearance. */
+export function tuningPathIsSelfClear(
+  path: Point[],
+  required: number,
+  changedSegments?: [number, number],
+) {
   const cumulative = [0]
   const turning = [0]
   const unsafeBends = [0]
@@ -180,6 +186,12 @@ export function tuningPathIsSelfClear(path: Point[], required: number) {
   for (let i = 1; i < path.length; i++)
     cumulative.push(cumulative[i - 1] + distance(path[i - 1], path[i]))
   const pairIsClear = (i: number, j: number) => {
+    if (
+      changedSegments &&
+      (i < changedSegments[0] || i > changedSegments[1]) &&
+      (j < changedSegments[0] || j > changedSegments[1])
+    )
+      return true
     const a = path[i],
       b = path[i + 1],
       c = path[j],

@@ -143,7 +143,7 @@ The main review path is:
 - `buses[].traceWidth`: explicit width in millimeters; otherwise uses connection `nominalTraceWidth` / `width`, then `minTraceWidth`.
 - `buses[].allowedLayers`: must contain the fixed terminal layer.
 - `differentialPairs[].lengthTolerance`: supported as a routed-length constraint. Pairs with `traceGap` use a shared corridor. An explicit `maxUncoupledLength` bounds total uncoupled copper, including fixed fanouts.
-- `minMeanderGap`: minimum **edge-to-edge** gap, in millimetres, between returning arms of a generated trace. The effective gap is the maximum of this optional value, two trace widths, and the existing clearance floor (`minTraceToPadEdgeClearance`, then `defaultObstacleMargin`, then 0.075 mm). Thus the default retains at least three trace widths center-to-center. This is a same-trace return-spacing constraint; it does not enlarge pad clearance or the gap between differential rails (`traceGap`).
+- `minMeanderGap`: minimum **edge-to-edge** gap, in millimetres, between returning arms of a generated trace. New length-tuning meanders default to two trace widths, giving at least three trace widths center-to-center. Existing route corners retain their electrical clearance unless a value is supplied; an explicit value also applies at final output validation. The existing clearance floor always applies (`minTraceToPadEdgeClearance`, then `defaultObstacleMargin`, then 0.075 mm). An explicit smaller gap can retain the previous smooth-tuner spacing in a compact pocket, while all electrical clearance checks remain active. This does not enlarge pad clearance or the gap between differential rails (`traceGap`).
 
 For wider, less frequent returning bends, supply the gap on the routing input:
 
@@ -156,7 +156,7 @@ if (!solver.solved) throw Error(solver.error ?? "Routing failed")
 With a 0.1 mm trace, this requests at least 0.5 mm between copper edges / 0.6 mm
 between centerlines. Smooth, octilinear, packed and shared-pair tuners use the
 same spacing rule, including generated terminal corrections and final matched
-output validation. Smooth chords on a continuous local bend are not separate
+output validation for an explicit request. Smooth chords on a continuous local bend are not separate
 returning arms; a shallow correction can retain its existing bend radius.
 Supplied fixed copper is not moved. A finite nonnegative value is required;
 infeasible matching or exhausted search fails instead of relaxing the gap.

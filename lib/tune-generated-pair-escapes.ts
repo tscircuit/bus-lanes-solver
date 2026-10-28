@@ -108,7 +108,7 @@ export function* tuneGeneratedPairEscapes(
           !routeAnglesAreConventional([tuned]) ||
           !tuningPathIsSelfClear(
             tuned.route,
-            meanderReturnSpacing(input, pad.width),
+            meanderReturnSpacing(input, pad.width, 0),
           ) ||
           !createTerminalViaClearanceChecker(stubInput, stub, {
             preserveExistingApproach: false,

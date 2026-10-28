@@ -180,13 +180,34 @@ export function roundedPairedLobes(
   const span = distance(a, b),
     period = span / lobes,
     radius = minRadius + spacing / 2
-  if (deficit <= 0 || lobes < 1 || period < 4 * radius) return null
+  if (deficit <= 0 || lobes < 1 || period <= 0) return null
   const ux = (b.x - a.x) / span,
     uy = (b.y - a.y) / span
   const samples = Math.max(
     18,
     Math.ceil((Math.PI * radius) / (2 * Math.max(0.005, minRadius / 6))),
   )
+  // Small corrections use partial arcs at the same radius. Forcing four
+  // quarter-turns imposes a minimum added length and can reject a clear pocket.
+  // Solve against sampled chords, including the displaced horizontal runs.
+  let sweep = Math.PI / 2
+  const addition = (angle: number) =>
+    4 *
+    radius *
+    lobes *
+    (2 * samples * Math.sin(angle / (2 * samples)) - Math.sin(angle))
+  if (deficit < addition(sweep)) {
+    let lo = 0,
+      hi = sweep
+    for (let i = 0; i < 40; i++) {
+      const mid = (lo + hi) / 2
+      if (addition(mid) < deficit) lo = mid
+      else hi = mid
+    }
+    sweep = (lo + hi) / 2
+  }
+  const reach = radius * Math.sin(sweep)
+  if (period < 4 * reach) return null
   const railCount = spacing === 0 ? 1 : 2
   // Arc angles and offsets are invariant during the height bisection. Retain
   // the original arithmetic order so the final sampled points are identical.
@@ -199,10 +220,10 @@ export function roundedPairedLobes(
   }> = []
   for (let l = 0; l < lobes; l++)
     for (const [cx, raised, start, end] of [
-      [0, 0, -Math.PI / 2, 0],
-      [2 * radius, 1, Math.PI, Math.PI / 2],
-      [period - 2 * radius, 1, Math.PI / 2, 0],
-      [period, 0, Math.PI, Math.PI * 1.5],
+      [0, 0, -Math.PI / 2, -Math.PI / 2 + sweep],
+      [2 * reach, 1, Math.PI / 2 + sweep, Math.PI / 2],
+      [period - 2 * reach, 1, Math.PI / 2, Math.PI / 2 - sweep],
+      [period, 0, Math.PI * 1.5 - sweep, Math.PI * 1.5],
     ])
       for (let i = 0; i <= samples; i++) {
         const angle = start + ((end - start) * i) / samples,
@@ -270,7 +291,8 @@ export function roundedPairedLobes(
   // Increasing height extends exactly two straight legs per lobe. The
   // circular chords and horizontal runs retain their lengths, so emitted
   // copper length is affine in height; no amplitude bisection is necessary.
-  const minimumHeight = 2 * radius
+  const minimumHeight = 2 * radius * (1 - Math.cos(sweep))
+  if (sweep < Math.PI / 2) return generate(minimumHeight)
   const minimumAddition = added(minimumHeight)
   if (minimumAddition > deficit + 1e-8) return null
   let height =

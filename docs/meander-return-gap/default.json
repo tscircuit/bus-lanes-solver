@@ -5,14 +5,14 @@
     "centerline": 0.3000000000000007,
     "a": {
       "x": -8.65,
-      "y": -2.658044691772815,
+      "y": -2.6580446917728144,
       "route_type": "wire",
       "layer": "top",
       "width": 0.1
     },
     "b": {
       "x": -8.35,
-      "y": -2.658044691772815,
+      "y": -2.6580446917728144,
       "route_type": "wire",
       "layer": "top",
       "width": 0.1
@@ -26,14 +26,14 @@
       "maxLengthMm": null,
       "withinLengthLimit": true,
       "toleranceMm": 0.01,
-      "skewMm": 0.010000000000015774,
+      "skewMm": 0.010000000000005116,
       "matched": true,
       "lengths": [
         {
           "name": "source_trace_0",
-          "carrierLengthMm": 19.989999999999984,
+          "carrierLengthMm": 19.989999999999995,
           "fixedLengthMm": 0,
-          "totalLengthMm": 19.989999999999984
+          "totalLengthMm": 19.989999999999995
         },
         {
           "name": "source_trace_1",

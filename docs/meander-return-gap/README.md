@@ -68,6 +68,21 @@ failure and a successful wider pocket without lowering any clearance or timing
 check. The packed-bank height comparison permits 25% rather than 30% savings
 while strengthening its self-spacing assertion from 0.200 to 0.300 mm.
 
+Rounded cells also support partial turns, retaining their radius when a small
+length correction cannot accommodate four full quarter-turns. Rotated and paired
+cases check their emitted length and self-spacing; small real-TSX corrections
+also pass native copper DRC and bus/pair matching.
+
+The default edge gap for new tuning is two trace widths. Existing native-route
+corners retain their electrical clearance; each new bank is checked against
+the whole route without retroactively imposing the new default on unrelated
+geometry. An explicit `minMeanderGap` also applies to whole-output validation.
+It replaces the default preference but never lowers electrical clearance.
+The compact generated-stub and folded-budget unit fixtures opt
+into their original physical clearance (0.100/0.075 mm); their electrical,
+timing and coupling assertions are unchanged. Public AM3352 benchmark inputs
+are unchanged and exercise the stricter default with fresh solves.
+
 Fresh base/head AM3352 runs remain required by `AGENTS.md`. Each PR's Blacksmith
 matrix runs all 11 samples with 3,600 seconds per solver/sample and retains the
 raw comparison. Pending or incomplete checks do not establish merge readiness.

@@ -9,6 +9,9 @@ function pockets(count: number) {
   const input: SimpleRouteJson = {
     layerCount: 2,
     minTraceWidth: 0.1,
+    // Retain the original pocket's physical clearance for this budget test.
+    // Default-gap infeasibility is exercised in folded-tuning.test.ts.
+    minMeanderGap: 0.075,
     minTraceToPadEdgeClearance: 0.075,
     bounds: { minX: -1, maxX: 11, minY: -1, maxY: count * 8 },
     connections: [],

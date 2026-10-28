@@ -85,7 +85,8 @@ export interface SimpleRouteJson {
   defaultObstacleMargin?: number
   minTraceToPadEdgeClearance?: number
   /** Minimum edge-to-edge gap between returning arms of a generated trace, in
-   * mm. At least two trace widths and the existing clearance floor always apply.
+   * mm. New meanders default to two trace widths; an explicit value also applies
+   * at final validation. The existing electrical clearance floor always applies.
    * Does not change differential-pair traceGap or pad/obstacle clearances. */
   minMeanderGap?: number
   minBoardEdgeClearance?: number

@@ -754,7 +754,7 @@ export class BusLanesSolver extends BaseSolver {
       if (
         !tuningPathIsSelfClear(
           t.route,
-          meanderReturnSpacing(this.input, this.widths.get(c.name)!),
+          meanderReturnSpacing(this.input, this.widths.get(c.name)!, 0),
         )
       )
         throw Error("Final self-clearance violation")
