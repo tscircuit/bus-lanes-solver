@@ -1,3 +1,4 @@
+import { meanderReturnSpacing } from "./meander-spacing"
 import { getCopperLayerNames } from "@tscircuit/fanout-solver"
 import { distance, length } from "./geometry"
 import { joinSignalEscapes } from "./join-signal-escapes"
@@ -184,10 +185,7 @@ export function* tuneGeneratedOrdinaryEscapes(
         !scene.pathVisible(tuned.route) ||
         !tuningPathIsSelfClear(
           tuned.route,
-          pad.width +
-            (input.minTraceToPadEdgeClearance ??
-              input.defaultObstacleMargin ??
-              0.075),
+          meanderReturnSpacing(input, pad.width),
         ) ||
         !createTerminalViaClearanceChecker(stubInput, stub, {
           preserveExistingApproach: false,

@@ -1,3 +1,4 @@
+import { meanderReturnSpacing } from "./meander-spacing"
 import { tuningPathIsSelfClear } from "./length-tuning"
 import { nativeSignalGeometryIsValid } from "./native-signal-geometry"
 import type { SimpleRouteJson, Trace, Wire } from "./types"
@@ -14,32 +15,25 @@ export function joinedSignalGeometryIsValid(params: {
   const { input, trace } = params
   if (params.smoothTuning !== false && !nativeSignalGeometryIsValid(trace))
     return false
-  const clearance =
-    input.minTraceToPadEdgeClearance ?? input.defaultObstacleMargin ?? 0.075
   let run: Wire[] = []
+  const runIsClear = () =>
+    run.length < 2 ||
+    tuningPathIsSelfClear(
+      run,
+      meanderReturnSpacing(
+        input,
+        run.reduce((w, p) => Math.max(w, p.width), 0),
+      ),
+    )
   for (const point of trace.route) {
     if (
       point.route_type !== "wire" ||
       (run.length > 0 && run[0].layer !== point.layer)
     ) {
-      if (
-        run.length > 1 &&
-        !tuningPathIsSelfClear(
-          run,
-          run.reduce((width, point) => Math.max(width, point.width), 0) +
-            clearance,
-        )
-      )
-        return false
+      if (!runIsClear()) return false
       run = []
     }
     if (point.route_type === "wire") run.push(point)
   }
-  return (
-    run.length < 2 ||
-    tuningPathIsSelfClear(
-      run,
-      run.reduce((width, point) => Math.max(width, point.width), 0) + clearance,
-    )
-  )
+  return runIsClear()
 }

@@ -1,3 +1,4 @@
+import { meanderReturnSpacing } from "./meander-spacing"
 import { BusLanesSolver } from "./bus-lanes-solver"
 import { exteriorPairSpacingReports } from "./exterior-pair-spacing"
 import { distance, length } from "./geometry"
@@ -102,14 +103,13 @@ export function* tuneGeneratedPairEscapes(
           new Map([[name, targets.get(name)!]]),
           { maxCandidates: 4096, packMeanders: true },
         )[0]
-        const clearance =
-          input.minTraceToPadEdgeClearance ??
-          input.defaultObstacleMargin ??
-          0.075
         if (
           length(tuned.route) > surfaceLimit + 1e-8 ||
           !routeAnglesAreConventional([tuned]) ||
-          !tuningPathIsSelfClear(tuned.route, pad.width + clearance) ||
+          !tuningPathIsSelfClear(
+            tuned.route,
+            meanderReturnSpacing(input, pad.width),
+          ) ||
           !createTerminalViaClearanceChecker(stubInput, stub, {
             preserveExistingApproach: false,
           })(tuned.route)

@@ -1,17 +1,32 @@
+import { validateRoutedCopperDrc } from "@tscircuit/fanout-solver"
 import { mkdir } from "node:fs/promises"
 import { Resvg } from "@resvg/resvg-js"
 import { BusLanesPipelineSolver, busLengthReports } from "../lib"
 import { meanderReturnGapInput } from "../tests/fixtures/meander-return-gap"
 import { measureReturnGap } from "../tests/fixtures/measure-return-gap"
 
-const input = await meanderReturnGapInput()
+const mode = process.argv[2] ?? "default"
+if (!["default", "wide", "paired"].includes(mode))
+  throw Error("Expected default, wide, or paired")
+const requestedGap = mode === "default" ? 0.2 : 0.5
+const input = {
+  ...(await meanderReturnGapInput({ paired: mode === "paired" })),
+  minMeanderGap: requestedGap,
+}
 const solver = new BusLanesPipelineSolver(input, { fanout: "none" })
 solver.solve()
 if (!solver.solved) throw Error(solver.error ?? "Routing did not complete")
 const traces = solver.getOutput().traces!
 const lengths = busLengthReports(input, traces)
 if (!lengths.every((r) => r.matched)) throw Error("Bus is not matched")
+const drc = validateRoutedCopperDrc({
+  inputSrj: input,
+  routedSrj: solver.getOutput(),
+  clearance: 0.1,
+} as unknown as Parameters<typeof validateRoutedCopperDrc>[0])
+if (!drc.valid) throw Error("Copper DRC failed")
 const gap = measureReturnGap(traces)
+if (gap.edgeGap < requestedGap - 1e-8) throw Error("Return-leg gap failed")
 const f = (n: number) => n.toFixed(3)
 const paths = traces
   .map(
@@ -42,9 +57,9 @@ const tick = (p: typeof a) =>
 const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="740" viewBox="0 0 1200 740">
 <rect width="1200" height="740" fill="#101a26"/>
 <g fill="#e8eef5" font-family="sans-serif">
-<text x="40" y="48" font-size="28">Smooth meander return-leg spacing</text>
+<text x="40" y="48" font-size="28">${mode === "default" ? "Corrected default" : mode === "wide" ? "Requested wider gap" : "Shared pair with wider return gap"}: smooth meanders</text>
 <text x="40" y="82" font-size="17">Real TSX → core SRJ conversion → BusLanesPipelineSolver · top copper · all dimensions in mm</text>
-<text x="40" y="130" font-size="20">Complete routed board · 2 / 2 signals</text>
+<text x="40" y="130" font-size="20">Complete routed board · ${traces.length} / ${traces.length} signals</text>
 <text x="680" y="130" font-size="20">Measured returning straight legs</text>
 </g>
 <svg x="30" y="150" width="620" height="460" viewBox="-14 -11 28 22">
@@ -57,15 +72,16 @@ ${paths}${pads}<g stroke="#ffad70" stroke-width="0.012"><path d="M ${a.x} ${-a.y
 </svg>
 <g fill="#e8eef5" font-family="sans-serif" font-size="19">
 <text x="40" y="650">Trace width: 0.100 · bus skew: ${f(lengths[0].skewMm!)}</text>
-<text x="40" y="687">Documented minimum: 0.200 edge / 0.300 centerline</text>
+<text x="40" y="687">Required minimum: ${f(requestedGap)} edge / ${f(requestedGap + 0.1)} centerline</text>
 <text x="680" y="650" fill="#ffad70">Edge gap: ${f(gap.edgeGap)}</text>
 <text x="680" y="687">Centerline spacing: ${f(gap.centerline)}</text>
 </g></svg>`
 const directory = "docs/meander-return-gap"
 await mkdir(directory, { recursive: true })
-await Bun.write(`${directory}/before.png`, new Resvg(svg).render().asPng())
+await Bun.write(`${directory}/${mode}.png`, new Resvg(svg).render().asPng())
 await Bun.write(
-  `${directory}/before.json`,
-  JSON.stringify({ gap, lengths }, null, 2) + "\n",
+  `${directory}/${mode}.json`,
+  JSON.stringify({ requestedGap, gap, lengths, drcValid: drc.valid }, null, 2) +
+    "\n",
 )
 console.log({ edgeGap: gap.edgeGap, centerline: gap.centerline, lengths })

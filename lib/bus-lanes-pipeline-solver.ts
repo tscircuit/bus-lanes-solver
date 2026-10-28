@@ -1,3 +1,4 @@
+import { meanderReturnSpacing } from "./meander-spacing"
 import { nativeGroupsEligible, routeNativeGroups } from "./route-native-groups"
 import {
   SingleLayerConnectivitySolver,
@@ -425,6 +426,7 @@ export class BusLanesPipelineSolver extends BaseSolver {
       options.maxRoutingTimeMs === undefined
         ? Infinity
         : performance.now() + options.maxRoutingTimeMs
+    meanderReturnSpacing(input, input.minTraceWidth)
     this.input = structuredClone(input)
     this.routingInput = withInferredSurfaceLayers(this.input)
     this.options = { smoothTuning: true, denseSearch: true, ...options }

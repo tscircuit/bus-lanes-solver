@@ -1,3 +1,4 @@
+import { meanderReturnSpacing } from "./meander-spacing"
 import { CopperIndex } from "./copper-index"
 import { createTerminalViaClearanceChecker } from "./terminal-via-clearance"
 import { fixedRouteLength } from "./route-lengths"
@@ -29,9 +30,7 @@ export function tuneLengths(
       yield t
       return
     }
-    const clearance =
-      input.minTraceToPadEdgeClearance ?? input.defaultObstacleMargin ?? 0.075
-    const returnSpacing = Math.max(width + clearance, 3 * width)
+    const returnSpacing = meanderReturnSpacing(input, width)
     const pitch = 2 * (returnSpacing + 2 * width)
     // Tune the long interior runs before considering short terminal approaches.
     const segments = t.route

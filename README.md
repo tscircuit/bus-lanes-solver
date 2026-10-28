@@ -143,6 +143,25 @@ The main review path is:
 - `buses[].traceWidth`: explicit width in millimeters; otherwise uses connection `nominalTraceWidth` / `width`, then `minTraceWidth`.
 - `buses[].allowedLayers`: must contain the fixed terminal layer.
 - `differentialPairs[].lengthTolerance`: supported as a routed-length constraint. Pairs with `traceGap` use a shared corridor. An explicit `maxUncoupledLength` bounds total uncoupled copper, including fixed fanouts.
+- `minMeanderGap`: minimum **edge-to-edge** gap, in millimetres, between returning arms of a generated trace. The effective gap is the maximum of this optional value, two trace widths, and the existing clearance floor (`minTraceToPadEdgeClearance`, then `defaultObstacleMargin`, then 0.075 mm). Thus the default retains at least three trace widths center-to-center. This is a same-trace return-spacing constraint; it does not enlarge pad clearance or the gap between differential rails (`traceGap`).
+
+For wider, less frequent returning bends, supply the gap on the routing input:
+
+```ts
+const solver = new BusLanesPipelineSolver({ ...input, minMeanderGap: 0.5 })
+solver.solve()
+if (!solver.solved) throw Error(solver.error ?? "Routing failed")
+```
+
+With a 0.1 mm trace, this requests at least 0.5 mm between copper edges / 0.6 mm
+between centerlines. Smooth, octilinear, packed and shared-pair tuners use the
+same spacing rule, including generated terminal corrections and final matched
+output validation. Smooth chords on a continuous local bend are not separate
+returning arms; a shallow correction can retain its existing bend radius.
+Supplied fixed copper is not moved. A finite nonnegative value is required;
+infeasible matching or exhausted search fails instead of relaxing the gap.
+The existing connectivity-only goal does not perform length tuning.
+See the [annotated TSX reproduction and after images](docs/meander-return-gap/README.md).
 
 Matching includes both fixed fanouts and the routes produced by this phase. It measures XY copper length; via depth, layer-dependent propagation velocity, and package delays are not inferred. No impedance or delay defaults are supplied. Matching uses the existing core SRJ fields: bus `maxLengthSkew` and differential-pair `lengthTolerance` (mapped from the JSX pair’s `maxLengthSkew`). Routes already inside the bound remain untuned; shorter routes grow only to the permitted lower bound. Overlapping bus and pair constraints are resolved together without forcing exact equality.
 

@@ -1,3 +1,4 @@
+import { meanderReturnSpacing } from "./meander-spacing"
 import { bipolarPairedLobes } from "./bipolar-tuning"
 import { foldedPairedLobes } from "./folded-tuning"
 import { smoothPairedLobes, roundedPairedLobes } from "./smooth-tuning"
@@ -52,6 +53,8 @@ export function tuneCoupledLengths(
     const spacing = width + gap,
       clearance =
         input.minTraceToPadEdgeClearance ?? input.defaultObstacleMargin ?? 0.075
+    const returnSpacing = meanderReturnSpacing(input, width)
+    const minRadius = Math.max(width * 1.2, clearance, returnSpacing / 2)
     let accepted: Trace[] | undefined
     for (const folded of options.packMeanders ? [false, true] : [false]) {
       if (accepted) break
@@ -103,9 +106,7 @@ export function tuneCoupledLengths(
                           1,
                           Math.floor(
                             ((hi - lo) * fraction) /
-                              (4 *
-                                (Math.max(width * 1.2, clearance) +
-                                  spacing / 2)),
+                              (4 * (minRadius + spacing / 2)),
                           ),
                         ),
                       },
@@ -147,7 +148,7 @@ export function tuneCoupledLengths(
               deficit,
               lobes,
               side,
-              Math.max(width * 1.2, clearance),
+              minRadius,
             )
             if (!waves) continue
             // The first rail is on the opposite side of the signed offset.
@@ -199,7 +200,7 @@ export function tuneCoupledLengths(
                     width,
                     copper,
                   ).pathVisible(t.route) ||
-                  !tuningPathIsSelfClear(t.route, width + clearance) ||
+                  !tuningPathIsSelfClear(t.route, returnSpacing) ||
                   total(t) < targets.get(t.connection_name!)! - 1e-6,
               )
             )

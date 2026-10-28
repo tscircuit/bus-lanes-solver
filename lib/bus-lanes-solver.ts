@@ -1,3 +1,4 @@
+import { meanderReturnSpacing } from "./meander-spacing"
 import { highDemandPairedLanes } from "./tuning-bank-demands"
 import { routePairedNetwork } from "./route-paired-network"
 import { roundCoupledReturnBends } from "./round-coupled-return-bends"
@@ -93,6 +94,7 @@ export class BusLanesSolver extends BaseSolver {
     private readonly terminalLayers: ReadonlyMap<string, string[]> = new Map(),
   ) {
     super()
+    meanderReturnSpacing(input, input.minTraceWidth)
     this.input = structuredClone(input)
     this.options = options
     this.MAX_ITERATIONS = options.maxSearchIterations ?? 200000
@@ -752,7 +754,7 @@ export class BusLanesSolver extends BaseSolver {
       if (
         !tuningPathIsSelfClear(
           t.route,
-          this.widths.get(c.name)! / 2 + scene.margin,
+          meanderReturnSpacing(this.input, this.widths.get(c.name)!),
         )
       )
         throw Error("Final self-clearance violation")

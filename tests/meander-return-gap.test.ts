@@ -22,7 +22,7 @@ test("real TSX pads and bus produce a complete matched pipeline output", async (
   expect(measureReturnGap(traces).edgeGap).toBeGreaterThanOrEqual(0.1 - 1e-8)
 })
 
-test.failing("TSX pipeline retains the documented three-width return-leg spacing", async () => {
+test("TSX pipeline retains the documented three-width return-leg spacing", async () => {
   const { solver } = await solved
   expect(
     measureReturnGap(solver.getOutput().traces!).edgeGap,

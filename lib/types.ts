@@ -84,6 +84,10 @@ export interface SimpleRouteJson {
   buses?: Bus[]
   defaultObstacleMargin?: number
   minTraceToPadEdgeClearance?: number
+  /** Minimum edge-to-edge gap between returning arms of a generated trace, in
+   * mm. At least two trace widths and the existing clearance floor always apply.
+   * Does not change differential-pair traceGap or pad/obstacle clearances. */
+  minMeanderGap?: number
   minBoardEdgeClearance?: number
   outline?: Point[]
   differentialPairs?: Array<{
