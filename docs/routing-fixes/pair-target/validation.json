@@ -1,0 +1,96 @@
+{
+  "baselineSha": "ead4eb9db255118af9713136abb16e4d72e5c36c",
+  "productionHeadSha": "a3ebc70aed39d9e81a1ec146a04c3a8d51f4d6fb",
+  "renderer": "graphics-debug/getSvgFromGraphicsObject via BusLanesSolver.visualize",
+  "inputSha256": "60c358f367172168078346bcbe5b23babf04f466fafcd3d0fb7e7eaba36cced7",
+  "before": {
+    "solved": false,
+    "failed": true,
+    "error": "Error: Native carrier matching exhausted its routing plans",
+    "failureCode": "native_single_carrier_matching_failed",
+    "acceptedConnections": 0,
+    "diagnosticOnly": true
+  },
+  "after": {
+    "solved": true,
+    "failed": false,
+    "error": null,
+    "connectivity": {
+      "valid": true,
+      "checkedConnectionCount": 2,
+      "connectedConnectionCount": 2,
+      "checkedEndpointCount": 4,
+      "connectedEndpointCount": 4,
+      "issues": []
+    },
+    "drc": {
+      "valid": true,
+      "checkedTraceCount": 2,
+      "checkedSegmentCount": 10,
+      "checkedViaCount": 4,
+      "issues": []
+    },
+    "buses": [
+      {
+        "busId": "DQS",
+        "minLengthMm": null,
+        "aboveMinimumLength": true,
+        "maxLengthMm": null,
+        "withinLengthLimit": true,
+        "toleranceMm": 0.1,
+        "skewMm": 0,
+        "matched": true,
+        "lengths": [
+          {
+            "name": "P",
+            "carrierLengthMm": 12.331370849898477,
+            "fixedLengthMm": 0,
+            "totalLengthMm": 12.331370849898477
+          },
+          {
+            "name": "N",
+            "carrierLengthMm": 12.331370849898477,
+            "fixedLengthMm": 0,
+            "totalLengthMm": 12.331370849898477
+          }
+        ]
+      }
+    ],
+    "pairs": [
+      {
+        "busId": "pair_0",
+        "minLengthMm": null,
+        "aboveMinimumLength": true,
+        "maxLengthMm": null,
+        "withinLengthLimit": true,
+        "toleranceMm": 0.1,
+        "skewMm": 0,
+        "matched": true,
+        "lengths": [
+          {
+            "name": "P",
+            "carrierLengthMm": 12.331370849898477,
+            "fixedLengthMm": 0,
+            "totalLengthMm": 12.331370849898477
+          },
+          {
+            "name": "N",
+            "carrierLengthMm": 12.331370849898477,
+            "fixedLengthMm": 0,
+            "totalLengthMm": 12.331370849898477
+          }
+        ]
+      }
+    ],
+    "coupling": [
+      {
+        "connectionNames": ["P", "N"],
+        "applicable": true,
+        "matched": true,
+        "maxExteriorEdgeGapMm": 0.10000000000000002,
+        "maxSamplingErrorMm": 0.001,
+        "separatedExteriorLengthMm": 0
+      }
+    ]
+  }
+}
