@@ -1,0 +1,28 @@
+import { expect, test } from "bun:test"
+import { BusLanesPipelineSolver } from "../../lib"
+import { pairOnlyInput } from "../fixtures/pair-only-length-target"
+import { expectCompletedRouting } from "../fixtures/expect-completed-routing"
+
+test("pair-only bus reproduces exhausted plans from automatic tuning headroom", () => {
+  const input = pairOnlyInput()
+  const before = structuredClone(input)
+  const solver = new BusLanesPipelineSolver(input, { maxRoutingTimeMs: 20000 })
+  solver.solve()
+  expect(solver.solved).toBe(false)
+  expect(solver.failed).toBe(true)
+  expect(solver.error).toBe(
+    "Error: Native carrier matching exhausted its routing plans",
+  )
+  expect(solver.failureCode).toBe("native_single_carrier_matching_failed")
+  expect(solver.traces).toHaveLength(0)
+  expect(input).toEqual(before)
+}, 30000)
+
+test("the same pair without the bus target remains a completed positive control", () => {
+  const input = pairOnlyInput()
+  input.buses = []
+  const before = structuredClone(input)
+  const solver = new BusLanesPipelineSolver(input, { maxRoutingTimeMs: 20000 })
+  solver.solve()
+  expectCompletedRouting(solver, before)
+}, 30000)
