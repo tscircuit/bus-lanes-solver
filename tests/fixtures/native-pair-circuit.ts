@@ -47,7 +47,12 @@ export function nativePairCircuit({
     },
     width: bounds.maxX - bounds.minX,
     height: bounds.maxY - bounds.minY,
-    outline: input.outline,
+    outline: input.outline ?? [
+      { x: bounds.minX, y: bounds.minY },
+      { x: bounds.maxX, y: bounds.minY },
+      { x: bounds.maxX, y: bounds.maxY },
+      { x: bounds.minX, y: bounds.maxY },
+    ],
     thickness: 1.6,
     material: "fr4",
     num_layers,
