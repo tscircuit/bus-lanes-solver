@@ -1,6 +1,7 @@
 import "../fixtures/pcb-snapshot"
 import { expect, test } from "bun:test"
 import { BusLanesPipelineSolver } from "../../lib"
+import { length } from "../../lib/geometry"
 import {
   validateOriginalEndpointConnectivity,
   validateRoutedCopperDrc,
@@ -16,6 +17,9 @@ test("a pair-only bus needs no artificial tuning headroom", async () => {
   const solver = new BusLanesPipelineSolver(input, { maxRoutingTimeMs: 20000 })
   solver.solve()
   if (solver.solved) {
+    // A 12 mm span plus terminal approaches fits below 13 mm without headroom.
+    for (const trace of solver.traces)
+      expect(length(trace.route)).toBeLessThan(13)
     const native = {
       inputSrj: input,
       routedSrj: solver.getOutput(),
