@@ -53,17 +53,37 @@ test("matches the autorouter board-edge DRC example with full trace width", () =
 test("outline checks reject concave shortcuts, outside points and copper too close to an edge", () => {
   const input = boardOutlineInput()
   expect(
-    boardSegmentIsClear(input, { x: -3, y: 1 }, { x: 3, y: 1 }, 0.05),
+    boardSegmentIsClear({
+      input: input,
+      start: { x: -3, y: 1 },
+      end: { x: 3, y: 1 },
+      copperRadiusMm: 0.05,
+    }),
   ).toBe(false)
   expect(
-    boardSegmentIsClear(input, { x: -3, y: -2 }, { x: 3, y: -2 }, 0.05),
+    boardSegmentIsClear({
+      input: input,
+      start: { x: -3, y: -2 },
+      end: { x: 3, y: -2 },
+      copperRadiusMm: 0.05,
+    }),
   ).toBe(true)
   expect(
-    boardSegmentIsClear(input, { x: -3, y: -1.1 }, { x: 3, y: -1.1 }, 0.05),
+    boardSegmentIsClear({
+      input: input,
+      start: { x: -3, y: -1.1 },
+      end: { x: 3, y: -1.1 },
+      copperRadiusMm: 0.05,
+    }),
   ).toBe(false)
-  expect(boardSegmentIsClear(input, { x: 0, y: 2 }, { x: 0, y: 2 }, 0.05)).toBe(
-    false,
-  )
+  expect(
+    boardSegmentIsClear({
+      input: input,
+      start: { x: 0, y: 2 },
+      end: { x: 0, y: 2 },
+      copperRadiusMm: 0.05,
+    }),
+  ).toBe(false)
   for (const outline of [
     input.outline!,
     input.outline!.toReversed(),
@@ -191,3 +211,79 @@ for (const outline of [
       expect(() => solver.getOutput()).toThrow()
     }
   })
+
+for (const reverse of [false, true]) {
+  for (const close of [false, true]) {
+    test(`concave routing preserves endpoints for ${reverse ? "clockwise" : "counterclockwise"} ${close ? "closed" : "open"} outlines`, () => {
+      const input = boardOutlineInput()
+      if (reverse) input.outline = input.outline!.toReversed()
+      if (close) input.outline = [...input.outline!, input.outline![0]]
+      const before = structuredClone(input)
+      const solver = new BusLanesSolver(input)
+      solver.solve()
+      expect(solver.solved).toBe(true)
+      const route = solver.traces[0].route
+      const [start, end] = input.connections[0].pointsToConnect
+      expect({ x: route[0].x, y: route[0].y }).toEqual({
+        x: start.x,
+        y: start.y,
+      })
+      expect({ x: route.at(-1)!.x, y: route.at(-1)!.y }).toEqual({
+        x: end.x,
+        y: end.y,
+      })
+      expect(traceStaysInsideOutline(input, solver.traces[0])).toBe(true)
+      expect(input).toEqual(before)
+    })
+  }
+}
+
+test("via-land clearance uses the full diameter rather than the drill", () => {
+  const input = boardOutlineInput()
+  const via: Trace = {
+    type: "pcb_trace",
+    pcb_trace_id: "via_land",
+    route: [
+      {
+        route_type: "via",
+        x: 0,
+        y: -1.5,
+        from_layer: "top",
+        to_layer: "bottom",
+        via_diameter: 0.3,
+        via_hole_diameter: 0.1,
+      },
+    ],
+  }
+  expect(traceStaysInsideOutline(input, via)).toBe(true)
+  via.route = [
+    {
+      ...via.route[0],
+      route_type: "via",
+      from_layer: "top",
+      to_layer: "bottom",
+      via_diameter: 0.8,
+      via_hole_diameter: 0.1,
+    },
+  ]
+  expect(traceStaysInsideOutline(input, via)).toBe(false)
+})
+
+test("a nonzero-area self-intersection and repeated degenerate vertices are rejected", () => {
+  expect(
+    boardOutlineError([
+      { x: 0, y: 0 },
+      { x: 3, y: 3 },
+      { x: 0, y: 4 },
+      { x: 4, y: 0 },
+    ]),
+  ).toContain("simple polygon")
+  expect(
+    boardOutlineError([
+      { x: 0, y: 0 },
+      { x: 0, y: 0 },
+      { x: 1, y: 0 },
+      { x: 0, y: 0 },
+    ]),
+  ).toContain("three vertices")
+})

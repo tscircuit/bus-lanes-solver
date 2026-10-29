@@ -373,7 +373,12 @@ export class VectorScene {
     return true
   }
   boardEdgeIsClear(a: Point, b: Point) {
-    return boardSegmentIsClear(this.input, a, b, this.width / 2)
+    return boardSegmentIsClear({
+      input: this.input,
+      start: a,
+      end: b,
+      copperRadiusMm: this.width / 2,
+    })
   }
   pathVisible(path: Point[]) {
     return path.slice(1).every((b, i) => this.visible(path[i], b))

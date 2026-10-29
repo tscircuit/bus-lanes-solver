@@ -3,18 +3,20 @@ import { expect, type MatcherResult } from "bun:test"
 import type { AnyCircuitElement } from "circuit-json"
 import { convertCircuitJsonToPcbSvg, type PcbSvgOptions } from "circuit-to-svg"
 
-// Same PCB renderer as core/tests/fixtures/extend-expect-circuit-snapshot.ts;
-// use the shared SVG snapshot matcher rather than a custom drawing/exporter.
+type PcbSnapshotOptions = { testPath: string; svgOptions?: PcbSvgOptions }
+
+// One shared adapter to core's PCB renderer and the existing SVG matcher.
 expect.extend({
   async toMatchPcbSnapshot(
     received: unknown,
-    testPath: string,
-    options?: PcbSvgOptions,
+    { testPath, svgOptions }: PcbSnapshotOptions,
   ): Promise<MatcherResult> {
+    if (!Array.isArray(received)) throw Error("Expected Circuit JSON elements")
+    const circuit: AnyCircuitElement[] = received
     await expect(
-      convertCircuitJsonToPcbSvg(received as AnyCircuitElement[], {
+      convertCircuitJsonToPcbSvg(circuit, {
         showDebugObjects: true,
-        ...options,
+        ...svgOptions,
       }),
     ).toMatchSvgSnapshot(testPath, "pcb")
     return { pass: true, message: () => "PCB snapshot matches" }
@@ -23,9 +25,6 @@ expect.extend({
 
 declare module "bun:test" {
   interface Matchers<T = unknown> {
-    toMatchPcbSnapshot(
-      testPath: string,
-      options?: PcbSvgOptions,
-    ): Promise<MatcherResult>
+    toMatchPcbSnapshot(options: PcbSnapshotOptions): Promise<MatcherResult>
   }
 }

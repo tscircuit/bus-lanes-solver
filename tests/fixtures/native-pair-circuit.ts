@@ -1,68 +1,114 @@
-import type { AnyCircuitElement } from "circuit-json"
+import type {
+  AnyCircuitElement,
+  PcbBoard,
+  PcbSmtPad,
+  PcbTrace,
+  PcbVia,
+} from "circuit-json"
 import type { SimpleRouteJson, Trace } from "../../lib"
 
-/** Circuit JSON for the small synthetic isolation controls; no SVG drawing. */
-export function nativePairCircuit(
-  input: SimpleRouteJson,
-  traces: Trace[],
-  title: string,
-): AnyCircuitElement[] {
-  const b = input.bounds
-  const pads = input.obstacles.length
-    ? input.obstacles
-    : input.connections.flatMap((c) =>
-        c.pointsToConnect.map((p) => ({
-          center: p,
-          width: input.minTraceWidth,
-          componentId: undefined,
-        })),
-      )
-  return [
-    {
-      type: "pcb_board",
-      pcb_board_id: "board",
-      center: { x: (b.minX + b.maxX) / 2, y: (b.minY + b.maxY) / 2 },
-      width: b.maxX - b.minX,
-      height: b.maxY - b.minY,
-      outline: input.outline,
-      thickness: 1.6,
-      material: "fr4",
-      num_layers: input.layerCount,
+function circuitLayer(layer: string) {
+  const copperLayer = (
+    [
+      "top",
+      "inner1",
+      "inner2",
+      "inner3",
+      "inner4",
+      "inner5",
+      "inner6",
+      "bottom",
+    ] as const
+  ).find((candidate) => candidate === layer)
+  if (!copperLayer)
+    throw Error(`Unsupported Circuit JSON copper layer: ${layer}`)
+  return copperLayer
+}
+
+/** Map actual synthetic fixture geometry to Circuit JSON for the shared matcher. */
+export function nativePairCircuit({
+  input,
+  traces,
+}: {
+  input: SimpleRouteJson
+  traces: Trace[]
+}): AnyCircuitElement[] {
+  const bounds = input.bounds
+  const num_layers = ([2, 4, 6, 8] as const).find(
+    (count) => count === input.layerCount,
+  )
+  if (!num_layers) throw Error("Unsupported snapshot layer count")
+  const board: PcbBoard = {
+    type: "pcb_board",
+    pcb_board_id: "board",
+    center: {
+      x: (bounds.minX + bounds.maxX) / 2,
+      y: (bounds.minY + bounds.maxY) / 2,
     },
-    ...pads.map((o, i) => ({
-      type: "pcb_smtpad",
-      pcb_smtpad_id: `pad_${i}`,
-      pcb_component_id: o.componentId,
-      pcb_port_id: `port_${i}`,
-      shape: "circle",
-      x: o.center.x,
-      y: o.center.y,
-      radius: o.width / 2,
-      layer: "top",
-    })),
-    ...traces,
-    ...traces.flatMap((t) =>
-      t.route
-        .filter((p) => p.route_type === "via")
-        .map((p, i) => ({
-          type: "pcb_via",
-          pcb_via_id: `${t.pcb_trace_id}_via_${i}`,
-          x: p.x,
-          y: p.y,
-          outer_diameter: p.via_diameter,
-          hole_diameter: p.via_hole_diameter,
-          layers: p.layers ?? [p.from_layer, p.to_layer],
-        })),
+    width: bounds.maxX - bounds.minX,
+    height: bounds.maxY - bounds.minY,
+    outline: input.outline,
+    thickness: 1.6,
+    material: "fr4",
+    num_layers,
+    min_board_edge_clearance: input.minBoardEdgeClearance,
+  }
+  const terminals = input.connections.flatMap(
+    (connection) => connection.pointsToConnect,
+  )
+  const pads: PcbSmtPad[] = terminals.map((terminal, index) => ({
+    type: "pcb_smtpad",
+    pcb_smtpad_id: `pad_${index}`,
+    pcb_port_id: terminal.pcb_port_id ?? `port_${index}`,
+    shape: "circle",
+    x: terminal.x,
+    y: terminal.y,
+    radius:
+      (input.obstacles.find(
+        (obstacle) =>
+          obstacle.center.x === terminal.x && obstacle.center.y === terminal.y,
+      )?.width ?? input.minTraceWidth) / 2,
+    layer: circuitLayer(terminal.layer),
+  }))
+  const copper: PcbTrace[] = [...(input.traces ?? []), ...traces].map(
+    (trace) => ({
+      type: "pcb_trace",
+      pcb_trace_id: trace.pcb_trace_id,
+      source_trace_id: trace.source_trace_id,
+      route: trace.route.map((point) =>
+        point.route_type === "wire"
+          ? { ...point, layer: circuitLayer(point.layer) }
+          : {
+              ...point,
+              from_layer: circuitLayer(point.from_layer),
+              to_layer: circuitLayer(point.to_layer),
+              via_diameter:
+                point.via_diameter ?? input.minViaPadDiameter ?? 0.3,
+              via_hole_diameter:
+                point.via_hole_diameter ?? input.minViaHoleDiameter ?? 0.15,
+            },
+      ),
+    }),
+  )
+  const vias: PcbVia[] = [...(input.traces ?? []), ...traces].flatMap((trace) =>
+    trace.route.flatMap((point, index) =>
+      point.route_type === "via"
+        ? [
+            {
+              type: "pcb_via" as const,
+              pcb_via_id: `${trace.pcb_trace_id}_via_${index}`,
+              x: point.x,
+              y: point.y,
+              outer_diameter: point.via_diameter ?? 0.3,
+              hole_diameter: point.via_hole_diameter ?? 0.15,
+              layers: [
+                circuitLayer(point.from_layer),
+                circuitLayer(point.to_layer),
+              ],
+            },
+          ]
+        : [],
     ),
-    {
-      type: "pcb_silkscreen_text",
-      pcb_silkscreen_text_id: "status",
-      anchor_position: { x: (b.minX + b.maxX) / 2, y: b.maxY - 0.7 },
-      text: title,
-      font: "tscircuit2024",
-      font_size: 0.25,
-      anchor_alignment: "center",
-      layer: "top",
-    },
-  ] as AnyCircuitElement[]
+  )
+  return [board, ...pads, ...copper, ...vias]
 }
