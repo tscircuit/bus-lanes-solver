@@ -1,4 +1,5 @@
 import { CopperIndex } from "./copper-index"
+import { boardSegmentIsClear } from "./board-outline"
 import {
   distance,
   segmentDistance,
@@ -347,6 +348,7 @@ export class VectorScene {
       )
     )
       return false
+    if (this.input.outline?.length && !this.boardEdgeIsClear(a, b)) return false
     const minX = Math.min(a.x, b.x) - this.margin,
       maxX = Math.max(a.x, b.x) + this.margin,
       minY = Math.min(a.y, b.y) - this.margin,
@@ -369,6 +371,9 @@ export class VectorScene {
       if (copperTooClose(a, b, c, this.margin - 1e-8)) return false
     }
     return true
+  }
+  boardEdgeIsClear(a: Point, b: Point) {
+    return boardSegmentIsClear(this.input, a, b, this.width / 2)
   }
   pathVisible(path: Point[]) {
     return path.slice(1).every((b, i) => this.visible(path[i], b))
@@ -404,6 +409,28 @@ export class VectorScene {
           ])
             result.push({ x: p.x + x * r, y: p.y + y * r })
       }
+    }
+    if (this.input.outline?.length) {
+      const edges: Copper[] = this.input.outline.map((a, i, ring) => ({
+        a,
+        b: ring[(i + 1) % ring.length],
+        radius: 0,
+        layer: this.connection.pointsToConnect[0].layer,
+        owners: [],
+      }))
+      // Reuse octilinear edge-offset vertices with the board-edge margin.
+      result.push(
+        ...new VectorScene(
+          {
+            ...this.input,
+            outline: undefined,
+            minTraceToPadEdgeClearance: this.input.minBoardEdgeClearance ?? 0,
+          },
+          this.connection,
+          this.width,
+          edges,
+        ).vertices(),
+      )
     }
     const seen = new Set<string>()
     return result.filter((p) => {

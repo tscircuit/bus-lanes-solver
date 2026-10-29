@@ -16,7 +16,6 @@ export interface NativeSingleCarrierOptions
 
 export function nativeSingleCarrierEligible(input: SimpleRouteJson) {
   return (
-    !input.outline?.length &&
     input.allowedLayers?.length === 1 &&
     /^inner\d+$/.test(input.allowedLayers[0]) &&
     getCopperLayerNames(input.layerCount).includes(input.allowedLayers[0]) &&

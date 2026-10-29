@@ -1,0 +1,9 @@
+# OrangeCrab r0.2.1 DDR routing reproduction
+
+Source: [OrangeCrab hardware](https://github.com/orangecrab-fpga/orangecrab-hardware/tree/c511d569fe2af39467041f888bc231020f40c6ac/hardware/orangecrab_r0.2.1), ECP5 FPGA with x16 DDR3L, six copper layers. Upstream hardware/software licences are included. Source hashes and exact removed element IDs are in `provenance.json`.
+
+`original.circuit.json` is the converted real PCB, preserving all 163 components, 972 pad/layer groups, 441 vias, source connectivity and authored traces. `byte0.srj.json` removes only the eleven DDR byte-zero signal routes, retaining 1430 obstacles and 996 fixed wire runs. The PCB before image is derived by removing exactly 19 trace records and 22 vias from the original Circuit JSON; all other elements remain unchanged. Original zone fills are reference geometry and require native refill/DRC after a successful reroute.
+
+Run `bun test tests/repros/orangecrab-reference.test.ts tests/repros/orangecrab-outline.test.ts tests/repros/concave-board-outline.test.ts tests/repros/native-offset-pair.test.ts tests/repros/native-pair-only-bus.test.ts`. Snapshots use `toMatchPcbSnapshot`, the normal `circuit-to-svg` PCB renderer and `bun-match-svg` matcher, under `tests/repros/__snapshots__`. Update with `bun test -u`.
+
+The real-board regression isolates outline acceptance at the first routing step. The two small synthetic native-pair controls isolate offset planning and pair-only length targeting; they do not represent completed OrangeCrab routing. The three fix PRs stack in that order. This repro deliberately fails the outline and native-pair assertions on main. The full original OrangeCrab byte lane still has native-approach failures after these three fixes; no full-board completion or electrical timing closure is claimed.
