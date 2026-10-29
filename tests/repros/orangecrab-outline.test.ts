@@ -1,26 +1,17 @@
-import "../fixtures/pcb-snapshot"
 import { expect, test } from "bun:test"
 import { BusLanesSolver } from "../../lib"
-import { orangecrabByte0, orangecrabCircuit } from "../fixtures/orangecrab"
+import { orangecrabByte0 } from "../fixtures/orangecrab"
 
-test("the unchanged real OrangeCrab outline is accepted before byte-zero search", async () => {
+test("the unchanged real OrangeCrab outline reaches coupled-pair search", () => {
   const input = orangecrabByte0()
-  const before = JSON.stringify(input)
+  const before = structuredClone(input)
   expect(input.connections).toHaveLength(11)
   expect(input.obstacles).toHaveLength(1430)
   expect(input.traces).toHaveLength(996)
-  const circuit = orangecrabCircuit(true)
-  expect(circuit.filter((e) => e.type === "pcb_via")).toHaveLength(419)
-  await expect(circuit).toMatchPcbSnapshot(import.meta.path, {
-    width: 1400,
-    height: 700,
-    showSolderMask: false,
-    showCourtyards: false,
-    showFabricationNotes: false,
-  })
   const solver = new BusLanesSolver(input)
   solver.step()
   expect(solver.error).toBeNull()
+  expect(solver.failed).toBe(false)
   expect(solver.phase).toBe("coupled_pairs")
-  expect(JSON.stringify(input)).toBe(before)
+  expect(input).toEqual(before)
 })

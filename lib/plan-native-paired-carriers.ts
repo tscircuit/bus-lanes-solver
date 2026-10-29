@@ -10,6 +10,7 @@ import { chamferOrdinaryCorners } from "./chamfer-ordinary-corners"
 import { fixedCopper, VectorScene } from "./vector-scene"
 import type { Connection, Point, SimpleRouteJson, Trace } from "./types"
 import { offsetPackageCenterlines } from "./offset-package-centerlines"
+import { nativePairHalfPitch } from "./native-pair-spacing"
 
 export interface NativePairedCarrierOptions {
   /** One centerline per differential pair, in the input pair order. */
@@ -178,7 +179,12 @@ export function* planNativePairedCarriers(
       options.packageRegions ??
       packageApproachRegions(native, pairedFieldMargin(native))
     const defaults = defaultCenterlines(native, step, regions)
-    const candidates = offsetPackageCenterlines(native, defaults, regions, step)
+    const candidates = offsetPackageCenterlines({
+      input: native,
+      defaults,
+      regions,
+      stepMm: step,
+    })
     if (candidates) {
       for (const centerlines of candidates) {
         const result = yield* planNativePairedCarriers(
@@ -211,7 +217,7 @@ export function* planNativePairedCarriers(
         c = native.connections.find((c) => c.name === name)!
       const path = offsetPath(
         centers[i],
-        ((rail ? 1 : -1) * (native.minTraceWidth + (pair.traceGap ?? 0.1))) / 2,
+        (rail ? 1 : -1) * nativePairHalfPitch(native, pair),
       )
       trunks.push({
         type: "pcb_trace",

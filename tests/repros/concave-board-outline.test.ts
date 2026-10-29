@@ -3,23 +3,21 @@ import { expect, test } from "bun:test"
 import { BusLanesSolver } from "../../lib"
 import { boardOutlineInput } from "../fixtures/board-outline"
 import { nativePairCircuit } from "../fixtures/native-pair-circuit"
+import { expectCompletedRouting } from "../fixtures/expect-completed-routing"
 
-test("a routed trace stays inside a concave board outline", async () => {
+test("a complete route stays inside the concave board cutout", async () => {
   const input = boardOutlineInput()
+  const before = structuredClone(input)
   const solver = new BusLanesSolver(input)
   solver.solve()
-  const circuit = nativePairCircuit(
+  expectCompletedRouting(solver, before)
+  expect(solver.traces[0].route.some((point) => point.y < -1.2)).toBe(true)
+  const circuit = nativePairCircuit({
     input,
-    solver.solved ? solver.traces : [],
-    solver.solved
-      ? "Board cutout: 1/1 connected"
-      : "Board cutout: FAILED - no accepted copper",
-  )
-  await expect(circuit).toMatchPcbSnapshot(import.meta.path, {
-    width: 900,
-    height: 800,
-    showSolderMask: false,
+    traces: solver.traces,
   })
-  expect(solver.solved).toBe(true)
-  expect(solver.traces[0].route.some((p) => p.y < -1.2)).toBe(true)
+  await expect(circuit).toMatchPcbSnapshot({
+    testPath: import.meta.path,
+    svgOptions: { width: 900, height: 800, showSolderMask: false },
+  })
 })

@@ -52,16 +52,21 @@ function inside(point: Point, ring: Point[]) {
 
 /** Test the entire copper capsule, including concave cutouts and edge clearance.
  * Endpoints alone cannot detect a segment that exits and reenters the board. */
-export function boardSegmentIsClear(
-  input: SimpleRouteJson,
-  a: Point,
-  b: Point,
-  radius: number,
-) {
-  const margin = radius + (input.minBoardEdgeClearance ?? 0),
+export function boardSegmentIsClear({
+  input,
+  start,
+  end,
+  copperRadiusMm,
+}: {
+  input: SimpleRouteJson
+  start: Point
+  end: Point
+  copperRadiusMm: number
+}) {
+  const margin = copperRadiusMm + (input.minBoardEdgeClearance ?? 0),
     r = input.bounds
   if (
-    [a, b].some(
+    [start, end].some(
       (p) =>
         p.x < r.minX + margin - epsilon ||
         p.x > r.maxX - margin + epsilon ||
@@ -72,10 +77,10 @@ export function boardSegmentIsClear(
     return false
   const ring = input.outline
   if (!ring?.length) return true
-  if (!inside(a, ring) || !inside(b, ring)) return false
+  if (!inside(start, ring) || !inside(end, ring)) return false
   return ring.every(
     (p, i) =>
-      segmentDistance([a, b], [p, ring[(i + 1) % ring.length]]) >=
+      segmentDistance([start, end], [p, ring[(i + 1) % ring.length]]) >=
       margin - epsilon,
   )
 }
@@ -88,7 +93,15 @@ export function traceStaysInsideOutline(input: SimpleRouteJson, trace: Trace) {
       point.route_type === "via"
         ? (point.via_diameter ?? input.minViaPadDiameter ?? 0.3) / 2
         : point.width / 2
-    if (!boardSegmentIsClear(input, point, point, radius)) return false
+    if (
+      !boardSegmentIsClear({
+        input: input,
+        start: point,
+        end: point,
+        copperRadiusMm: radius,
+      })
+    )
+      return false
     const previous = trace.route[i - 1]
     if (!previous) continue
     const wire =
@@ -99,15 +112,16 @@ export function traceStaysInsideOutline(input: SimpleRouteJson, trace: Trace) {
           : undefined
     if (
       wire &&
-      !boardSegmentIsClear(
-        input,
-        previous,
-        point,
-        Math.max(
-          wire.width,
-          previous.route_type === "wire" ? previous.width : wire.width,
-        ) / 2,
-      )
+      !boardSegmentIsClear({
+        input: input,
+        start: previous,
+        end: point,
+        copperRadiusMm:
+          Math.max(
+            wire.width,
+            previous.route_type === "wire" ? previous.width : wire.width,
+          ) / 2,
+      })
     )
       return false
   }

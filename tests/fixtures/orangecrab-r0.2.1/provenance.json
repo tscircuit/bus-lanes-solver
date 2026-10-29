@@ -51,9 +51,33 @@
   "removed_vias": 22,
   "native_removed_wire_segments": 1215,
   "native_retained_wire_segments": 6065,
-  "scope": "Only DDR byte 0 removed; all other source board elements retained. Original filled pours are reference geometry, not a new autoroute. The two small native pair controls are synthetic isolation tests, not OrangeCrab routes.",
+  "scope": "Only DDR byte 0 removed; all other source PCB elements and captured native constraints retained. Original filled pours are reference geometry, not a new autoroute. Outline acceptance does not establish complete DDR routing.",
   "sha256": {
     "original.circuit.json": "22a2fd135fadc363f7712ead3cd05533c4b5c412fb055d1e55e704e1cdbe433e",
     "byte0.srj.json": "d35e1db264568b8994b144526b78e1de788339c02205ff977a955b59d6b9828f"
+  },
+  "castellated_headers": {
+    "references": [
+      "J1",
+      "J2"
+    ],
+    "inner_hole_count": 28,
+    "edge_hole_count": 28,
+    "hole_diameter_mm": 1,
+    "same_pin_hole_center_spacing_mm": 1.4,
+    "adjacent_pin_pitch_mm": 2.54,
+    "board_edges_y_mm": [
+      -11.43,
+      11.43
+    ],
+    "inner_hole_rows_y_mm": [
+      -10.16,
+      10.16
+    ],
+    "edge_hole_rows_y_mm": [
+      -11.56,
+      11.56
+    ],
+    "note": "The source Feather footprints intentionally join each inner header hole to an edge drill of the same pin. Milling intersects the edge drills. Preserve all 56 hole positions and their connected copper; do not move or deduplicate them for appearance."
   }
 }
