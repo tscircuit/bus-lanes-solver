@@ -39,7 +39,7 @@ test("a pair-only bus completes without artificial tuning headroom", async () =>
   })
 }, 30000)
 
-test("the same pair without the bus target remains a completed positive control", () => {
+test("the same pair without the bus target remains a completed positive control", async () => {
   const input = pairOnlyInput()
   input.buses = []
   const before = structuredClone(input)
@@ -57,6 +57,24 @@ test("the same pair without the bus target remains a completed positive control"
   expect(
     createHash("sha256").update(JSON.stringify(copper)).digest("hex"),
   ).toBe("2aeb67090fa1997e9cdd87a212e478cd471bd633247b25ae0d8c08d984a7b218")
+  const circuit = nativePairCircuit({ input, traces: solver.traces })
+  await expect(circuit).toMatchPcbSnapshot({
+    testPath: import.meta.path,
+    snapshotName: "bus-free-control",
+    svgOptions: {
+      width: 1000,
+      height: 450,
+      showSolderMask: false,
+      hiddenLayerOpacity: 1,
+      xRayElementIds: circuit.flatMap((element) =>
+        element.type === "pcb_trace"
+          ? [element.pcb_trace_id]
+          : element.type === "pcb_smtpad"
+            ? [element.pcb_smtpad_id]
+            : [],
+      ),
+    },
+  })
 }, 30000)
 
 for (const constraint of [
