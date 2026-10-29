@@ -1,4 +1,8 @@
 import type { GraphicsObject } from "graphics-debug"
+import {
+  boardOutlineError,
+  traceStaysInsideOutline,
+} from "./board-outline"
 import { layerColor } from "./layer-colors"
 import { BaseSolver } from "@tscircuit/solver-utils"
 import {
@@ -77,8 +81,8 @@ export class SingleLayerConnectivitySolver extends BaseSolver {
       (options.maxPasses ?? 300) < 0
     )
       throw Error("maxPasses must be a nonnegative integer")
-    if (input.outline?.length)
-      throw Error("Single-layer connectivity supports rectangular bounds")
+    const outlineError = boardOutlineError(input.outline)
+    if (outlineError) throw Error(outlineError)
     if (
       input.buses?.some(
         (b) =>
@@ -604,6 +608,8 @@ export class SingleLayerConnectivitySolver extends BaseSolver {
       yield
     }
     const result = input.connections.map((c) => routed.get(c.name)!)
+    if (result.some((trace) => !traceStaysInsideOutline(input, trace)))
+      throw Error("Generated connectivity copper crosses the board outline")
     const drc = validateRoutedCopperDrc({
       inputSrj: {
         ...input,

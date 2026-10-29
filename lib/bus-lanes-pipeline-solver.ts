@@ -36,6 +36,7 @@ import {
 } from "./compact-matching-groups"
 import { compactUnconstrainedLanes } from "./compact-unconstrained-lanes"
 import { routeFreshSharedBuses } from "./route-fresh-shared-buses"
+import { boardOutlineError } from "./board-outline"
 import { routeSharedLayerBuses } from "./route-shared-layer-buses"
 import { simplifyMatchedTraces } from "./simplify-matched-traces"
 import { routeBackwardPackageBuses } from "./route-backward-package-buses"
@@ -440,6 +441,14 @@ export class BusLanesPipelineSolver extends BaseSolver {
     this.MAX_ITERATIONS =
       (options.maxSearchIterations ?? searchBudget) *
       Math.max(1, input.layerCount)
+    const outlineError = boardOutlineError(this.input.outline)
+    if (outlineError) {
+      this.failed = true
+      this.error = outlineError
+      this.failureCode = "invalid_outline"
+      this.phase = "failed"
+      return
+    }
     if (options.goal === "connectivity") {
       if (options.fanout === "none")
         throw Error("Connectivity routing requires local terminal vias")
