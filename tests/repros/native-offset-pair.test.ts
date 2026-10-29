@@ -16,6 +16,8 @@ test("offset native packages route without supplied pair centerlines", async () 
   const solver = new BusLanesPipelineSolver(input, { maxRoutingTimeMs: 20000 })
   solver.solve()
   if (solver.solved) {
+    for (const trace of solver.traces)
+      expect(trace.route.filter((p) => p.route_type === "via")).toHaveLength(2)
     const native = {
       inputSrj: input,
       routedSrj: solver.getOutput(),
