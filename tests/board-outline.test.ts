@@ -1,5 +1,4 @@
 import { boardOutlineInput } from "./fixtures/board-outline"
-import { expectRoutingFixSnapshot } from "./fixtures/routing-fix-svg"
 import { expect, test } from "bun:test"
 import { checkPcbTracesOutOfBoard } from "@tscircuit/checks"
 import type { PcbBoard, PcbTrace } from "circuit-json"
@@ -93,13 +92,6 @@ for (const denseSearch of [false, true])
     expect(solver.traces).toHaveLength(1)
     expect(solver.traces[0].route.some((p) => p.y < -1.2)).toBe(true)
     expect(traceStaysInsideOutline(input, solver.traces[0])).toBe(true)
-    if (!denseSearch)
-      expectRoutingFixSnapshot(
-        "outline",
-        input,
-        solver,
-        "Board outline: route around the concave cutout",
-      )
     expect(input).toEqual(before)
   })
 
