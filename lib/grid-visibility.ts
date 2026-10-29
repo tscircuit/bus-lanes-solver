@@ -372,7 +372,11 @@ export class GridVisibilitySearch extends GridHistoryProjector {
           this.hardEdgeKnown[next] |= neighbor.reverse
           const a = this.point(id),
             b = this.point(next)
-          if (!this.edgeClear(a.x, a.y, b.x, b.y, this.copperBuckets)) {
+          if (
+            (this.scene.input.outline?.length &&
+              !this.scene.boardEdgeIsClear(a, b)) ||
+            !this.edgeClear(a.x, a.y, b.x, b.y, this.copperBuckets)
+          ) {
             this.hardEdgeBlocked[id] |= neighbor.bit
             this.hardEdgeBlocked[next] |= neighbor.reverse
           }
@@ -505,6 +509,7 @@ export class GridVisibilitySearch extends GridHistoryProjector {
       scene.width,
       scene.input.minBoardEdgeClearance,
       scene.input.bounds,
+      scene.input.outline,
       scene.copper.map((c) => [c.a.x, c.a.y, c.b.x, c.b.y, c.radius, c.rect]),
     ])
     let cachedGrid = grids.get(gridKey)
@@ -601,6 +606,12 @@ export class GridVisibilitySearch extends GridHistoryProjector {
           markBox(p.x - r, p.x + r, p.y - r, p.y + r, entry)
         }
       }
+      if (scene.input.outline?.length)
+        for (let id = 0; id < n; id++) {
+          if (this.blocked[id]) continue
+          const point = this.point(id)
+          if (!scene.boardEdgeIsClear(point, point)) this.blocked[id] = 1
+        }
       componentIndex = grid?.checkReachability
         ? new GridComponents(this.blocked, this.nx)
         : undefined
@@ -1231,7 +1242,14 @@ export class GridVisibilitySearch extends GridHistoryProjector {
         if (!(hardEdgeKnown[curId] & bit)) {
           hardEdgeKnown[curId] |= bit
           hardEdgeKnown[id] |= reverse
-          if (!this.edgeClear(xs[x], ys[y], px, py, copperBuckets)) {
+          if (
+            (this.scene.input.outline?.length &&
+              !this.scene.boardEdgeIsClear(
+                { x: xs[x], y: ys[y] },
+                { x: px, y: py },
+              )) ||
+            !this.edgeClear(xs[x], ys[y], px, py, copperBuckets)
+          ) {
             hardEdgeBlocked[curId] |= bit
             hardEdgeBlocked[id] |= reverse
           }
