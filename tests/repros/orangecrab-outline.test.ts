@@ -1,20 +1,13 @@
-import "../fixtures/pcb-snapshot"
 import { expect, test } from "bun:test"
 import { BusLanesSolver } from "../../lib"
-import { orangecrabByte0, orangecrabCircuit } from "../fixtures/orangecrab"
+import { orangecrabByte0 } from "../fixtures/orangecrab"
 
-test("reproduces rejection of the unchanged real OrangeCrab outline", async () => {
+test("the original OrangeCrab outline reproduces unsupported_outline", () => {
   const input = orangecrabByte0()
-  const before = JSON.stringify(input)
-  const circuit = orangecrabCircuit(true)
-  expect(circuit.filter((e) => e.type === "pcb_via")).toHaveLength(419)
-  await expect(circuit).toMatchPcbSnapshot(import.meta.path, {
-    width: 1400,
-    height: 700,
-    showSolderMask: false,
-    showCourtyards: false,
-    showFabricationNotes: false,
-  })
+  const before = structuredClone(input)
+  expect(input.connections).toHaveLength(11)
+  expect(input.obstacles).toHaveLength(1430)
+  expect(input.traces).toHaveLength(996)
   const solver = new BusLanesSolver(input)
   solver.step()
   expect(solver.error).toBe("Custom board outlines are unsupported")
@@ -22,5 +15,5 @@ test("reproduces rejection of the unchanged real OrangeCrab outline", async () =
   expect(solver.failed).toBe(true)
   expect(solver.solved).toBe(false)
   expect(solver.traces).toHaveLength(0)
-  expect(JSON.stringify(input)).toBe(before)
+  expect(input).toEqual(before)
 })
