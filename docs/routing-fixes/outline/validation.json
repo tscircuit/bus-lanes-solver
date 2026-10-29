@@ -1,0 +1,37 @@
+{
+  "baselineSha": "ead4eb9db255118af9713136abb16e4d72e5c36c",
+  "productionHeadSha": "fbef9337d4ee71ca16f224c218448af39e304356",
+  "renderer": "graphics-debug/getSvgFromGraphicsObject via BusLanesSolver.visualize",
+  "inputSha256": "ca9a901c1786d2638aac0a1d7a162d2a818ed7912bf4f4c9a0bf81db4f126660",
+  "before": {
+    "solved": false,
+    "failed": true,
+    "error": "Custom board outlines are unsupported",
+    "failureCode": "unsupported_outline",
+    "acceptedConnections": 0,
+    "diagnosticOnly": true
+  },
+  "after": {
+    "solved": true,
+    "failed": false,
+    "error": null,
+    "connectivity": {
+      "valid": true,
+      "checkedConnectionCount": 1,
+      "connectedConnectionCount": 1,
+      "checkedEndpointCount": 2,
+      "connectedEndpointCount": 2,
+      "issues": []
+    },
+    "drc": {
+      "valid": true,
+      "checkedTraceCount": 1,
+      "checkedSegmentCount": 5,
+      "checkedViaCount": 0,
+      "issues": []
+    },
+    "buses": [],
+    "pairs": [],
+    "coupling": []
+  }
+}

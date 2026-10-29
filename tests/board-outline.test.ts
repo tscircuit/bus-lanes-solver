@@ -1,12 +1,9 @@
+import { boardOutlineInput } from "./fixtures/board-outline"
+import { expectRoutingFixSnapshot } from "./fixtures/routing-fix-svg"
 import { expect, test } from "bun:test"
 import { checkPcbTracesOutOfBoard } from "@tscircuit/checks"
 import type { PcbBoard, PcbTrace } from "circuit-json"
-import {
-  BusLanesSolver,
-  BusLanesPipelineSolver,
-  type SimpleRouteJson,
-  type Trace,
-} from "../lib"
+import { BusLanesSolver, BusLanesPipelineSolver, type Trace } from "../lib"
 import {
   boardOutlineError,
   boardSegmentIsClear,
@@ -16,38 +13,9 @@ import { VectorScene } from "../lib/vector-scene"
 import { GridVisibilitySearch } from "../lib/grid-visibility"
 import { joinedSignalGeometryIsValid } from "../lib/joined-signal-geometry"
 
-function fixture(): SimpleRouteJson {
-  return {
-    layerCount: 2,
-    minTraceWidth: 0.1,
-    minBoardEdgeClearance: 0.2,
-    bounds: { minX: -5, maxX: 5, minY: -4, maxY: 4 },
-    outline: [
-      { x: -5, y: -4 },
-      { x: 5, y: -4 },
-      { x: 5, y: 4 },
-      { x: 1, y: 4 },
-      { x: 1, y: -1 },
-      { x: -1, y: -1 },
-      { x: -1, y: 4 },
-      { x: -5, y: 4 },
-    ],
-    obstacles: [],
-    connections: [
-      {
-        name: "signal",
-        pointsToConnect: [
-          { x: -3, y: 1, layer: "top" },
-          { x: 3, y: 1, layer: "top" },
-        ],
-      },
-    ],
-  }
-}
-
 test("matches the autorouter board-edge DRC example with full trace width", () => {
   // Same geometry as tscircuit-autorouter/tests/drc-board-edge-debug.test.ts.
-  const input = fixture()
+  const input = boardOutlineInput()
   input.bounds = { minX: -5, maxX: 5, minY: -5, maxY: 5 }
   input.outline = [
     { x: -4, y: -4 },
@@ -84,7 +52,7 @@ test("matches the autorouter board-edge DRC example with full trace width", () =
 })
 
 test("outline checks reject concave shortcuts, outside points and copper too close to an edge", () => {
-  const input = fixture()
+  const input = boardOutlineInput()
   expect(
     boardSegmentIsClear(input, { x: -3, y: 1 }, { x: 3, y: 1 }, 0.05),
   ).toBe(false)
@@ -116,7 +84,7 @@ test("outline checks reject concave shortcuts, outside points and copper too clo
 
 for (const denseSearch of [false, true])
   test(`routes around a concave board cutout (${denseSearch ? "grid" : "vector"}) without changing the input`, () => {
-    const input = fixture(),
+    const input = boardOutlineInput(),
       before = structuredClone(input)
     const solver = new BusLanesSolver(input, { denseSearch })
     solver.solve()
@@ -125,11 +93,18 @@ for (const denseSearch of [false, true])
     expect(solver.traces).toHaveLength(1)
     expect(solver.traces[0].route.some((p) => p.y < -1.2)).toBe(true)
     expect(traceStaysInsideOutline(input, solver.traces[0])).toBe(true)
+    if (!denseSearch)
+      expectRoutingFixSnapshot(
+        "outline",
+        input,
+        solver,
+        "Board outline: route around the concave cutout",
+      )
     expect(input).toEqual(before)
   })
 
 test("the explicit rectangular outline control completes through the pipeline", () => {
-  const input = fixture()
+  const input = boardOutlineInput()
   input.outline = [
     { x: -5, y: -4 },
     { x: 5, y: -4 },
@@ -143,7 +118,7 @@ test("the explicit rectangular outline control completes through the pipeline", 
 })
 
 test("native grid access blocks off-board via lands and continuous notch crossings", () => {
-  const input = fixture(),
+  const input = boardOutlineInput(),
     connection = input.connections[0]
   const scene = new VectorScene(input, connection, 0.3, [])
   const search = new GridVisibilitySearch(
@@ -166,7 +141,7 @@ test("native grid access blocks off-board via lands and continuous notch crossin
 })
 
 test("final acceptance checks via diameter and the full pad-to-pad copper against the polygon", () => {
-  const input = fixture()
+  const input = boardOutlineInput()
   const trace: Trace = {
     type: "pcb_trace",
     pcb_trace_id: "invalid",
@@ -213,7 +188,7 @@ for (const outline of [
   ],
 ])
   test("invalid outlines fail before searching", () => {
-    const input = { ...fixture(), outline }
+    const input = { ...boardOutlineInput(), outline }
     for (const solver of [
       new BusLanesSolver(input),
       new BusLanesPipelineSolver(input),
