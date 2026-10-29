@@ -469,7 +469,10 @@ export function* planNativePairedCarriers(
   )
   const longest = Math.max(...total)
   const target =
-    options.busTargetLength ?? Math.max(longest, Math.ceil(longest * 1.15))
+    options.busTargetLength ??
+    (native.connections.some((c) => !pairedNames.has(c.name))
+      ? Math.max(longest, Math.ceil(longest * 1.15))
+      : longest)
   const targets = (native.buses ?? []).flatMap((bus) =>
     pairs
       .filter((p) =>
