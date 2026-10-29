@@ -41,14 +41,39 @@ function pairedFieldMargin(input: SimpleRouteJson) {
   )
 }
 
+function pairTerminalLateral({
+  native,
+  pair,
+  normal,
+  side,
+}: {
+  native: SimpleRouteJson
+  pair: NonNullable<SimpleRouteJson["differentialPairs"]>[number]
+  normal: Point
+  side: number
+}) {
+  return (
+    pair.connectionNames.reduce((sum, name) => {
+      const point = native.connections.find(
+        (connection) => connection.name === name,
+      )!.pointsToConnect[side]
+      return sum + point.x * normal.x + point.y * normal.y
+    }, 0) / 2
+  )
+}
+
 /** Flare paired backbones at the larger package so ordinary signals retain
  * pad escape space. Offset packages use the dominant board axis, so the
  * backbone keeps conventional headings and joins fields with a 45-degree leg. */
-function defaultCenterlines(
-  native: SimpleRouteJson,
-  step: number,
-  packageRegions?: ReturnType<typeof packageApproachRegions>,
-): Point[][] {
+function defaultCenterlines({
+  native,
+  step,
+  packageRegions,
+}: {
+  native: SimpleRouteJson
+  step: number
+  packageRegions?: ReturnType<typeof packageApproachRegions>
+}): Point[][] {
   const pairs = native.differentialPairs!,
     regions =
       packageRegions ??
@@ -138,19 +163,17 @@ function defaultCenterlines(
   return pairs.map((_, i) => {
     const rank = order.findIndex((p) => p.i === i),
       fraction = pairs.length === 1 ? 0 : 1 - (2 * rank) / (pairs.length - 1)
-    const pairCenter = (side: number) =>
-      pairs[i].connectionNames.reduce((sum, name) => {
-        const p = native.connections.find((c) => c.name === name)!
-          .pointsToConnect[side]
-        return sum + p.x * normal.x + p.y * normal.y
-      }, 0) / 2
     // Keep offset-package approaches near their own pads instead of forcing
     // the pair through the unrelated center of a dense BGA field.
     const first = quantize(
-        offsetPackages ? pairCenter(0) : sourceCenter + fraction * sourceSpread,
+        offsetPackages
+          ? pairTerminalLateral({ native, pair: pairs[i], normal, side: 0 })
+          : sourceCenter + fraction * sourceSpread,
       ),
       last = quantize(
-        offsetPackages ? pairCenter(1) : targetCenter + fraction * targetSpread,
+        offsetPackages
+          ? pairTerminalLateral({ native, pair: pairs[i], normal, side: 1 })
+          : targetCenter + fraction * targetSpread,
       )
     if (Math.abs(first - last) < 1e-8)
       return [position(first, out), position(last, incoming)]
@@ -178,7 +201,11 @@ export function* planNativePairedCarriers(
     const regions =
       options.packageRegions ??
       packageApproachRegions(native, pairedFieldMargin(native))
-    const defaults = defaultCenterlines(native, step, regions)
+    const defaults = defaultCenterlines({
+      native,
+      step,
+      packageRegions: regions,
+    })
     const candidates = offsetPackageCenterlines({
       input: native,
       defaults,
@@ -200,7 +227,7 @@ export function* planNativePairedCarriers(
   }
   const centers =
     options.centerlines ??
-    defaultCenterlines(native, step, options.packageRegions)
+    defaultCenterlines({ native, step, packageRegions: options.packageRegions })
   if (centers.length !== pairs.length)
     throw Error("Supply exactly one backbone for each differential pair")
   const regions =
