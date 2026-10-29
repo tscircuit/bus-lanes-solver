@@ -6,6 +6,9 @@ import { orangecrabByte0, orangecrabCircuit } from "../fixtures/orangecrab"
 test("the unchanged real OrangeCrab outline is accepted before byte-zero search", async () => {
   const input = orangecrabByte0()
   const before = JSON.stringify(input)
+  expect(input.connections).toHaveLength(11)
+  expect(input.obstacles).toHaveLength(1430)
+  expect(input.traces).toHaveLength(996)
   const circuit = orangecrabCircuit(true)
   expect(circuit.filter((e) => e.type === "pcb_via")).toHaveLength(419)
   await expect(circuit).toMatchPcbSnapshot(import.meta.path, {
