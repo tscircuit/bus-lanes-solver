@@ -15,6 +15,25 @@ test("a pair-only bus needs no artificial tuning headroom", async () => {
     before = structuredClone(input)
   const solver = new BusLanesPipelineSolver(input, { maxRoutingTimeMs: 20000 })
   solver.solve()
+  if (solver.solved) {
+    const native = {
+      inputSrj: input,
+      routedSrj: solver.getOutput(),
+    } as Parameters<typeof validateRoutedCopperDrc>[0]
+    expect(validateOriginalEndpointConnectivity(native).valid).toBe(true)
+    expect(validateRoutedCopperDrc({ ...native, clearance: 0.1 }).valid).toBe(
+      true,
+    )
+    expect(busLengthReports(input, solver.traces).every((r) => r.matched)).toBe(
+      true,
+    )
+    expect(
+      pairLengthReports(input, solver.traces).every((r) => r.matched),
+    ).toBe(true)
+    expect(
+      exteriorPairSpacingReports(input, solver.traces).every((r) => r.matched),
+    ).toBe(true)
+  }
   const circuit = nativePairCircuit(
     input,
     solver.solved ? solver.traces : [],
@@ -32,22 +51,5 @@ test("a pair-only bus needs no artificial tuning headroom", async () => {
       .map((e: any) => e.pcb_trace_id ?? e.pcb_smtpad_id),
   })
   expect(solver.solved).toBe(true)
-  const native = {
-    inputSrj: input,
-    routedSrj: solver.getOutput(),
-  } as Parameters<typeof validateRoutedCopperDrc>[0]
-  expect(validateOriginalEndpointConnectivity(native).valid).toBe(true)
-  expect(validateRoutedCopperDrc({ ...native, clearance: 0.1 }).valid).toBe(
-    true,
-  )
-  expect(busLengthReports(input, solver.traces).every((r) => r.matched)).toBe(
-    true,
-  )
-  expect(pairLengthReports(input, solver.traces).every((r) => r.matched)).toBe(
-    true,
-  )
-  expect(
-    exteriorPairSpacingReports(input, solver.traces).every((r) => r.matched),
-  ).toBe(true)
   expect(input).toEqual(before)
 }, 30000)
