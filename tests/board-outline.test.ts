@@ -1,4 +1,6 @@
 import { expect, test } from "bun:test"
+import { checkPcbTracesOutOfBoard } from "@tscircuit/checks"
+import type { PcbBoard, PcbTrace } from "circuit-json"
 import {
   BusLanesSolver,
   BusLanesPipelineSolver,
@@ -43,6 +45,44 @@ function fixture(): SimpleRouteJson {
   }
 }
 
+test("matches the autorouter board-edge DRC example with full trace width", () => {
+  // Same geometry as tscircuit-autorouter/tests/drc-board-edge-debug.test.ts.
+  const input = fixture()
+  input.bounds = { minX: -5, maxX: 5, minY: -5, maxY: 5 }
+  input.outline = [
+    { x: -4, y: -4 },
+    { x: 4, y: -4 },
+    { x: 4, y: 4 },
+    { x: -4, y: 4 },
+  ]
+  const board: PcbBoard = {
+    type: "pcb_board",
+    pcb_board_id: "board",
+    center: { x: 0, y: 0 },
+    thickness: 1.6,
+    num_layers: 2,
+    material: "fr4",
+    outline: input.outline,
+    min_board_edge_clearance: input.minBoardEdgeClearance,
+  }
+  for (const [y, clear] of [
+    [3.8, false],
+    [3.69, true],
+  ] as const) {
+    const trace = {
+      type: "pcb_trace",
+      pcb_trace_id: "edge_trace",
+      connection_name: "edge_trace",
+      route: [
+        { route_type: "wire", x: -1, y, width: 0.2, layer: "top" },
+        { route_type: "wire", x: 1, y, width: 0.2, layer: "top" },
+      ],
+    } satisfies Trace & PcbTrace
+    expect(traceStaysInsideOutline(input, trace)).toBe(clear)
+    expect(checkPcbTracesOutOfBoard([board, trace]).length === 0).toBe(clear)
+  }
+})
+
 test("outline checks reject concave shortcuts, outside points and copper too close to an edge", () => {
   const input = fixture()
   expect(
@@ -75,7 +115,7 @@ test("outline checks reject concave shortcuts, outside points and copper too clo
 })
 
 for (const denseSearch of [false, true])
-  test("routes around a concave board cutout without changing the input", () => {
+  test(`routes around a concave board cutout (${denseSearch ? "grid" : "vector"}) without changing the input`, () => {
     const input = fixture(),
       before = structuredClone(input)
     const solver = new BusLanesSolver(input, { denseSearch })

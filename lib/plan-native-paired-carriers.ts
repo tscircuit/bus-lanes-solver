@@ -9,7 +9,6 @@ import { packageApproachRegions, pointInBox } from "./package-approach-regions"
 import { chamferOrdinaryCorners } from "./chamfer-ordinary-corners"
 import { fixedCopper, VectorScene } from "./vector-scene"
 import type { Connection, Point, SimpleRouteJson, Trace } from "./types"
-import { offsetPackageCenterlines } from "./offset-package-centerlines"
 
 export interface NativePairedCarrierOptions {
   /** One centerline per differential pair, in the input pair order. */
@@ -41,8 +40,8 @@ function pairedFieldMargin(input: SimpleRouteJson) {
 }
 
 /** Flare paired backbones at the larger package so ordinary signals retain
- * pad escape space. Offset packages use a cardinal reference frame; automatic
- * alternatives also check other package faces against immutable copper. */
+ * pad escape space. Axis-aligned packages use their immutable copper fields;
+ * callers can provide octilinear centerlines for other arrangements. */
 function defaultCenterlines(
   native: SimpleRouteJson,
   step: number,
@@ -70,19 +69,10 @@ function defaultCenterlines(
   const a = center(source.pads),
     b = center(target.pads),
     distance = Math.hypot(a.x - b.x, a.y - b.y)
-  const forward = { x: (b.x - a.x) / distance, y: (b.y - a.y) / distance }
-  const offsetPackages =
-    Math.abs(forward.x) > 1e-8 && Math.abs(forward.y) > 1e-8
-  if (offsetPackages) {
-    if (Math.abs(forward.x) >= Math.abs(forward.y)) {
-      forward.x = Math.sign(forward.x)
-      forward.y = 0
-    } else {
-      forward.x = 0
-      forward.y = Math.sign(forward.y)
-    }
-  }
-  const normal = { x: -forward.y, y: forward.x }
+  const forward = { x: (b.x - a.x) / distance, y: (b.y - a.y) / distance },
+    normal = { x: -forward.y, y: forward.x }
+  if (Math.abs(forward.x) > 1e-8 && Math.abs(forward.y) > 1e-8)
+    throw Error("Provide paired centerlines for diagonal native packages")
   const projection = (box: SimpleRouteJson["bounds"], u: Point) =>
     [box.minX, box.maxX].flatMap((x) =>
       [box.minY, box.maxY].map((y) => x * u.x + y * u.y),
@@ -137,20 +127,8 @@ function defaultCenterlines(
   return pairs.map((_, i) => {
     const rank = order.findIndex((p) => p.i === i),
       fraction = pairs.length === 1 ? 0 : 1 - (2 * rank) / (pairs.length - 1)
-    const pairCenter = (side: number) =>
-      pairs[i].connectionNames.reduce((sum, name) => {
-        const p = native.connections.find((c) => c.name === name)!
-          .pointsToConnect[side]
-        return sum + p.x * normal.x + p.y * normal.y
-      }, 0) / 2
-    // Keep offset-package approaches near their own pads instead of forcing
-    // the pair through the unrelated center of a dense BGA field.
-    const first = quantize(
-        offsetPackages ? pairCenter(0) : sourceCenter + fraction * sourceSpread,
-      ),
-      last = quantize(
-        offsetPackages ? pairCenter(1) : targetCenter + fraction * targetSpread,
-      )
+    const first = quantize(sourceCenter + fraction * sourceSpread),
+      last = quantize(targetCenter + fraction * targetSpread)
     if (Math.abs(first - last) < 1e-8)
       return [position(first, out), position(last, incoming)]
     const stem = 12 * native.minTraceWidth,
@@ -173,25 +151,6 @@ export function* planNativePairedCarriers(
     carrier = native.allowedLayers![0],
     step = options.gridStep ?? native.minTraceWidth
   if (!pairs.length) return []
-  if (!options.centerlines) {
-    const regions =
-      options.packageRegions ??
-      packageApproachRegions(native, pairedFieldMargin(native))
-    const defaults = defaultCenterlines(native, step, regions)
-    const candidates = offsetPackageCenterlines(native, defaults, regions, step)
-    if (candidates) {
-      for (const centerlines of candidates) {
-        const result = yield* planNativePairedCarriers(
-          native,
-          { ...options, centerlines },
-          progress,
-        )
-        if (result) return result
-        yield
-      }
-      return null
-    }
-  }
   const centers =
     options.centerlines ??
     defaultCenterlines(native, step, options.packageRegions)
@@ -510,10 +469,7 @@ export function* planNativePairedCarriers(
   )
   const longest = Math.max(...total)
   const target =
-    options.busTargetLength ??
-    (native.connections.some((c) => !pairedNames.has(c.name))
-      ? Math.max(longest, Math.ceil(longest * 1.15))
-      : longest)
+    options.busTargetLength ?? Math.max(longest, Math.ceil(longest * 1.15))
   const targets = (native.buses ?? []).flatMap((bus) =>
     pairs
       .filter((p) =>
