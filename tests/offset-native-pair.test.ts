@@ -1,3 +1,4 @@
+import { expectRoutingFixSnapshot } from "./fixtures/routing-fix-svg"
 import { expect, test } from "bun:test"
 import { validateRoutedCopperDrc } from "@tscircuit/fanout-solver"
 import { BusLanesPipelineSolver } from "../lib"
@@ -26,5 +27,11 @@ test("freshly routes offset packages without supplied centerlines", () => {
       clearance: 0.1,
     } as Parameters<typeof validateRoutedCopperDrc>[0]).valid,
   ).toBe(true)
+  expectRoutingFixSnapshot(
+    "offset-pair",
+    input,
+    solver,
+    "Offset packages: automatic differential-pair approaches",
+  )
   expect(input).toEqual(before)
 }, 30000)
