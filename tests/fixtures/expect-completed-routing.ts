@@ -3,10 +3,10 @@ import {
   validateOriginalEndpointConnectivity,
   validateRoutedCopperDrc,
 } from "@tscircuit/fanout-solver"
-import type {
-  BusLanesSolver,
+import {
   BusLanesPipelineSolver,
-  SimpleRouteJson,
+  type BusLanesSolver,
+  type SimpleRouteJson,
 } from "../../lib"
 import { busLengthReports, pairLengthReports } from "../../lib/route-lengths"
 import { exteriorPairSpacingReports } from "../../lib/exterior-pair-spacing"
@@ -22,13 +22,25 @@ export function expectCompletedRouting(
   expect(solver.error).toBeNull()
   const input = solver.input
   const output = solver.getOutput()
+  const fixedConnections =
+    solver instanceof BusLanesPipelineSolver
+      ? (solver.options.singleCarrier?.fixedConnections ?? [])
+      : []
   const native = {
-    inputSrj: nativeValidationSrj(input),
-    routedSrj: nativeValidationSrj(output),
+    inputSrj: nativeValidationSrj({
+      ...input,
+      connections: [...input.connections, ...fixedConnections],
+    }),
+    routedSrj: nativeValidationSrj({
+      ...output,
+      connections: [...output.connections, ...fixedConnections],
+    }),
   }
   const connectivity = validateOriginalEndpointConnectivity(native)
   expect(connectivity.valid).toBe(true)
-  expect(connectivity.connectedConnectionCount).toBe(input.connections.length)
+  expect(connectivity.connectedConnectionCount).toBe(
+    native.inputSrj.connections.length,
+  )
   expect(
     validateRoutedCopperDrc({
       ...native,

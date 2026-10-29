@@ -3,13 +3,17 @@ import { expect, type MatcherResult } from "bun:test"
 import type { AnyCircuitElement } from "circuit-json"
 import { convertCircuitJsonToPcbSvg, type PcbSvgOptions } from "circuit-to-svg"
 
-type PcbSnapshotOptions = { testPath: string; svgOptions?: PcbSvgOptions }
+type PcbSnapshotOptions = {
+  testPath: string
+  svgOptions?: PcbSvgOptions
+  snapshotName?: string
+}
 
 // One shared adapter to core's PCB renderer and the existing SVG matcher.
 expect.extend({
   async toMatchPcbSnapshot(
     received: unknown,
-    { testPath, svgOptions }: PcbSnapshotOptions,
+    { testPath, svgOptions, snapshotName }: PcbSnapshotOptions,
   ): Promise<MatcherResult> {
     if (!Array.isArray(received)) throw Error("Expected Circuit JSON elements")
     const circuit: AnyCircuitElement[] = received
@@ -18,7 +22,7 @@ expect.extend({
         showDebugObjects: true,
         ...svgOptions,
       }),
-    ).toMatchSvgSnapshot(testPath, "pcb")
+    ).toMatchSvgSnapshot(testPath, snapshotName ?? "pcb")
     return { pass: true, message: () => "PCB snapshot matches" }
   },
 })
