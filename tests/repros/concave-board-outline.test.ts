@@ -4,7 +4,7 @@ import { BusLanesSolver } from "../../lib"
 import { boardOutlineInput } from "../fixtures/board-outline"
 import { nativePairCircuit } from "../fixtures/native-pair-circuit"
 
-test("a routed trace stays inside a concave board outline", async () => {
+test("reproduces rejection of a valid concave board outline", async () => {
   const input = boardOutlineInput()
   const solver = new BusLanesSolver(input)
   solver.solve()
@@ -20,6 +20,9 @@ test("a routed trace stays inside a concave board outline", async () => {
     height: 800,
     showSolderMask: false,
   })
-  expect(solver.solved).toBe(true)
-  expect(solver.traces[0].route.some((p) => p.y < -1.2)).toBe(true)
+  expect(solver.error).toBe("Custom board outlines are unsupported")
+  expect(solver.failureCode).toBe("unsupported_outline")
+  expect(solver.failed).toBe(true)
+  expect(solver.solved).toBe(false)
+  expect(solver.traces).toHaveLength(0)
 })

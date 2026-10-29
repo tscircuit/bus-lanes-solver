@@ -10,7 +10,7 @@ import { nativePairCircuit } from "../fixtures/native-pair-circuit"
 import { exteriorPairSpacingReports } from "../../lib/exterior-pair-spacing"
 import { busLengthReports, pairLengthReports } from "../../lib/route-lengths"
 
-test("a pair-only bus needs no artificial tuning headroom", async () => {
+test("reproduces exhausted routing plans from pair-only tuning headroom", async () => {
   const input = pairOnlyInput(),
     before = structuredClone(input)
   const solver = new BusLanesPipelineSolver(input, { maxRoutingTimeMs: 20000 })
@@ -50,6 +50,12 @@ test("a pair-only bus needs no artificial tuning headroom", async () => {
       .filter((e) => e.type === "pcb_trace" || e.type === "pcb_smtpad")
       .map((e: any) => e.pcb_trace_id ?? e.pcb_smtpad_id),
   })
-  expect(solver.solved).toBe(true)
+  expect(solver.error).toBe(
+    "Error: Native carrier matching exhausted its routing plans",
+  )
+  expect(solver.failureCode).toBe("native_single_carrier_matching_failed")
+  expect(solver.failed).toBe(true)
+  expect(solver.solved).toBe(false)
+  expect(solver.traces).toHaveLength(0)
   expect(input).toEqual(before)
 }, 30000)

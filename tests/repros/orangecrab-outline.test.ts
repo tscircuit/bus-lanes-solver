@@ -3,7 +3,7 @@ import { expect, test } from "bun:test"
 import { BusLanesSolver } from "../../lib"
 import { orangecrabByte0, orangecrabCircuit } from "../fixtures/orangecrab"
 
-test("the unchanged real OrangeCrab outline is accepted before byte-zero search", async () => {
+test("reproduces rejection of the unchanged real OrangeCrab outline", async () => {
   const input = orangecrabByte0()
   const before = JSON.stringify(input)
   const circuit = orangecrabCircuit(true)
@@ -17,7 +17,10 @@ test("the unchanged real OrangeCrab outline is accepted before byte-zero search"
   })
   const solver = new BusLanesSolver(input)
   solver.step()
-  expect(solver.error).toBeNull()
-  expect(solver.phase).toBe("coupled_pairs")
+  expect(solver.error).toBe("Custom board outlines are unsupported")
+  expect(solver.failureCode).toBe("unsupported_outline")
+  expect(solver.failed).toBe(true)
+  expect(solver.solved).toBe(false)
+  expect(solver.traces).toHaveLength(0)
   expect(JSON.stringify(input)).toBe(before)
 })

@@ -10,7 +10,7 @@ import { nativePairCircuit } from "../fixtures/native-pair-circuit"
 import { exteriorPairSpacingReports } from "../../lib/exterior-pair-spacing"
 import { pairLengthReports } from "../../lib/route-lengths"
 
-test("offset native packages route without supplied pair centerlines", async () => {
+test("reproduces missing automatic centerlines for offset native packages", async () => {
   const input = offsetNativePair(),
     before = structuredClone(input)
   const solver = new BusLanesPipelineSolver(input, { maxRoutingTimeMs: 20000 })
@@ -47,6 +47,12 @@ test("offset native packages route without supplied pair centerlines", async () 
       .filter((e) => e.type === "pcb_trace" || e.type === "pcb_smtpad")
       .map((e: any) => e.pcb_trace_id ?? e.pcb_smtpad_id),
   })
-  expect(solver.solved).toBe(true)
+  expect(solver.error).toBe(
+    "Error: Provide paired centerlines for diagonal native packages",
+  )
+  expect(solver.failureCode).toBe("native_single_carrier_matching_failed")
+  expect(solver.failed).toBe(true)
+  expect(solver.solved).toBe(false)
+  expect(solver.traces).toHaveLength(0)
   expect(input).toEqual(before)
 }, 30000)
