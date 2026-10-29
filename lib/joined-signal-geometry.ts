@@ -1,4 +1,5 @@
 import { tuningPathIsSelfClear } from "./length-tuning"
+import { traceStaysInsideOutline } from "./board-outline"
 import { nativeSignalGeometryIsValid } from "./native-signal-geometry"
 import type { SimpleRouteJson, Trace, Wire } from "./types"
 
@@ -12,6 +13,7 @@ export function joinedSignalGeometryIsValid(params: {
   smoothTuning?: boolean
 }): boolean {
   const { input, trace } = params
+  if (!traceStaysInsideOutline(input, trace)) return false
   if (params.smoothTuning !== false && !nativeSignalGeometryIsValid(trace))
     return false
   const clearance =
