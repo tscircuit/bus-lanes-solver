@@ -424,8 +424,7 @@ export class VectorScene {
           {
             ...this.input,
             outline: undefined,
-            minTraceToPadEdgeClearance:
-              this.input.minBoardEdgeClearance ?? 0,
+            minTraceToPadEdgeClearance: this.input.minBoardEdgeClearance ?? 0,
           },
           this.connection,
           this.width,

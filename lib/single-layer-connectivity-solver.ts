@@ -1,8 +1,5 @@
 import type { GraphicsObject } from "graphics-debug"
-import {
-  boardOutlineError,
-  traceStaysInsideOutline,
-} from "./board-outline"
+import { boardOutlineError, traceStaysInsideOutline } from "./board-outline"
 import { layerColor } from "./layer-colors"
 import { BaseSolver } from "@tscircuit/solver-utils"
 import {

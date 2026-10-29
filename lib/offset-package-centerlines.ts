@@ -59,12 +59,8 @@ export function offsetPackageCenterlines(
       ),
   )
   const preferred = [0, 1].map((side) => ({
-    x:
-      connections.reduce((sum, c) => sum + c.pointsToConnect[side].x, 0) /
-      2,
-    y:
-      connections.reduce((sum, c) => sum + c.pointsToConnect[side].y, 0) /
-      2,
+    x: connections.reduce((sum, c) => sum + c.pointsToConnect[side].x, 0) / 2,
+    y: connections.reduce((sum, c) => sum + c.pointsToConnect[side].y, 0) / 2,
   }))
   const paths: Point[][] = []
   const seen = new Set<string>()

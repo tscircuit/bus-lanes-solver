@@ -54,9 +54,9 @@ test("outline checks reject concave shortcuts, outside points and copper too clo
   expect(
     boardSegmentIsClear(input, { x: -3, y: -1.1 }, { x: 3, y: -1.1 }, 0.05),
   ).toBe(false)
-  expect(
-    boardSegmentIsClear(input, { x: 0, y: 2 }, { x: 0, y: 2 }, 0.05),
-  ).toBe(false)
+  expect(boardSegmentIsClear(input, { x: 0, y: 2 }, { x: 0, y: 2 }, 0.05)).toBe(
+    false,
+  )
   for (const outline of [
     input.outline!,
     input.outline!.toReversed(),

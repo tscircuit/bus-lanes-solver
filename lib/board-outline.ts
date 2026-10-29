@@ -11,8 +11,7 @@ export function boardOutlineError(outline?: Point[]): string | undefined {
   const ring = outline.filter(
     (p, i) => !i || distance(p, outline[i - 1]) > epsilon,
   )
-  if (ring.length > 1 && distance(ring[0], ring.at(-1)!) <= epsilon)
-    ring.pop()
+  if (ring.length > 1 && distance(ring[0], ring.at(-1)!) <= epsilon) ring.pop()
   if (ring.length < 3) return "Board outline needs at least three vertices"
   const origin = ring[0]
   const area = ring.reduce((sum, p, i) => {
