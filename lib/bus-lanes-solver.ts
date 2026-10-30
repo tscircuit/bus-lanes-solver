@@ -1,4 +1,5 @@
 import { highDemandPairedLanes } from "./tuning-bank-demands"
+import { boardOutlineError } from "./board-outline"
 import { routePairedNetwork } from "./route-paired-network"
 import { roundCoupledReturnBends } from "./round-coupled-return-bends"
 import {
@@ -159,8 +160,9 @@ export class BusLanesSolver extends BaseSolver {
   }
   private initialize() {
     const input = this.input
-    if (input.outline?.length) {
-      this.fail("unsupported_outline", "Custom board outlines are unsupported")
+    const outlineError = boardOutlineError(input.outline)
+    if (outlineError) {
+      this.fail("invalid_outline", outlineError)
       return
     }
     const names = new Set<string>()
