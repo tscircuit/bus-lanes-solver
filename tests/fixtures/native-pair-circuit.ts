@@ -6,6 +6,7 @@ import type {
   PcbVia,
 } from "circuit-json"
 import type { SimpleRouteJson, Trace } from "../../lib"
+import { fixedCopper } from "../../lib/vector-scene"
 
 function circuitLayer(layer: string) {
   const copperLayer = (
@@ -92,7 +93,24 @@ export function nativePairCircuit({
       )?.width ?? input.minTraceWidth) / 2,
     layer: circuitLayer(terminal.layer),
   }))
-  const copper: PcbTrace[] = [...(input.traces ?? []), ...traces].map(
+  const obstacleTraces: Trace[] = fixedCopper({
+    ...input,
+    obstacles: input.obstacles.filter(
+      (obstacle) => obstacle.type === "oval" && !obstacle.componentId,
+    ),
+    traces: [],
+  }).map((copper, index) => ({
+    type: "pcb_trace",
+    pcb_trace_id: `fixed_oval_${index}`,
+    connection_name: copper.owners[0],
+    route: [copper.a, copper.b].map((point) => ({
+      ...point,
+      route_type: "wire",
+      width: copper.radius * 2,
+      layer: copper.layer,
+    })),
+  }))
+  const copper: PcbTrace[] = [...obstacleTraces, ...(input.traces ?? []), ...traces].map(
     (trace) => ({
       type: "pcb_trace",
       pcb_trace_id: trace.pcb_trace_id,

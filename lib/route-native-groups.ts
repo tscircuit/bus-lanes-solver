@@ -7,6 +7,7 @@ import { routeMatchedNativeSingleCarrier } from "./route-matched-native-single-c
 import { type NativeCarrierProgress } from "./match-native-carrier-signals"
 import { NativeCarrierRouter } from "./native-carrier-router"
 import { cleanNativeCarrierSignal } from "./native-carrier-tuning"
+import { toNativeValidationSrj } from "./native-validation-input"
 import { nativeGroupCenterlines } from "./native-group-centerlines"
 import { busLengthReports, pairLengthReports } from "./route-lengths"
 import { exteriorPairSpacingReports } from "./exterior-pair-spacing"
@@ -349,11 +350,11 @@ export function* routeNativeGroups(
   )
     return null
   const drc = validateRoutedCopperDrc({
-    inputSrj: input,
-    routedSrj: { ...input, traces: completed },
+    inputSrj: toNativeValidationSrj(input),
+    routedSrj: toNativeValidationSrj({ ...input, traces: completed }),
     clearance:
       input.minTraceToPadEdgeClearance ?? input.defaultObstacleMargin ?? 0.075,
     allowBlindAndBuriedVias: false,
-  } as never)
+  })
   return drc.valid ? completed : null
 }

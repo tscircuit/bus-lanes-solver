@@ -37,6 +37,21 @@ export function fixedCopper(input: SimpleRouteJson): Copper[] {
       Math.abs(Math.cos(angle)) * o.width + Math.abs(Math.sin(angle)) * o.height
     const height =
       Math.abs(Math.sin(angle)) * o.width + Math.abs(Math.cos(angle)) * o.height
+    if (o.type === "oval" && o.shape !== "circle") {
+      const halfSpan = Math.abs(o.width - o.height) / 2
+      const axis = angle + (o.width < o.height ? Math.PI / 2 : 0)
+      const dx = Math.cos(axis) * halfSpan
+      const dy = Math.sin(axis) * halfSpan
+      for (const layer of o.layers)
+        result.push({
+          a: { x: o.center.x - dx, y: o.center.y - dy },
+          b: { x: o.center.x + dx, y: o.center.y + dy },
+          radius: Math.min(o.width, o.height) / 2,
+          layer,
+          owners: o.connectedTo,
+        })
+      continue
+    }
     for (const layer of o.layers)
       result.push({
         a: o.center,

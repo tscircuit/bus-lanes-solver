@@ -1,4 +1,5 @@
 import { validateRoutedCopperDrc } from "@tscircuit/fanout-solver"
+import { toNativeValidationSrj } from "./native-validation-input"
 import { CopperConflictIndex } from "./copper-conflict-index"
 import { length, segmentDistance } from "./geometry"
 import { GridHistoryProjector } from "./grid-visibility"
@@ -155,14 +156,14 @@ export function* matchNativeCarrierSignals(
       ],
     }
     return validateRoutedCopperDrc({
-      inputSrj: validationInput,
-      routedSrj: {
+      inputSrj: toNativeValidationSrj(validationInput),
+      routedSrj: toNativeValidationSrj({
         ...validationInput,
         traces: [...(original.traces ?? []), ...complete],
-      },
+      }),
       clearance,
       allowBlindAndBuriedVias: false,
-    } as unknown as Parameters<typeof validateRoutedCopperDrc>[0]).valid
+    }).valid
   }
   if (!input.connections.length) return valid([]) ? paired : null
   function* negotiate(
