@@ -194,7 +194,7 @@ export function* matchNativeCarrierSignals(
         new Float32Array(projector.cellCount),
         new Float32Array(projector.cellCount),
       ],
-      router = new NativeCarrierRouter(local, step, history)
+      router = new NativeCarrierRouter({ input: local, step, history })
     const routed = new Map(
       seed
         .filter((t) => !frozenNames.has(t.connection_name))

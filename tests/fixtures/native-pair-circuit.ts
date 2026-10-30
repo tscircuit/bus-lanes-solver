@@ -61,6 +61,21 @@ export function nativePairCircuit({
   const terminals = input.connections.flatMap(
     (connection) => connection.pointsToConnect,
   )
+  // Keep surrounding BGA pads visible when a regression routes only selected
+  // pins. Existing terminal ordering and snapshot identities stay stable.
+  for (const obstacle of input.obstacles) {
+    if (!obstacle.componentId || obstacle.shape !== "circle") continue
+    for (const layer of obstacle.layers)
+      if (
+        !terminals.some(
+          (point) =>
+            point.x === obstacle.center.x &&
+            point.y === obstacle.center.y &&
+            point.layer === layer,
+        )
+      )
+        terminals.push({ ...obstacle.center, layer })
+  }
   const pads: PcbSmtPad[] = terminals.map((terminal, index) => ({
     type: "pcb_smtpad",
     pcb_smtpad_id: `pad_${index}`,
@@ -71,7 +86,9 @@ export function nativePairCircuit({
     radius:
       (input.obstacles.find(
         (obstacle) =>
-          obstacle.center.x === terminal.x && obstacle.center.y === terminal.y,
+          obstacle.center.x === terminal.x &&
+          obstacle.center.y === terminal.y &&
+          obstacle.layers.includes(terminal.layer),
       )?.width ?? input.minTraceWidth) / 2,
     layer: circuitLayer(terminal.layer),
   }))

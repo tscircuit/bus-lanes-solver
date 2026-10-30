@@ -304,7 +304,7 @@ export function* planNativePairedCarriers(
       new Float32Array(projector.cellCount),
       new Float32Array(projector.cellCount),
     ],
-    router = new NativeCarrierRouter(input, step, history),
+    router = new NativeCarrierRouter({ input, step, history }),
     routed = new Map<string, Trace>(),
     index = new CopperConflictIndex()
   const copperCache = new WeakMap<Trace, ReturnType<typeof fixedCopper>>()

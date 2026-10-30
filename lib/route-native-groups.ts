@@ -306,10 +306,11 @@ export function* routeNativeGroups(
         cells =
           (Math.ceil((input.bounds.maxX - input.bounds.minX) / step) + 1) *
           (Math.ceil((input.bounds.maxY - input.bounds.minY) / step) + 1)
-      const router = new NativeCarrierRouter(part, step, [
-        new Float32Array(cells),
-        new Float32Array(cells),
-      ])
+      const router = new NativeCarrierRouter({
+        input: part,
+        step,
+        history: [new Float32Array(cells), new Float32Array(cells)],
+      })
       const candidate = yield* bounded(
         router.route(connection, { strict: true, maxExpansions: 500000 }),
         1000,

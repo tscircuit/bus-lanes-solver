@@ -38,10 +38,11 @@ function nativeInput(): SimpleRouteJson {
 }
 function route(input: SimpleRouteJson, maximum = Infinity) {
   const cells = 161 * 81
-  const router = new NativeCarrierRouter(input, 0.1, [
-      new Float32Array(cells),
-      new Float32Array(cells),
-    ]),
+  const router = new NativeCarrierRouter({
+      input,
+      step: 0.1,
+      history: [new Float32Array(cells), new Float32Array(cells)],
+    }),
     search = router.route(input.connections[0], {
       maxLength: maximum,
       maxExpansions: 200000,
