@@ -13,6 +13,7 @@ jobs:
     steps:
       - name: Install the Ubuntu KiCad CLI
         run: |
+          sudo add-apt-repository --yes ppa:kicad/kicad-9.0-releases
           sudo apt-get update
           sudo apt-get install --no-install-recommends -y kicad
           dpkg-query --show kicad
