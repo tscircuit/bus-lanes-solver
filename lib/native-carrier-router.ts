@@ -8,7 +8,7 @@ import {
 } from "./length-search-frontier"
 import type { Connection, Point, SimpleRouteJson, Trace, Wire } from "./types"
 import { fixedCopper, VectorScene } from "./vector-scene"
-import { nativeViaGridBounds } from "./native-via-grid-bounds"
+import { nativeViaGridSearches } from "./native-via-grid-bounds"
 
 type Bounds = SimpleRouteJson["bounds"]
 export interface NativeCarrierCandidate {
@@ -135,14 +135,14 @@ export class NativeCarrierRouter {
   ): Generator<void, NativeCarrierCandidate | null> {
     const candidate = yield* this.routeGrid(c, options)
     if (candidate) return candidate
-    for (const gridBounds of nativeViaGridBounds({
+    for (const { bounds: gridBounds, stepMm } of nativeViaGridSearches({
       input: this.input,
       connection: c,
       stepMm: this.step,
       forcedVia: options.forcedVia,
     })) {
-      const nx = Math.ceil((gridBounds.maxX - gridBounds.minX) / this.step) + 1
-      const ny = Math.ceil((gridBounds.maxY - gridBounds.minY) / this.step) + 1
+      const nx = Math.ceil((gridBounds.maxX - gridBounds.minX) / stepMm) + 1
+      const ny = Math.ceil((gridBounds.maxY - gridBounds.minY) / stepMm) + 1
       const oldNx =
         Math.ceil((this.gridBounds.maxX - this.gridBounds.minX) / this.step) + 1
       const oldNy =
@@ -152,12 +152,10 @@ export class NativeCarrierRouter {
         for (let y = 0; y < ny; y++)
           for (let x = 0; x < nx; x++) {
             const oldX = Math.round(
-              (gridBounds.minX + x * this.step - this.gridBounds.minX) /
-                this.step,
+              (gridBounds.minX + x * stepMm - this.gridBounds.minX) / this.step,
             )
             const oldY = Math.round(
-              (gridBounds.minY + y * this.step - this.gridBounds.minY) /
-                this.step,
+              (gridBounds.minY + y * stepMm - this.gridBounds.minY) / this.step,
             )
             if (oldX >= 0 && oldX < oldNx && oldY >= 0 && oldY < oldNy)
               shifted[y * nx + x] = old[oldY * oldNx + oldX] ?? 0
@@ -166,7 +164,7 @@ export class NativeCarrierRouter {
       })
       const router = new NativeCarrierRouter({
         input: this.input,
-        step: this.step,
+        step: stepMm,
         history,
         gridBounds,
       })
