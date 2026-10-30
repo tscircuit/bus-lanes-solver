@@ -11,6 +11,7 @@ import {
 import { busLengthReports, pairLengthReports } from "../../lib/route-lengths"
 import { exteriorPairSpacingReports } from "../../lib/exterior-pair-spacing"
 import { sharedPairSpacingReports } from "../../lib/shared-pair-spacing"
+import { toNativeValidationSrj } from "../../lib/native-validation-input"
 
 /** All acceptance checks run before a completed routing snapshot can be written. */
 export function expectCompletedRouting(
@@ -27,11 +28,11 @@ export function expectCompletedRouting(
       ? (solver.options.singleCarrier?.fixedConnections ?? [])
       : []
   const native = {
-    inputSrj: nativeValidationSrj({
+    inputSrj: toNativeValidationSrj({
       ...input,
       connections: [...input.connections, ...fixedConnections],
     }),
-    routedSrj: nativeValidationSrj({
+    routedSrj: toNativeValidationSrj({
       ...output,
       connections: [...output.connections, ...fixedConnections],
     }),
@@ -72,24 +73,4 @@ export function expectCompletedRouting(
   expect(output.traces?.slice(0, input.traces?.length ?? 0)).toEqual(
     input.traces ?? [],
   )
-}
-
-function nativeValidationSrj(input: SimpleRouteJson) {
-  return {
-    ...input,
-    obstacles: input.obstacles.map((obstacle) => ({
-      ...obstacle,
-      type: "rect" as const,
-    })),
-    traces: input.traces?.map((trace) => {
-      const connection_name =
-        trace.connection_name ??
-        input.connections.find(
-          (connection) => connection.source_trace_id === trace.source_trace_id,
-        )?.name
-      if (!connection_name)
-        throw Error("Native validation requires fixed-copper ownership")
-      return { ...trace, connection_name }
-    }),
-  }
 }

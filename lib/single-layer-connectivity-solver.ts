@@ -13,6 +13,7 @@ import {
 } from "./grid-visibility"
 import { GridHeap } from "./grid-heap"
 import { fixedCopper, VectorScene } from "./vector-scene"
+import { toNativeValidationSrj } from "./native-validation-input"
 import { CopperConflictIndex } from "./copper-conflict-index"
 import { length, simplify } from "./geometry"
 import { busLengthReports, pairLengthReports } from "./route-lengths"
@@ -608,17 +609,20 @@ export class SingleLayerConnectivitySolver extends BaseSolver {
     if (result.some((trace) => !traceStaysInsideOutline(input, trace)))
       throw Error("Generated connectivity copper crosses the board outline")
     const drc = validateRoutedCopperDrc({
-      inputSrj: {
+      inputSrj: toNativeValidationSrj({
         ...input,
         connections: [
           ...input.connections,
           ...(options.fixedConnections ?? []),
         ],
-      },
-      routedSrj: { ...input, traces: [...(input.traces ?? []), ...result] },
+      }),
+      routedSrj: toNativeValidationSrj({
+        ...input,
+        traces: [...(input.traces ?? []), ...result],
+      }),
       clearance,
       allowBlindAndBuriedVias: false,
-    } as unknown as Parameters<typeof validateRoutedCopperDrc>[0])
+    })
     if (!drc.valid)
       throw Error(
         `Single-layer copper DRC rejected the route: ${drc.issues.map((issue) => issue.code).join(", ")}`,
