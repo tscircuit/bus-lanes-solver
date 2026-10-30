@@ -8,6 +8,7 @@ import {
 } from "./length-search-frontier"
 import type { Connection, Point, SimpleRouteJson, Trace, Wire } from "./types"
 import { fixedCopper, VectorScene } from "./vector-scene"
+import { nativeViaGridBounds } from "./native-via-grid-bounds"
 
 type Bounds = SimpleRouteJson["bounds"]
 export interface NativeCarrierCandidate {
@@ -29,6 +30,10 @@ export interface NativeCarrierSearchOptions {
  * Length and congestion are separate resources; immutable predecessors retain
  * a short expensive prefix when a cheap long prefix cannot finish. */
 export class NativeCarrierRouter {
+  readonly input: SimpleRouteJson
+  readonly step: number
+  readonly history: readonly Float32Array[]
+  private readonly gridBounds: Bounds
   readonly carrier: string
   readonly cellCount: number
   private fixed: ReturnType<typeof fixedCopper>
@@ -36,16 +41,26 @@ export class NativeCarrierRouter {
   private regions = new Map<string, Bounds>()
   private frontier = new LengthSearchFrontier()
   private conflicts = new CopperConflictIndex()
-  constructor(
-    readonly input: SimpleRouteJson,
-    readonly step: number,
-    readonly history: readonly Float32Array[],
-  ) {
+  constructor({
+    input,
+    step,
+    history,
+    gridBounds = input.bounds,
+  }: {
+    input: SimpleRouteJson
+    step: number
+    history: readonly Float32Array[]
+    gridBounds?: Bounds
+  }) {
+    this.input = input
+    this.step = step
+    this.history = history
+    this.gridBounds = gridBounds
     this.carrier = input.allowedLayers![0]
     this.fixed = fixedCopper(input)
     this.cellCount =
-      (Math.ceil((input.bounds.maxX - input.bounds.minX) / step) + 1) *
-      (Math.ceil((input.bounds.maxY - input.bounds.minY) / step) + 1)
+      (Math.ceil((gridBounds.maxX - gridBounds.minX) / step) + 1) *
+      (Math.ceil((gridBounds.maxY - gridBounds.minY) / step) + 1)
     const padding = 10 * (input.minViaPadDiameter ?? 0.3)
     for (const o of input.obstacles) {
       if (!o.componentId) continue
@@ -98,7 +113,7 @@ export class NativeCarrierRouter {
       soft,
       0,
       undefined,
-      { bounds: this.input.bounds, step: this.step },
+      { bounds: this.gridBounds, step: this.step },
     )
     const access = search.getRoutingAccess()
     search.cancel()
@@ -117,6 +132,53 @@ export class NativeCarrierRouter {
   *route(
     c: Connection,
     options: NativeCarrierSearchOptions = {},
+  ): Generator<void, NativeCarrierCandidate | null> {
+    const candidate = yield* this.routeGrid(c, options)
+    if (candidate) return candidate
+    for (const gridBounds of nativeViaGridBounds({
+      input: this.input,
+      connection: c,
+      stepMm: this.step,
+      forcedVia: options.forcedVia,
+    })) {
+      const nx = Math.ceil((gridBounds.maxX - gridBounds.minX) / this.step) + 1
+      const ny = Math.ceil((gridBounds.maxY - gridBounds.minY) / this.step) + 1
+      const oldNx =
+        Math.ceil((this.gridBounds.maxX - this.gridBounds.minX) / this.step) + 1
+      const oldNy =
+        Math.ceil((this.gridBounds.maxY - this.gridBounds.minY) / this.step) + 1
+      const history = this.history.map((old) => {
+        const shifted = new Float32Array(nx * ny)
+        for (let y = 0; y < ny; y++)
+          for (let x = 0; x < nx; x++) {
+            const oldX = Math.round(
+              (gridBounds.minX + x * this.step - this.gridBounds.minX) /
+                this.step,
+            )
+            const oldY = Math.round(
+              (gridBounds.minY + y * this.step - this.gridBounds.minY) /
+                this.step,
+            )
+            if (oldX >= 0 && oldX < oldNx && oldY >= 0 && oldY < oldNy)
+              shifted[y * nx + x] = old[oldY * oldNx + oldX] ?? 0
+          }
+        return shifted
+      })
+      const router = new NativeCarrierRouter({
+        input: this.input,
+        step: this.step,
+        history,
+        gridBounds,
+      })
+      const aligned = yield* router.routeGrid(c, options)
+      if (aligned) return aligned
+      yield
+    }
+    return null
+  }
+  private *routeGrid(
+    c: Connection,
+    options: NativeCarrierSearchOptions,
   ): Generator<void, NativeCarrierCandidate | null> {
     const input = this.input,
       bounds = input.bounds,
@@ -411,8 +473,8 @@ export class NativeCarrierRouter {
               x = a.x + (b.x - a.x) * f,
               y = a.y + (b.y - a.y) * f
             const cell =
-              Math.round((y - bounds.minY) / step) * g.nx +
-              Math.round((x - bounds.minX) / step)
+              Math.round((y - this.gridBounds.minY) / step) * g.nx +
+              Math.round((x - this.gridBounds.minX) / step)
             cost +=
               (span / samples / step) *
               (Number(blocked) * penalty + (this.history[1][cell] ?? 0))
