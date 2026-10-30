@@ -293,12 +293,13 @@ export function* matchNativeCarrierSignals(
           }
         }
         let provisional: Trace | null = null
+        let fewestConflicts = Infinity
         if (!candidate) {
           for (const layer of layers) {
             const raw = yield* routers.get(layer)!.route(c, search)
             if (!raw) continue
             const carrierInput = { ...local, allowedLayers: [layer] }
-            candidate = minimums.has(c.name)
+            const matched = minimums.has(c.name)
               ? tuneNativeCarrierSignal(
                   carrierInput,
                   c,
@@ -315,7 +316,26 @@ export function* matchNativeCarrierSignals(
                   others,
                   true,
                 )
-            if (candidate) break
+            if (matched) {
+              const collisions =
+                layers.length === 1
+                  ? 0
+                  : others.filter((other) =>
+                      index.firstConflict(
+                        physical(matched),
+                        physical(other),
+                        clearance - 1e-8,
+                      ),
+                    ).length
+              if (collisions < fewestConflicts) {
+                candidate = matched
+                fewestConflicts = collisions
+              }
+              // Keep the established first clear choice. A matched but
+              // colliding primary must not hide a clear permitted alternative.
+              if (!collisions) break
+              continue
+            }
             // Charge an untunable path on its actual carrier. A different layer
             // is also tried before retaining a provisional unmatched signal.
             if (length(raw.trace.route) < (minimums.get(c.name) ?? 0) - 1e-8) {
