@@ -93,6 +93,27 @@ export function nativePairCircuit({
       )?.width ?? input.minTraceWidth) / 2,
     layer: circuitLayer(terminal.layer),
   }))
+  const fixedPads: PcbSmtPad[] = input.obstacles.flatMap((obstacle, index) => {
+    if (obstacle.componentId || obstacle.type === "oval") return []
+    return obstacle.layers.map(
+      (layer): PcbSmtPad => ({
+        type: "pcb_smtpad",
+        pcb_smtpad_id: `fixed_obstacle_${index}_${layer}`,
+        pcb_port_id: `fixed_obstacle_port_${index}`,
+        x: obstacle.center.x,
+        y: obstacle.center.y,
+        layer: circuitLayer(layer),
+        ...(obstacle.shape === "circle"
+          ? { shape: "circle", radius: obstacle.width / 2 }
+          : {
+              shape: "rect",
+              width: obstacle.width,
+              height: obstacle.height,
+              ccw_rotation: obstacle.ccwRotationDegrees ?? 0,
+            }),
+      }),
+    )
+  })
   const obstacleTraces: Trace[] = fixedCopper({
     ...input,
     obstacles: input.obstacles.filter(
@@ -110,26 +131,27 @@ export function nativePairCircuit({
       layer: copper.layer,
     })),
   }))
-  const copper: PcbTrace[] = [...obstacleTraces, ...(input.traces ?? []), ...traces].map(
-    (trace) => ({
-      type: "pcb_trace",
-      pcb_trace_id: trace.pcb_trace_id,
-      source_trace_id: trace.source_trace_id,
-      route: trace.route.map((point) =>
-        point.route_type === "wire"
-          ? { ...point, layer: circuitLayer(point.layer) }
-          : {
-              ...point,
-              from_layer: circuitLayer(point.from_layer),
-              to_layer: circuitLayer(point.to_layer),
-              via_diameter:
-                point.via_diameter ?? input.minViaPadDiameter ?? 0.3,
-              via_hole_diameter:
-                point.via_hole_diameter ?? input.minViaHoleDiameter ?? 0.15,
-            },
-      ),
-    }),
-  )
+  const copper: PcbTrace[] = [
+    ...obstacleTraces,
+    ...(input.traces ?? []),
+    ...traces,
+  ].map((trace) => ({
+    type: "pcb_trace",
+    pcb_trace_id: trace.pcb_trace_id,
+    source_trace_id: trace.source_trace_id,
+    route: trace.route.map((point) =>
+      point.route_type === "wire"
+        ? { ...point, layer: circuitLayer(point.layer) }
+        : {
+            ...point,
+            from_layer: circuitLayer(point.from_layer),
+            to_layer: circuitLayer(point.to_layer),
+            via_diameter: point.via_diameter ?? input.minViaPadDiameter ?? 0.3,
+            via_hole_diameter:
+              point.via_hole_diameter ?? input.minViaHoleDiameter ?? 0.15,
+          },
+    ),
+  }))
   const vias: PcbVia[] = [...(input.traces ?? []), ...traces].flatMap((trace) =>
     trace.route.flatMap((point, index) =>
       point.route_type === "via"
@@ -150,5 +172,5 @@ export function nativePairCircuit({
         : [],
     ),
   )
-  return [board, ...pads, ...copper, ...vias]
+  return [board, ...pads, ...fixedPads, ...copper, ...vias]
 }
