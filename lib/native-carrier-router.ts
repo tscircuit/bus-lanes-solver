@@ -26,7 +26,7 @@ export interface NativeCarrierSearchOptions {
   carrierRegion?: Bounds
 }
 
-/** Owns continuous occupancy for native TOP escapes and one inner carrier.
+/** Owns continuous occupancy for native TOP escapes and one selected carrier.
  * Length and congestion are separate resources; immutable predecessors retain
  * a short expensive prefix when a cheap long prefix cannot finish. */
 export class NativeCarrierRouter {
@@ -229,6 +229,20 @@ export class NativeCarrierRouter {
     const softVia = ["top", this.carrier].map((layer) =>
       this.grid(c, layer, diameter, soft),
     )
+    const otherWireLayers = new Set(
+      (options.softTraces ?? []).flatMap((trace) =>
+        trace.route.flatMap((point) =>
+          point.route_type === "wire" &&
+          point.layer !== "top" &&
+          point.layer !== this.carrier
+            ? [point.layer]
+            : [],
+        ),
+      ),
+    )
+    const otherSoftVia = [...otherWireLayers].map((layer) =>
+      this.grid(c, layer, diameter, soft),
+    )
     const g = grids[0],
       goalStage = c.pointsToConnect[1].layer === this.carrier ? 1 : 2
     const ends = new Map(
@@ -351,10 +365,18 @@ export class NativeCarrierRouter {
           vias.every((v) => !v.isBlocked(cell)) &&
           holeClearsOwnPads(a)
         ) {
-          const cost = softVia.reduce(
+          const carrierCost = softVia.reduce(
             (sum, v) => sum + (v.softEdgeIsClear(a, a) ? 0 : penalty * 4),
             0,
           )
+          // Plated lands also intersect movable wires on other carriers. Keep
+          // the existing penalty when TOP/the selected carrier already blocks
+          // the site, so single-carrier negotiation retains its old costs.
+          const cost =
+            carrierCost ||
+            (otherSoftVia.some((grid) => !grid.softEdgeIsClear(a, a))
+              ? penalty * 4
+              : 0)
           if (options.strict && cost) continue
           const ni = id + N
           frontier.add(
