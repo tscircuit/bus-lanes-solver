@@ -46,7 +46,11 @@ function nativeBgaFields({
   input: SimpleRouteJson
   connection: Connection
 }) {
-  const fields: Array<{ point: Point; pitches: number[] }> = []
+  const fields: Array<{
+    point: Point
+    pitches: number[]
+    padDiameterMm: number
+  }> = []
   for (const point of connection.pointsToConnect) {
     if (point.layer !== "top") continue
     const owner = input.obstacles.find(
@@ -70,7 +74,12 @@ function nativeBgaFields({
           .filter((distance) => distance > 1e-4),
       ),
     )
-    if (pitches.every(Number.isFinite)) fields.push({ point, pitches })
+    if (pitches.every(Number.isFinite))
+      fields.push({
+        point,
+        pitches,
+        padDiameterMm: Math.max(...pads.map((pad) => pad.width)),
+      })
   }
   return fields
 }
@@ -86,13 +95,27 @@ export function* nativeViaGridSearches(context: {
   for (const bounds of nativeViaGridBounds(context))
     yield { bounds, stepMm: context.stepMm }
   const steps = new Map<string, number>()
-  for (const { pitches } of nativeBgaFields(context))
+  const clearance =
+    context.input.minTraceToPadEdgeClearance ??
+    context.input.defaultObstacleMargin ??
+    0.075
+  for (const { pitches, padDiameterMm } of nativeBgaFields(context)) {
+    const viaRadiusMm = (context.input.minViaPadDiameter ?? 0.3) / 2
+    // The square between four pads already spans a coarse cell in a wide
+    // package. Keep its existing phase search instead of adding subdivisions.
+    const pocketWidthMm =
+      Math.min(...pitches) -
+      Math.SQRT2 * (padDiameterMm / 2 + viaRadiusMm + clearance)
+    if (pocketWidthMm >= context.stepMm - 1e-8) continue
     for (const pitch of pitches) {
       if (pitch < context.stepMm) continue
-      const stepMm = pitch / Math.ceil(pitch / context.stepMm)
+      // Roundoff at an integral ratio must not introduce an extra division.
+      const divisions = Math.ceil(pitch / context.stepMm - 1e-9)
+      const stepMm = pitch / divisions
       if (stepMm >= context.stepMm - 1e-8) continue
       steps.set(stepMm.toFixed(9), stepMm)
     }
+  }
   for (const stepMm of [...steps.values()].sort((a, b) => a - b)) {
     yield { bounds: context.input.bounds, stepMm }
     for (const bounds of nativeViaGridBounds({ ...context, stepMm }))
