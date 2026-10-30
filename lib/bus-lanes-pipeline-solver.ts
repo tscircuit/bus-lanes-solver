@@ -53,6 +53,7 @@ import {
   type RematchedSignalDogbones,
 } from "./rematch-trapped-signal-dogbones"
 import { BaseSolver } from "@tscircuit/solver-utils"
+import { nativeCarrierLayers } from "./native-carrier-layers"
 import { getCopperLayerNames } from "@tscircuit/fanout-solver"
 import { BusLanesSolver } from "./bus-lanes-solver"
 import type { SimpleRouteJson, SolverOptions, Trace } from "./types"
@@ -66,8 +67,8 @@ export interface BusLanesPipelineOptions extends SolverOptions {
    * explicitly requests only pad-to-pad routing and copper DRC on one carrier. */
   goal?: "matched" | "connectivity"
   connectivity?: SingleLayerConnectivityOptions
-  /** Native paired backbones, whole-copper matching and movable controllers
-   * on a single inner carrier. All numerical settings are board-space mm. */
+  /** Native paired backbones and whole-copper matching on a selected carrier,
+   * with optional permitted alternatives for ordinary signals. Distances are mm. */
   singleCarrier?: NativeSingleCarrierOptions
 }
 
@@ -429,13 +430,18 @@ export class BusLanesPipelineSolver extends BaseSolver {
     this.input = structuredClone(input)
     this.routingInput = withInferredSurfaceLayers(this.input)
     this.options = { smoothTuning: true, denseSearch: true, ...options }
+    if (options.singleCarrier?.carrierLayer !== undefined)
+      nativeCarrierLayers({
+        input: this.routingInput,
+        options: options.singleCarrier,
+      })
     this.stats = { carrierStrategy: this.carrierStrategy.name }
     // Surface routing negotiates carrier layers and owned approaches before
     // matching and control repair. Its aggregate work reserve includes those
     // stages; an explicitly supplied search budget remains authoritative.
     const searchBudget =
       canRouteOnPadLayers(this.routingInput) ||
-      nativeSingleCarrierEligible(this.routingInput)
+      nativeSingleCarrierEligible(this.routingInput, options.singleCarrier)
         ? 2000000
         : 200000
     this.MAX_ITERATIONS =
@@ -459,6 +465,7 @@ export class BusLanesPipelineSolver extends BaseSolver {
       this.phase = "connectivity_route"
     } else if (
       options.fanout !== "none" &&
+      options.singleCarrier?.carrierLayer === undefined &&
       nativeGroupsEligible(this.routingInput)
     ) {
       this.nativeGroupsActive = true
@@ -486,7 +493,7 @@ export class BusLanesPipelineSolver extends BaseSolver {
       this.phase = "native_group_escapes"
     } else if (
       options.fanout !== "none" &&
-      nativeSingleCarrierEligible(this.routingInput)
+      nativeSingleCarrierEligible(this.routingInput, options.singleCarrier)
     ) {
       this.nativeSingleCarrier = routeMatchedNativeSingleCarrier(
         this.routingInput,

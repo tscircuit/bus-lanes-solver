@@ -8,17 +8,26 @@ import {
   planNativePairedCarriers,
   type NativePairedCarrierOptions,
 } from "./plan-native-paired-carriers"
+import { nativeCarrierLayers } from "./native-carrier-layers"
 import type { SimpleRouteJson, Trace } from "./types"
 
 export interface NativeSingleCarrierOptions
   extends NativePairedCarrierOptions,
     NativeCarrierMatchingOptions {}
 
-export function nativeSingleCarrierEligible(input: SimpleRouteJson) {
+export function nativeSingleCarrierEligible(
+  input: SimpleRouteJson,
+  options: NativeSingleCarrierOptions = {},
+) {
+  const carrier = options.carrierLayer ?? input.allowedLayers?.[0]
   return (
-    input.allowedLayers?.length === 1 &&
-    /^inner\d+$/.test(input.allowedLayers[0]) &&
-    getCopperLayerNames(input.layerCount).includes(input.allowedLayers[0]) &&
+    (options.carrierLayer !== undefined || input.allowedLayers?.length === 1) &&
+    !!carrier &&
+    (options.carrierLayer !== undefined
+      ? carrier !== "top"
+      : /^inner\d+$/.test(carrier)) &&
+    getCopperLayerNames(input.layerCount).includes(carrier) &&
+    !!input.allowedLayers?.includes(carrier) &&
     !!input.differentialPairs?.length &&
     input.connections.every(
       (c) =>
@@ -33,7 +42,8 @@ export function* routeMatchedNativeSingleCarrier(
   options: NativeSingleCarrierOptions = {},
   progress?: (state: NativeCarrierProgress) => void,
 ): Generator<void, Trace[] | null> {
-  if (!nativeSingleCarrierEligible(input)) return null
+  if (!nativeSingleCarrierEligible(input, options)) return null
+  const { primary } = nativeCarrierLayers({ input, options })
   if (
     input.connections.some(
       (c) =>
@@ -47,8 +57,7 @@ export function* routeMatchedNativeSingleCarrier(
     throw Error("Native single-carrier matching requires uniform signal widths")
   if (
     input.buses?.some(
-      (b) =>
-        b.allowedLayers && !b.allowedLayers.includes(input.allowedLayers![0]),
+      (b) => b.allowedLayers && !b.allowedLayers.includes(primary),
     )
   )
     throw Error("A bus excludes the selected native carrier layer")
@@ -65,8 +74,11 @@ export function* routeMatchedNativeSingleCarrier(
     throw Error(
       "Supply fixedConnections for all immutable traces not owned by routing requests",
     )
-  const paired = yield* planNativePairedCarriers(input, options, (stage) =>
-    progress?.({ stage, pass: 0, collisions: 0, unfinished: [], traces: [] }),
+  const paired = yield* planNativePairedCarriers(
+    { ...input, allowedLayers: [primary] },
+    options,
+    (stage) =>
+      progress?.({ stage, pass: 0, collisions: 0, unfinished: [], traces: [] }),
   )
   if (!paired) return null
   return yield* matchNativeCarrierSignals(input, paired, options, progress)

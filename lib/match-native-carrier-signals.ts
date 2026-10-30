@@ -3,6 +3,10 @@ import { toNativeValidationSrj } from "./native-validation-input"
 import { CopperConflictIndex } from "./copper-conflict-index"
 import { length, segmentDistance } from "./geometry"
 import { GridHistoryProjector } from "./grid-visibility"
+import {
+  nativeCarrierLayers,
+  type NativeCarrierLayerOptions,
+} from "./native-carrier-layers"
 import { NativeCarrierRouter } from "./native-carrier-router"
 import {
   cleanNativeCarrierSignal,
@@ -16,7 +20,8 @@ import { nativeSignalGeometryIsValid } from "./native-signal-geometry"
 import { fixedCopper, VectorScene } from "./vector-scene"
 import type { Connection, SimpleRouteJson, Trace } from "./types"
 
-export interface NativeCarrierMatchingOptions {
+export interface NativeCarrierMatchingOptions
+  extends NativeCarrierLayerOptions {
   /** Genuine native owners of immutable copper, excluded from routing requests. */
   fixedConnections?: Connection[]
   gridStep?: number
@@ -52,9 +57,11 @@ export function* matchNativeCarrierSignals(
   progress?: (state: NativeCarrierProgress) => void,
   initial: Trace[] = [],
 ): Generator<void, Trace[] | null> {
+  const layerSelection = nativeCarrierLayers({ input: original, options })
   const pairedNames = new Set(paired.map((t) => t.connection_name))
   const input: SimpleRouteJson = {
     ...original,
+    allowedLayers: [layerSelection.primary],
     connections: original.connections.filter((c) => !pairedNames.has(c.name)),
     traces: [...(original.traces ?? []), ...paired],
   }
@@ -191,11 +198,25 @@ export function* matchNativeCarrierSignals(
         ),
         { bounds: local.bounds, step },
       )
-    const history = [
-        new Float32Array(projector.cellCount),
-        new Float32Array(projector.cellCount),
-      ],
-      router = new NativeCarrierRouter({ input: local, step, history })
+    const topHistory = new Float32Array(projector.cellCount)
+    const carrierHistories = new Map(
+      layerSelection.ordinary.map(
+        (layer) => [layer, new Float32Array(projector.cellCount)] as const,
+      ),
+    )
+    const routers = new Map(
+      layerSelection.ordinary.map(
+        (layer) =>
+          [
+            layer,
+            new NativeCarrierRouter({
+              input: { ...local, allowedLayers: [layer] },
+              step,
+              history: [topHistory, carrierHistories.get(layer)!],
+            }),
+          ] as const,
+      ),
+    )
     const routed = new Map(
       seed
         .filter((t) => !frozenNames.has(t.connection_name))
@@ -221,18 +242,31 @@ export function* matchNativeCarrierSignals(
           maxLength: maximum,
           maxExpansions: options.maxExpansionsPerRoute,
         }
+        const layers = layerSelection.ordinary.filter((layer) =>
+          (original.buses ?? []).every(
+            (bus) =>
+              !bus.connectionNames.includes(c.name) ||
+              !bus.allowedLayers ||
+              bus.allowedLayers.includes(layer),
+          ),
+        )
         if (pass >= 1) {
-          const strict = yield* router.route(c, {
-            ...search,
-            strict: true,
-            maxExpansions: Math.min(
-              options.maxStrictExpansionsPerRoute ?? 300000,
-              options.maxExpansionsPerRoute ?? 1500000,
-            ),
-          })
-          if (strict) {
-            const hard = { ...local, traces: [...local.traces!, ...others] }
-            const t = minimums.has(c.name)
+          for (const layer of layers) {
+            const strict = yield* routers.get(layer)!.route(c, {
+              ...search,
+              strict: true,
+              maxExpansions: Math.min(
+                options.maxStrictExpansionsPerRoute ?? 300000,
+                options.maxExpansionsPerRoute ?? 1500000,
+              ),
+            })
+            if (!strict) continue
+            const hard = {
+              ...local,
+              allowedLayers: [layer],
+              traces: [...local.traces!, ...others],
+            }
+            const trace = minimums.has(c.name)
               ? tuneNativeCarrierSignal(
                   hard,
                   c,
@@ -243,25 +277,30 @@ export function* matchNativeCarrierSignals(
                 )
               : cleanNativeCarrierSignal(hard, c, strict.trace, [], true)
             if (
-              t &&
+              trace &&
               others.every(
                 (other) =>
                   !index.firstConflict(
-                    physical(t),
+                    physical(trace),
                     physical(other),
                     clearance - 1e-8,
                   ),
               )
-            )
-              candidate = t
+            ) {
+              candidate = trace
+              break
+            }
           }
         }
+        let provisional: Trace | null = null
         if (!candidate) {
-          const raw = yield* router.route(c, search)
-          if (raw) {
+          for (const layer of layers) {
+            const raw = yield* routers.get(layer)!.route(c, search)
+            if (!raw) continue
+            const carrierInput = { ...local, allowedLayers: [layer] }
             candidate = minimums.has(c.name)
               ? tuneNativeCarrierSignal(
-                  local,
+                  carrierInput,
                   c,
                   raw.trace,
                   minimums.get(c.name)!,
@@ -269,18 +308,21 @@ export function* matchNativeCarrierSignals(
                   others,
                   raw.bankCost,
                 )
-              : cleanNativeCarrierSignal(local, c, raw.trace, others, true)
-            // A hard-clear shortest path can have no room for its timing bank.
-            // Retrying it unchanged cannot improve the state: charge its carrier
-            // corridor so the next search explores a different tunable topology.
-            if (
-              !candidate &&
-              length(raw.trace.route) < (minimums.get(c.name) ?? 0) - 1e-8
-            ) {
+              : cleanNativeCarrierSignal(
+                  carrierInput,
+                  c,
+                  raw.trace,
+                  others,
+                  true,
+                )
+            if (candidate) break
+            // Charge an untunable path on its actual carrier. A different layer
+            // is also tried before retaining a provisional unmatched signal.
+            if (length(raw.trace.route) < (minimums.get(c.name) ?? 0) - 1e-8) {
               for (const wire of physical(raw.trace)) {
-                if (wire.layer !== input.allowedLayers![0]) continue
+                if (wire.layer !== layer) continue
                 projector.penalizeIntersection(
-                  history[1],
+                  carrierHistories.get(layer)!,
                   wire.a,
                   wire.b,
                   wire.a,
@@ -291,10 +333,9 @@ export function* matchNativeCarrierSignals(
                 )
               }
             }
-            // An honest provisional path supplies connectivity for later
-            // repairs when its first bank cannot fit. It is still unfinished.
-            if (!candidate && !old) candidate = raw.trace
+            provisional ??= raw.trace
           }
+          if (!candidate && !old) candidate = provisional
         }
         if (candidate) routed.set(c.name, candidate)
         else if (old) routed.set(c.name, old)
@@ -310,10 +351,11 @@ export function* matchNativeCarrierSignals(
             t.connection_name!,
             (trouble.get(t.connection_name!) ?? 0) + 1,
           )
-        const plane = first.layer === input.allowedLayers![0] ? 1 : 0
-        if (first.layer === "top" || plane === 1)
+        const history =
+          first.layer === "top" ? topHistory : carrierHistories.get(first.layer)
+        if (history)
           projector.penalizeIntersection(
-            history[plane],
+            history,
             first.a,
             first.b,
             second.a,
@@ -396,7 +438,7 @@ export function* matchNativeCarrierSignals(
         if (
           physical(t).some(
             (w) =>
-              w.layer === input.allowedLayers![0] &&
+              layerSelection.ordinary.includes(w.layer) &&
               (mouths.some(
                 (p) =>
                   segmentDistance([p, p], [w.a, w.b]) < w.radius + 0.5 * repair,
