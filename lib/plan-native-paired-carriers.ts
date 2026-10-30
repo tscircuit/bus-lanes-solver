@@ -9,6 +9,8 @@ import { packageApproachRegions, pointInBox } from "./package-approach-regions"
 import { chamferOrdinaryCorners } from "./chamfer-ordinary-corners"
 import { fixedCopper, VectorScene } from "./vector-scene"
 import type { Connection, Point, SimpleRouteJson, Trace } from "./types"
+import { offsetPackageCenterlines } from "./offset-package-centerlines"
+import { nativePairHalfPitch } from "./native-pair-spacing"
 
 export interface NativePairedCarrierOptions {
   /** One centerline per differential pair, in the input pair order. */
@@ -39,14 +41,39 @@ function pairedFieldMargin(input: SimpleRouteJson) {
   )
 }
 
+function pairTerminalLateral({
+  native,
+  pair,
+  normal,
+  side,
+}: {
+  native: SimpleRouteJson
+  pair: NonNullable<SimpleRouteJson["differentialPairs"]>[number]
+  normal: Point
+  side: number
+}) {
+  return (
+    pair.connectionNames.reduce((sum, name) => {
+      const point = native.connections.find(
+        (connection) => connection.name === name,
+      )!.pointsToConnect[side]
+      return sum + point.x * normal.x + point.y * normal.y
+    }, 0) / 2
+  )
+}
+
 /** Flare paired backbones at the larger package so ordinary signals retain
- * pad escape space. Axis-aligned packages use their immutable copper fields;
- * callers can provide octilinear centerlines for other arrangements. */
-function defaultCenterlines(
-  native: SimpleRouteJson,
-  step: number,
-  packageRegions?: ReturnType<typeof packageApproachRegions>,
-): Point[][] {
+ * pad escape space. Offset packages use the dominant board axis, so the
+ * backbone keeps conventional headings and joins fields with a 45-degree leg. */
+function defaultCenterlines({
+  native,
+  step,
+  packageRegions,
+}: {
+  native: SimpleRouteJson
+  step: number
+  packageRegions?: ReturnType<typeof packageApproachRegions>
+}): Point[][] {
   const pairs = native.differentialPairs!,
     regions =
       packageRegions ??
@@ -69,10 +96,19 @@ function defaultCenterlines(
   const a = center(source.pads),
     b = center(target.pads),
     distance = Math.hypot(a.x - b.x, a.y - b.y)
-  const forward = { x: (b.x - a.x) / distance, y: (b.y - a.y) / distance },
-    normal = { x: -forward.y, y: forward.x }
-  if (Math.abs(forward.x) > 1e-8 && Math.abs(forward.y) > 1e-8)
-    throw Error("Provide paired centerlines for diagonal native packages")
+  const forward = { x: (b.x - a.x) / distance, y: (b.y - a.y) / distance }
+  const offsetPackages =
+    Math.abs(forward.x) > 1e-8 && Math.abs(forward.y) > 1e-8
+  if (offsetPackages) {
+    if (Math.abs(forward.x) >= Math.abs(forward.y)) {
+      forward.x = Math.sign(forward.x)
+      forward.y = 0
+    } else {
+      forward.x = 0
+      forward.y = Math.sign(forward.y)
+    }
+  }
+  const normal = { x: -forward.y, y: forward.x }
   const projection = (box: SimpleRouteJson["bounds"], u: Point) =>
     [box.minX, box.maxX].flatMap((x) =>
       [box.minY, box.maxY].map((y) => x * u.x + y * u.y),
@@ -127,8 +163,18 @@ function defaultCenterlines(
   return pairs.map((_, i) => {
     const rank = order.findIndex((p) => p.i === i),
       fraction = pairs.length === 1 ? 0 : 1 - (2 * rank) / (pairs.length - 1)
-    const first = quantize(sourceCenter + fraction * sourceSpread),
-      last = quantize(targetCenter + fraction * targetSpread)
+    // Keep offset-package approaches near their own pads instead of forcing
+    // the pair through the unrelated center of a dense BGA field.
+    const first = quantize(
+        offsetPackages
+          ? pairTerminalLateral({ native, pair: pairs[i], normal, side: 0 })
+          : sourceCenter + fraction * sourceSpread,
+      ),
+      last = quantize(
+        offsetPackages
+          ? pairTerminalLateral({ native, pair: pairs[i], normal, side: 1 })
+          : targetCenter + fraction * targetSpread,
+      )
     if (Math.abs(first - last) < 1e-8)
       return [position(first, out), position(last, incoming)]
     const stem = 12 * native.minTraceWidth,
@@ -151,9 +197,37 @@ export function* planNativePairedCarriers(
     carrier = native.allowedLayers![0],
     step = options.gridStep ?? native.minTraceWidth
   if (!pairs.length) return []
+  if (!options.centerlines) {
+    const regions =
+      options.packageRegions ??
+      packageApproachRegions(native, pairedFieldMargin(native))
+    const defaults = defaultCenterlines({
+      native,
+      step,
+      packageRegions: regions,
+    })
+    const candidates = offsetPackageCenterlines({
+      input: native,
+      defaults,
+      regions,
+      stepMm: step,
+    })
+    if (candidates) {
+      for (const centerlines of candidates) {
+        const result = yield* planNativePairedCarriers(
+          native,
+          { ...options, centerlines },
+          progress,
+        )
+        if (result) return result
+        yield
+      }
+      return null
+    }
+  }
   const centers =
     options.centerlines ??
-    defaultCenterlines(native, step, options.packageRegions)
+    defaultCenterlines({ native, step, packageRegions: options.packageRegions })
   if (centers.length !== pairs.length)
     throw Error("Supply exactly one backbone for each differential pair")
   const regions =
@@ -170,7 +244,7 @@ export function* planNativePairedCarriers(
         c = native.connections.find((c) => c.name === name)!
       const path = offsetPath(
         centers[i],
-        ((rail ? 1 : -1) * (native.minTraceWidth + (pair.traceGap ?? 0.1))) / 2,
+        (rail ? 1 : -1) * nativePairHalfPitch(native, pair),
       )
       trunks.push({
         type: "pcb_trace",
