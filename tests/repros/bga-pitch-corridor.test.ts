@@ -1,6 +1,9 @@
 import "../fixtures/pcb-snapshot"
 import { expect, test } from "bun:test"
 import { BusLanesPipelineSolver } from "../../lib"
+import { nativeViaGridSearches } from "../../lib/native-via-grid-bounds"
+import { loadNativeGroupFixture } from "../../scripts/native-group-fixtures"
+import { denseBgaViaGrid } from "../fixtures/dense-bga-via-grid"
 import { bgaPitchCorridor } from "../fixtures/bga-pitch-corridor"
 import { expectCompletedRouting } from "../fixtures/expect-completed-routing"
 import { nativePairCircuit } from "../fixtures/native-pair-circuit"
@@ -52,3 +55,39 @@ test("pitch subdivisions do not bypass copper on an unused physical plane", () =
   expect(solver.traces).toEqual([])
   expect(input).toEqual(before)
 }, 30000)
+
+test("wide native BGA pockets retain the original search resolution", () => {
+  const { input } = loadNativeGroupFixture("ram-minus29")
+  const before = structuredClone(input)
+  const searches = [
+    ...nativeViaGridSearches({
+      input,
+      connection: input.connections[0],
+      stepMm: input.minTraceWidth,
+    }),
+  ]
+  expect(
+    searches.every((search) => search.stepMm === input.minTraceWidth),
+  ).toBe(true)
+  expect(input).toEqual(before)
+})
+
+test("numerical noise at an integral pitch ratio does not add a finer grid", () => {
+  const { input } = denseBgaViaGrid()
+  for (const pad of input.obstacles)
+    if (pad.componentId === "bga") {
+      pad.center.x *= 1 + 1e-15
+      pad.center.y *= 1 + 1e-15
+    }
+  const before = structuredClone(input)
+  const stepMm = 0.5 / 6
+  const searches = [
+    ...nativeViaGridSearches({
+      input,
+      connection: input.connections[0],
+      stepMm,
+    }),
+  ]
+  expect(searches.every((search) => search.stepMm === stepMm)).toBe(true)
+  expect(input).toEqual(before)
+})
