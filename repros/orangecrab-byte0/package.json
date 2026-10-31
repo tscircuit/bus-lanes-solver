@@ -1,0 +1,11 @@
+{
+  "name": "orangecrab-byte0-core-repro",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "tscircuit": "0.0.3044"
+  },
+  "overrides": {
+    "@tscircuit/jscad": "0.0.3"
+  }
+}
