@@ -256,11 +256,14 @@ export function* rebalancePairEscapes(
                       trim,
                     ),
                   )
-                  const tuned = tuneCoupledLengths(local, candidate, {
-                    maxCandidates: 65536,
-                    packMeanders: true,
-                    packageOnlyPairTuning: true,
-                  })
+                  const tuned = tuneCoupledLengths(
+                    { input: local, traces: candidate },
+                    {
+                      maxCandidates: 65536,
+                      packMeanders: true,
+                      packageOnlyPairTuning: true,
+                    },
+                  )
                   if (
                     tuned.some(
                       (t) =>

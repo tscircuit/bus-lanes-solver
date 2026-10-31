@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test"
 import { distance, length, segmentDistance } from "../lib/geometry"
-import { tangentPairedLobes } from "../lib/smooth-tuning"
+import { tangentPairedLobes } from "../lib/tangent-paired-lobes"
 
 // Board-world mm, +X right/+Y up. Measure the emitted copper polylines, rather
 // than ideal circle offsets: their chord gaps previously fell below clearance.
@@ -14,15 +14,15 @@ test("rounded paired tuning preserves copper clearance along every bend", () => 
     const normal = { x: -Math.sin(angle), y: Math.cos(angle) }
     for (const side of [-1, 1]) {
       for (const lobes of [1, 2]) {
-        const rails = tangentPairedLobes(
+        const rails = tangentPairedLobes({
           a,
           b,
           spacing,
-          4,
+          deficit: 4,
           lobes,
           side,
-          width * 1.2,
-        )
+          minRadius: width * 1.2,
+        })
         expect(rails).not.toBeNull()
         if (!rails) throw Error("Expected a feasible paired tuning cell")
         for (const [railIndex, rail] of rails.entries()) {

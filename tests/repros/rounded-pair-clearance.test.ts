@@ -50,7 +50,7 @@ test("a tight-gap pair can gain length without violating copper clearance", () =
         { connectionNames: ["P", "N"], traceGap: gap, lengthTolerance: 0.1 },
       ],
     }
-    const tuned = tuneCoupledLengths(input, traces, { packMeanders: true })
+    const tuned = tuneCoupledLengths({ input, traces }, { packMeanders: true })
     for (const [rail, trace] of tuned.entries()) {
       expect(distance(trace.route[0], traces[rail].route[0])).toBeLessThan(1e-9)
       expect(

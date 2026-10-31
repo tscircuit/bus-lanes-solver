@@ -673,27 +673,28 @@ export class BusLanesSolver extends BaseSolver {
           try {
             const targets = minimumLengthTargets(input, candidate)
             assertLengthTargets(input, targets)
-            this.traces =
-              this.options.smoothTuning &&
-              candidate.some((t) => t.coupledSection)
-                ? tuneCoupledLengths(input, candidate, {
-                    // Narrow banks need more curve period/offset combinations.
-                    // Keep that extra bounded work local to packed candidates.
-                    maxCandidates:
-                      corridor === original
-                        ? (this.options.originalCorridorTuningCandidates ?? 512)
-                        : demandPackedCorridors.has(corridor)
-                          ? 65536
-                          : 16384,
-                    packMeanders:
-                      quickOriginal || compactCorridors.has(corridor),
-                    packageOnlyPairTuning,
-                  })
-                : this.options.smoothTuning
-                  ? tuneSmoothLengths(input, candidate, targets, {
-                      packageOnlyPairTuning,
-                    })
-                  : tuneLengths(input, candidate, targets)
+            if (!this.options.smoothTuning) {
+              this.traces = tuneLengths(input, candidate, targets)
+            } else if (candidate.some((trace) => trace.coupledSection)) {
+              // Narrow banks need more curve period/offset combinations.
+              // Keep that extra bounded work local to packed candidates.
+              let maxCandidates = 16384
+              if (corridor === original)
+                maxCandidates =
+                  this.options.originalCorridorTuningCandidates ?? 512
+              else if (demandPackedCorridors.has(corridor))
+                maxCandidates = 65536
+              const packMeanders =
+                quickOriginal || compactCorridors.has(corridor)
+              this.traces = tuneCoupledLengths(
+                { input, traces: candidate },
+                { maxCandidates, packMeanders, packageOnlyPairTuning },
+              )
+            } else {
+              this.traces = tuneSmoothLengths(input, candidate, targets, {
+                packageOnlyPairTuning,
+              })
+            }
             if (this.options.smoothTuning)
               this.traces = simplifyMatchedTraces(input, this.traces)
             if (

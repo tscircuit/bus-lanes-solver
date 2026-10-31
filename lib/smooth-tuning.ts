@@ -177,7 +177,6 @@ export function roundedPairedLobes(
   lobes: number,
   side: number,
   minRadius: number,
-  tangentSegments = false,
 ): [Point[], Point[]] | null {
   const span = distance(a, b),
     period = span / lobes,
@@ -190,9 +189,6 @@ export function roundedPairedLobes(
     Math.ceil((Math.PI * radius) / (2 * Math.max(0.005, minRadius / 6))),
   )
   const railCount = spacing === 0 ? 1 : 2
-  const useTangents = tangentSegments && spacing > 0
-  let lastSample = samples
-  if (useTangents) lastSample += 1
   // Arc angles and offsets are invariant during the height bisection. Retain
   // the original arithmetic order so the final sampled points are identical.
   const templates: Array<{
@@ -209,37 +205,18 @@ export function roundedPairedLobes(
       [period - 2 * radius, 1, Math.PI / 2, 0],
       [period, 0, Math.PI, Math.PI * 1.5],
     ])
-      for (let i = 0; i <= lastSample; i++) {
-        const step = (end - start) / samples
-        let angle = start + ((end - start) * i) / samples
-        let scale = 1
-        // Intersect successive circle tangents instead of joining sampled
-        // points with chords. Both emitted rails then retain their requested
-        // separation along every straight copper segment, including the bends.
-        if (useTangents) {
-          if (i === 0) angle = start
-          else if (i === lastSample) angle = end
-          else {
-            angle = start + (i - 0.5) * step
-            scale = 1 / Math.cos(step / 2)
-          }
-        }
-        const direction = Math.sign(end - start)
+      for (let i = 0; i <= samples; i++) {
+        const angle = start + ((end - start) * i) / samples,
+          direction = Math.sign(end - start)
+        const x = l * period + cx + radius * Math.cos(angle)
         const tx = -Math.sin(angle) * direction,
           ty = side * Math.cos(angle) * direction
-        const lobeOriginX = l * period + cx
-        const circleX = radius * Math.cos(angle)
         for (let k = 0; k < railCount; k++) {
           const offset = ((k === 0 ? 1 : -1) * spacing) / 2
-          let px = lobeOriginX + circleX - ty * offset
-          if (useTangents) {
-            const pairedX = circleX - ty * offset
-            px = lobeOriginX + scale * pairedX
-          }
           templates.push({
-            px,
-            sin: scale * radius * Math.sin(angle),
-            offsetY: scale * tx * offset,
+            px: x - ty * offset,
+            sin: radius * Math.sin(angle),
+            offsetY: tx * offset,
             raised: !!raised,
             rail: k,
           })
@@ -318,29 +295,5 @@ export function roundedTuningLobes(
 ): Point[] | null {
   return (
     roundedPairedLobes(a, b, 0, deficit, lobes, side, minRadius)?.[0] ?? null
-  )
-}
-
-/** Rounded tuning with a conservative polygon gap instead of ideal arc spacing.
- * Existing curve candidates remain first choices; use this when their chords
- * cannot satisfy the actual copper clearance. Board-world mm, +Y up. */
-export function tangentPairedLobes(
-  a: Point,
-  b: Point,
-  spacing: number,
-  deficit: number,
-  lobes: number,
-  side: number,
-  minRadius: number,
-): [Point[], Point[]] | null {
-  return roundedPairedLobes(
-    a,
-    b,
-    spacing,
-    deficit,
-    lobes,
-    side,
-    minRadius,
-    true,
   )
 }
