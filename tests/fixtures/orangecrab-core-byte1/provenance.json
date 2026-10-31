@@ -1,0 +1,14 @@
+{
+  "source": "OrangeCrab r0.2.1",
+  "sourceCommit": "c511d569fe2af39467041f888bc231020f40c6ac",
+  "sourceSha256": "4597f3ac08e21c09253b27ca1b9e26aaf3c3d3e2147b6c0d79c0dc6aa555e201",
+  "tsx": "repros/orangecrab-byte0/circuits/orangecrab.tsx",
+  "capture": "repros/orangecrab-byte1/run.tsx",
+  "runtime": {
+    "tscircuit": "0.0.3046",
+    "core": "0.0.2244"
+  },
+  "inputSha256": "17df6cb0f47bbc35972e06d0d01801d0eec11f6552874b34e8e9670224b47d0b",
+  "license": "CERN-OHL-1.2",
+  "licenseFile": "../../../repros/orangecrab-byte0/LICENSE.hardware.txt"
+}

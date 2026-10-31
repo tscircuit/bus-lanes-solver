@@ -1,0 +1,16 @@
+{
+  "runtime": {
+    "tscircuit": "0.0.3046",
+    "core": "0.0.2244",
+    "bun": "1.4.3"
+  },
+  "inputSha256": "17df6cb0f47bbc35972e06d0d01801d0eec11f6552874b34e8e9670224b47d0b",
+  "requestedSignals": 11,
+  "before": {
+    "solved": false,
+    "traces": 0,
+    "seconds": 16.428807101000004,
+    "error": "Error: Error: No shared tuning corridor for source_trace_48, source_trace_49"
+  },
+  "after": null
+}
