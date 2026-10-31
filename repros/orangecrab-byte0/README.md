@@ -13,19 +13,24 @@ Install the repository dependencies first with `bun install`. Then, from this di
 ```sh
 npm ci --ignore-scripts --legacy-peer-deps
 bun run.tsx before /absolute/path/to/base-checkout/lib/index.ts
+bun failed-baseline.ts before
 bun run.tsx after /absolute/path/to/fix-checkout/lib/index.ts
 bun validate.ts after
 ```
 
-The default solver argument is this checkout's `../../lib/index.ts`. The local algorithm adapter runs a fresh solver for each request and returns its routes to core through `autoroutingphase.algorithmFn`; no saved routes are replayed. Core publishes the resulting Circuit JSON. The separate validator exports a snapshot only after successful routing and all acceptance checks. The wrapper retains all non-byte-zero traces as pending source connections.
+The default solver argument is this checkout's `../../lib/index.ts`. The local algorithm adapter runs a fresh solver for each request and returns its routes to core through `autoroutingphase.algorithmFn`; no saved routes are replayed. Core publishes the resulting Circuit JSON. `failed-baseline.ts` intentionally exports only the original, clearly labeled failed baseline for this reproduction. Successful output must pass every check in `validate.ts` before it can replace the snapshot. The wrapper retains all non-byte-zero traces as pending source connections.
 
 The nested package pins the published core runtime. Its only override uses the same official npm `@tscircuit/jscad@0.0.3` artifact because the original CAD download host is unavailable in the capture environment. The solver, geometry and matching constraints are not patched in that runtime.
 
-`validate.ts` independently checks all 22 source endpoints, native copper DRC, core clearance/self-short checks, whole-copper bus/pair skew, and exterior coupling before exporting a completed routed snapshot. Failed runs retain JSON diagnostics locally and cannot export review snapshots. `results/` holds local inputs, actual Circuit JSON, output SRJ, solver state, checks and SVG/PNG files.
+`validate.ts` independently checks all 22 source endpoints, native copper DRC, core clearance/self-short checks, whole-copper bus/pair skew, and exterior coupling before exporting a completed routed snapshot. The dedicated failed-baseline command is the documented exception to completed-only review artifacts. Both commands generate `board.snap.svg` from actual core output with the same viewport, so the stacked fix shows a modification of the same SVG in GitHub. SVGO compacts and formats renderer markup; it never changes the circuit or routes. `results/` holds local inputs, actual Circuit JSON, output SRJ, solver state, checks and SVG/PNG files.
 
 ## Baseline
 
 Bus solver `791e0b67fb3519a87fb296447905ccd4fafa83f8` fails with `No shared tuning corridor`. Core publishes zero PCB routes.
+
+![Failed baseline: 0 of 11 byte-zero signals routed](board.snap.svg)
+
+This is deliberately failed output for the reproduction, not a completed DDR route. The stacked fix updates this same SVG after validating all 11 routes and 22 endpoints.
 
 The independently captured SRJ fixture in `tests/fixtures/orangecrab-core-byte0/input.srj.json` and the source geometry are immutable. The two expected-failure tests reproduce the real byte-lane failure and the underlying paired-arc clearance error. The stacked fix removes the expected-failure markers while retaining the assertions.
 
@@ -39,4 +44,4 @@ Native PCB commit: `c511d569fe2af39467041f888bc231020f40c6ac`; SHA-256: `4597f3a
 
 The hardware extraction modifies the original representation and scope. It is derived from OrangeCrab under [CERN OHL v1.2](LICENSE.hardware.txt); the original design remains available at the pinned source link.
 
-Benchmark effect: this reproduction changes no production solver behavior. Its new expected-failure tests and capture files do not alter AM3352 benchmark inputs, harness, budgets or acceptance rules. Fresh benchmark comparisons are run separately by the required workflow.
+Benchmark effect: this reproduction changes no production solver behavior. Its expected-failure tests and SVG capture tooling do not alter AM3352 benchmark inputs, harness, budgets or acceptance rules. Fresh benchmark comparisons are run separately by the required workflow.
