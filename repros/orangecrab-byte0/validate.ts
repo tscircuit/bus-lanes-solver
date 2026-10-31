@@ -1,7 +1,6 @@
 import { readFileSync, writeFileSync } from "node:fs"
 import { createHash } from "node:crypto"
-import { convertCircuitJsonToPcbSvg } from "circuit-to-svg"
-import { Resvg } from "@resvg/resvg-js"
+import { writeSnapshot } from "./snapshot"
 import {
   checkEachPcbTraceNonOverlapping,
   checkPadTraceClearance,
@@ -94,14 +93,4 @@ if (
   native.exterior.some((pair) => !pair.matched)
 )
   throw Error("Refusing an incomplete or invalid routed snapshot")
-const svg = convertCircuitJsonToPcbSvg(json, {
-  backgroundColor: "white",
-  width: 1400,
-  height: 1100,
-  shouldDrawRatsNest: false,
-  shouldDrawErrors: false,
-  showErrorsInTextOverlay: false,
-  viewport: { minX: -7, minY: -12, maxX: 23, maxY: 10.5 },
-})
-writeFileSync(`${directory}/board.svg`, svg)
-writeFileSync(`${directory}/board.png`, new Resvg(svg).render().asPng())
+writeSnapshot({ circuit: json, directory, status: "completed" })

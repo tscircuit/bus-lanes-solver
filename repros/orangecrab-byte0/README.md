@@ -13,15 +13,16 @@ Install the repository dependencies first with `bun install`. Then, from this di
 ```sh
 npm ci --ignore-scripts --legacy-peer-deps
 bun run.tsx before /absolute/path/to/base-checkout/lib/index.ts
+bun failed-baseline.ts before
 bun run.tsx after /absolute/path/to/fix-checkout/lib/index.ts
 bun validate.ts after
 ```
 
-The default solver argument is this checkout's `../../lib/index.ts`. The local algorithm adapter runs a fresh solver for each request and returns its routes to core through `autoroutingphase.algorithmFn`; no saved routes are replayed. Core publishes the resulting Circuit JSON. The separate validator exports a snapshot only after successful routing and all acceptance checks. The wrapper retains all non-byte-zero traces as pending source connections.
+The default solver argument is this checkout's `../../lib/index.ts`. The local algorithm adapter runs a fresh solver for each request and returns its routes to core through `autoroutingphase.algorithmFn`; no saved routes are replayed. Core publishes the resulting Circuit JSON. `failed-baseline.ts` intentionally exports only the original, clearly labeled failed baseline for this reproduction. Successful output must pass every check in `validate.ts` before it can replace the snapshot. The wrapper retains all non-byte-zero traces as pending source connections.
 
 The nested package pins the published core runtime. Its only override uses the same official npm `@tscircuit/jscad@0.0.3` artifact because the original CAD download host is unavailable in the capture environment. The solver, geometry and matching constraints are not patched in that runtime.
 
-`validate.ts` independently checks all 22 source endpoints, native copper DRC, core clearance/self-short checks, whole-copper bus/pair skew, and exterior coupling before exporting a completed routed snapshot. Failed runs retain JSON diagnostics locally and cannot export review snapshots. `results/` holds local inputs, actual Circuit JSON, output SRJ, solver state, checks and SVG/PNG files.
+`validate.ts` independently checks all 22 source endpoints, native copper DRC, core clearance/self-short checks, whole-copper bus/pair skew, and exterior coupling before exporting a completed routed snapshot. The dedicated failed-baseline command is the documented exception to completed-only review artifacts. Both commands generate `board.snap.svg` from actual core output with the same viewport, so the stacked fix shows a modification of the same SVG in GitHub. SVGO compacts and formats renderer markup; it never changes the circuit or routes. `results/` holds local inputs, actual Circuit JSON, output SRJ, solver state, checks and SVG/PNG files.
 
 ## Baseline
 
@@ -31,9 +32,11 @@ The independently captured SRJ fixture in `tests/fixtures/orangecrab-core-byte0/
 
 ## Fixed result
 
-![After: 11 matched and physically connected byte-zero signals](after.png)
+![Completed: 11 matched and physically connected byte-zero signals](board.snap.svg)
 
-[After SVG](after.snap.svg) · [Measured comparison](comparison.json)
+[Tracked SVG](board.snap.svg) · [Measured comparison](comparison.json)
+
+The repro PR tracks the labeled failed baseline at this same path. This fix changes it to the completed board, so GitHub can show the visual before/after diff.
 
 The before and after requests have identical SRJ hashes. The fix publishes all
 11 traces and 22 vias, connects every one of the 22 endpoints, and reports zero
