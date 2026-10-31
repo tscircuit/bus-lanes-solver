@@ -8,9 +8,7 @@ import {
 } from "react"
 import { resolve } from "node:path"
 import { EventEmitter } from "node:events"
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs"
-import { convertCircuitJsonToPcbSvg } from "circuit-to-svg"
-import { Resvg } from "@resvg/resvg-js"
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import Board from "./circuits/orangecrab"
 const [label = "after", solverModule = "../../lib/index.ts"] =
   process.argv.slice(2)
@@ -19,6 +17,8 @@ const id = "orangecrab"
 const { BusLanesPipelineSolver } = await import(modulePath)
 const directory = `${import.meta.dir}/results/${label}`
 mkdirSync(directory, { recursive: true })
+for (const filename of ["board.svg", "board.png"])
+  rmSync(`${directory}/${filename}`, { force: true })
 let solver: InstanceType<typeof BusLanesPipelineSolver> | undefined
 class LocalBusRouter extends EventEmitter {
   isRouting = false
@@ -132,20 +132,6 @@ circuit.add(cloneElement(board, {}, children))
 await circuit.renderUntilSettled()
 const json = circuit.getCircuitJson()
 writeFileSync(`${directory}/circuit.json`, JSON.stringify(json))
-const svg = convertCircuitJsonToPcbSvg(json, {
-  backgroundColor: "white",
-  width: 1400,
-  height: 1100,
-  shouldDrawRatsNest: false,
-  shouldDrawErrors: false,
-  showErrorsInTextOverlay: false,
-  viewport:
-    id === "orangecrab"
-      ? { minX: -7, minY: -12, maxX: 23, maxY: 10.5 }
-      : undefined,
-})
-writeFileSync(`${directory}/board.svg`, svg)
-writeFileSync(`${directory}/board.png`, new Resvg(svg).render().asPng())
 const summary = {
   label,
   id,

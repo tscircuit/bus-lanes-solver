@@ -79,13 +79,19 @@ const report = {
 writeFileSync(`${directory}/validation.json`, JSON.stringify(report, null, 2))
 console.log(JSON.stringify(report))
 if (
-  traces.length &&
-  (traces.length !== 11 ||
-    physical?.length ||
-    matching?.length ||
-    !native?.drc.valid ||
-    !native.connectivity.valid ||
-    native.connectivity.connectedEndpointCount !== 22)
+  !summary.solved ||
+  summary.asyncErrors.length ||
+  traces.length !== 11 ||
+  physical?.length ||
+  matching?.length ||
+  !native?.drc.valid ||
+  !native.connectivity.valid ||
+  native.connectivity.connectedEndpointCount !== 22 ||
+  native.buses.some(
+    (bus) => !bus.matched || !bus.aboveMinimumLength || !bus.withinLengthLimit,
+  ) ||
+  native.pairs.some((pair) => !pair.matched) ||
+  native.exterior.some((pair) => !pair.matched)
 )
   throw Error("Refusing an incomplete or invalid routed snapshot")
 const svg = convertCircuitJsonToPcbSvg(json, {
