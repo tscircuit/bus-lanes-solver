@@ -1,6 +1,17 @@
-import { bipolarPairedLobes } from "./bipolar-tuning"
-import { foldedPairedLobes } from "./folded-tuning"
-import { smoothPairedLobes, roundedPairedLobes } from "./smooth-tuning"
+import { pairedArcNeedsTangents } from "./paired-arc-sampling"
+import {
+  applyToPoint,
+  compose,
+  inverse,
+  rotate,
+  translate,
+  type Matrix,
+} from "transformation-matrix"
+import {
+  createPairedTuningLobes,
+  pairedTuningPatterns,
+  type PairedTuningShape,
+} from "./paired-tuning-patterns"
 import { tuneSmoothLengths } from "./smooth-length-tuning"
 import { fixedRouteLength, minimumLengthTargets } from "./route-lengths"
 import { distance, length } from "./geometry"
@@ -8,11 +19,37 @@ import { VectorScene, fixedCopper, routeCopper } from "./vector-scene"
 import { tuningPathIsSelfClear } from "./length-tuning"
 import type { SimpleRouteJson, Trace, Point, Wire } from "./types"
 
+interface SharedTuningCorridor {
+  localToBoardTransform: Matrix
+  boardToLocalTransform: Matrix
+  offset: number
+}
+
+function totalTraceLength(input: SimpleRouteJson, trace: Trace): number {
+  return length(trace.route) + fixedRouteLength(input, trace.connection_name!)
+}
+
+function projectAlongCorridor(
+  { point }: { point: Point },
+  corridor: SharedTuningCorridor,
+): number {
+  return applyToPoint(corridor.boardToLocalTransform, point).x
+}
+
+function corridorCenterPoint(
+  { distanceAlongCorridor }: { distanceAlongCorridor: number },
+  corridor: SharedTuningCorridor,
+): Point {
+  return applyToPoint(corridor.localToBoardTransform, {
+    x: distanceAlongCorridor,
+    y: corridor.offset / 2,
+  })
+}
+
 /** Tune shared corridors jointly; residual skew corrections are restricted to
  * package approaches. All coordinates and planar copper lengths are board mm. */
 export function tuneCoupledLengths(
-  input: SimpleRouteJson,
-  traces: Trace[],
+  { input, traces }: { input: SimpleRouteJson; traces: Trace[] },
   options: {
     maxCandidates?: number
     packMeanders?: boolean
@@ -30,8 +67,6 @@ export function tuneCoupledLengths(
   )
   let attempted = 0
   const fixed = fixedCopper(input)
-  const total = (trace: Trace) =>
-    length(trace.route) + fixedRouteLength(input, trace.connection_name!)
   for (const pair of input.differentialPairs ?? []) {
     const indices = pair.connectionNames.map((n) =>
       result.findIndex((t) => t.connection_name === n),
@@ -40,7 +75,9 @@ export function tuneCoupledLengths(
     if (rails.some((t) => !t.coupledSection)) continue
     const targets = minimumLengthTargets(input, result)
     const deficit = Math.max(
-      ...rails.map((t) => targets.get(t.connection_name!)! - total(t)),
+      ...rails.map(
+        (t) => targets.get(t.connection_name!)! - totalTraceLength(input, t),
+      ),
     )
     if (deficit < 1e-8) continue
     const width = (rails[0].route[0] as Wire).width
@@ -52,8 +89,17 @@ export function tuneCoupledLengths(
     const spacing = width + gap,
       clearance =
         input.minTraceToPadEdgeClearance ?? input.defaultObstacleMargin ?? 0.075
+    const curveShapes: PairedTuningShape[] = ["bipolar", "rounded", "smooth"]
+    const needsTangentSegments = pairedArcNeedsTangents({
+      width,
+      gap,
+      clearance,
+    })
+    if (needsTangentSegments) curveShapes.push("tangent")
+    const foldingModes = [false]
+    if (options.packMeanders) foldingModes.push(true)
     let accepted: Trace[] | undefined
-    for (const folded of options.packMeanders ? [false, true] : [false]) {
+    for (const folded of foldingModes) {
       if (accepted) break
       for (
         let i = rails[0].coupledSection![0];
@@ -82,73 +128,60 @@ export function tuneCoupledLengths(
             continue
           const offset = -(c.x - a.x) * uy + (c.y - a.y) * ux
           if (Math.abs(Math.abs(offset) - spacing) > 1e-6) continue
-          const project = (p: Point) => (p.x - a.x) * ux + (p.y - a.y) * uy
-          const lo = Math.max(0, project(c)) + width * 2,
-            hi = Math.min(span, project(d)) - width * 2
-          if (hi - lo < width * 8) continue
-          const center = (x: number) => ({
-            x: a.x + ux * x - (uy * offset) / 2,
-            y: a.y + uy * x + (ux * offset) / 2,
-          })
-          // A shared cell must accommodate both offset rails: its minimum
-          // period is four times the centerline radius. Dense cells reduce
-          // transverse excursion without shrinking either rail's bend radius.
-          function* patterns() {
-            if (!folded)
-              for (const fraction of [0.9, 0.65, 0.4])
-                for (const lobes of options.packMeanders
-                  ? Array.from(
-                      {
-                        length: Math.max(
-                          1,
-                          Math.floor(
-                            ((hi - lo) * fraction) /
-                              (4 *
-                                (Math.max(width * 1.2, clearance) +
-                                  spacing / 2)),
-                          ),
-                        ),
-                      },
-                      (_, i) => i + 1,
-                    ).reverse()
-                  : Array.from({ length: 16 }, (_, i) => i + 1))
-                  for (const side of [1, -1])
-                    for (const createLobes of [
-                      bipolarPairedLobes,
-                      roundedPairedLobes,
-                      smoothPairedLobes,
-                    ])
-                      yield { fraction, lobes, createLobes, side }
-
-            if (folded)
-              for (const lobes of [1, 2, 3])
-                for (const fraction of [0.9, 0.65, 0.4])
-                  for (const side of [1, -1])
-                    yield {
-                      fraction,
-                      lobes,
-                      createLobes: foldedPairedLobes,
-                      side,
-                    }
+          const ccwRotationRadians = Math.atan2(uy, ux)
+          const localToBoardTransform = compose(
+            translate(a.x, a.y),
+            rotate(ccwRotationRadians),
+          )
+          const boardToLocalTransform = inverse(localToBoardTransform)
+          const corridor = {
+            localToBoardTransform,
+            boardToLocalTransform,
+            offset,
           }
+          const lo =
+            Math.max(0, projectAlongCorridor({ point: c }, corridor)) +
+            width * 2
+          const hi =
+            Math.min(span, projectAlongCorridor({ point: d }, corridor)) -
+            width * 2
+          if (hi - lo < width * 8) continue
+          // A shared cell must accommodate both offset rails without reducing
+          // either rail's bend radius. Keep the existing candidate order.
+          const patterns = pairedTuningPatterns({
+            folded,
+            packMeanders: options.packMeanders,
+            span: hi - lo,
+            width,
+            clearance,
+            spacing,
+            curveShapes,
+          })
           tuningCandidate: for (const {
             fraction,
             lobes,
-            createLobes,
+            shape,
             side,
-          } of patterns()) {
+          } of patterns) {
             if (++attempted > (options.maxCandidates ?? Infinity))
               throw Error("Coupled tuning candidate budget exhausted")
             const margin = ((hi - lo) * (1 - fraction)) / 2
-            const waves = createLobes(
-              center(lo + margin),
-              center(hi - margin),
+            const waves = createPairedTuningLobes({
+              shape,
+              a: corridorCenterPoint(
+                { distanceAlongCorridor: lo + margin },
+                corridor,
+              ),
+              b: corridorCenterPoint(
+                { distanceAlongCorridor: hi - margin },
+                corridor,
+              ),
               spacing,
               deficit,
               lobes,
               side,
-              Math.max(width * 1.2, clearance),
-            )
+              minRadius: Math.max(width * 1.2, clearance),
+            })
             if (!waves) continue
             // The first rail is on the opposite side of the signed offset.
             const ordered = offset > 0 ? waves.toReversed() : waves
@@ -200,12 +233,16 @@ export function tuneCoupledLengths(
                     copper,
                   ).pathVisible(t.route) ||
                   !tuningPathIsSelfClear(t.route, width + clearance) ||
-                  total(t) < targets.get(t.connection_name!)! - 1e-6,
+                  totalTraceLength(input, t) <
+                    targets.get(t.connection_name!)! - 1e-6,
               )
             )
               continue
             if (
-              Math.abs(total(candidate[0]) - total(candidate[1])) >
+              Math.abs(
+                totalTraceLength(input, candidate[0]) -
+                  totalTraceLength(input, candidate[1]),
+              ) >
               pair.lengthTolerance + 1e-6
             )
               continue

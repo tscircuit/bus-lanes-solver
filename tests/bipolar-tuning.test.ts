@@ -153,10 +153,13 @@ test("paired length tuning uses both sides of a narrow obstacle-bounded corridor
     ],
   }
   const before = structuredClone({ input, traces })
-  const result = tuneCoupledLengths(input, traces, {
-    packMeanders: true,
-    maxCandidates: 16384,
-  })
+  const result = tuneCoupledLengths(
+    { input, traces },
+    {
+      packMeanders: true,
+      maxCandidates: 16384,
+    },
+  )
   expect({ input, traces }).toEqual(before)
   expect(busLengthReports(input, result).every((r) => r.matched)).toBe(true)
   expect(pairLengthReports(input, result).every((r) => r.matched)).toBe(true)

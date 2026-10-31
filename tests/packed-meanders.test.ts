@@ -97,8 +97,8 @@ test("packed single-lane meanders use the available run to reduce transverse hei
 test("packed differential meanders fill a compact bank with shared tangent curves", () => {
   const { input, traces } = fixture(true),
     original = structuredClone(traces)
-  const wide = tuneCoupledLengths(input, traces)
-  const packed = tuneCoupledLengths(input, traces, { packMeanders: true })
+  const wide = tuneCoupledLengths({ input, traces })
+  const packed = tuneCoupledLengths({ input, traces }, { packMeanders: true })
   expect(height(packed[0])).toBeLessThan(height(wide[0]) * 0.4)
   validate(input, traces, packed)
   expect(traces).toEqual(original)
