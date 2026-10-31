@@ -1,0 +1,20 @@
+{
+  "sourceRepo": "orangecrab-fpga/orangecrab-hardware",
+  "sourceCommit": "c511d569fe2af39467041f888bc231020f40c6ac",
+  "sourcePath": "hardware/orangecrab_r0.2.1/OrangeCrab.kicad_pcb",
+  "sourceSha256": "4597f3ac08e21c09253b27ca1b9e26aaf3c3d3e2147b6c0d79c0dc6aa555e201",
+  "capture": {
+    "tscircuit": "0.0.3044",
+    "core": "0.0.2242",
+    "source": "TSX rendered through Circuit.renderUntilSettled(), autorouting:start for DDR_BYTE0"
+  },
+  "scope": "Original placements, 387 copper pads, 11 signal connections; other DDR nets pending",
+  "constraints": {
+    "byteSkewMm": 0.5,
+    "pairSkewMm": 0.1,
+    "clearanceMm": 0.089,
+    "widthMm": 0.089,
+    "carrier": "inner1"
+  },
+  "baseline": "791e0b67fb3519a87fb296447905ccd4fafa83f8"
+}
