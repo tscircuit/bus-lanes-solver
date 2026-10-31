@@ -46,9 +46,9 @@ native DRC, core physical/self-short or core matching errors. Measured final
 byte skew is about 0.499999 mm and DQS skew about 0.099999 mm, within the unchanged
 0.5/0.1 mm limits. Other DDR signals remain pending.
 
-The conservative tangent-based polygon is an additional candidate after the
-existing curve forms. Existing successful native matching paths retain their
-curve construction. Generated-fanout routing also reserves at most 1 nm inside
+The conservative tangent-based polygon is an additional candidate when the
+maximum sampled chord angle could consume physical clearance. Requests with
+sufficient gap retain their existing candidates and matching targets. For the affected pairs and their buses, generated-fanout routing reserves at most 1 nm inside
 the requested skew bounds for later polygon cleanup and compaction; the public
 input/output limits and physical-clearance rules stay unchanged.
 

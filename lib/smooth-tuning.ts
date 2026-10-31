@@ -1,4 +1,5 @@
 import { distance } from "./geometry"
+import { ROUNDED_PAIR_ARC_SAMPLES } from "./paired-arc-sampling"
 import type { Point } from "./types"
 
 /** Tangent-continuous raised-cosine lobes, sampled in board-world mm (+X right,
@@ -185,7 +186,7 @@ export function roundedPairedLobes(
   const ux = (b.x - a.x) / span,
     uy = (b.y - a.y) / span
   const samples = Math.max(
-    18,
+    ROUNDED_PAIR_ARC_SAMPLES,
     Math.ceil((Math.PI * radius) / (2 * Math.max(0.005, minRadius / 6))),
   )
   const railCount = spacing === 0 ? 1 : 2

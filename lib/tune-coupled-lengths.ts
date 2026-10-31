@@ -1,3 +1,4 @@
+import { pairedArcNeedsTangents } from "./paired-arc-sampling"
 import { bipolarPairedLobes } from "./bipolar-tuning"
 import { foldedPairedLobes } from "./folded-tuning"
 import {
@@ -121,7 +122,9 @@ export function tuneCoupledLengths(
                       bipolarPairedLobes,
                       roundedPairedLobes,
                       smoothPairedLobes,
-                      tangentPairedLobes,
+                      ...(pairedArcNeedsTangents(width, gap, clearance)
+                        ? [tangentPairedLobes]
+                        : []),
                     ])
                       yield { fraction, lobes, createLobes, side }
 
