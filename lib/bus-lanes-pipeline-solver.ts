@@ -9,6 +9,7 @@ import {
   type NativeSingleCarrierOptions,
 } from "./route-matched-native-single-carrier"
 import { withInferredSurfaceLayers } from "./effective-carrier-layers"
+import { withSkewRoundoffReserve } from "./skew-roundoff-reserve"
 import { initialSignalDogbones } from "./initial-signal-dogbones"
 import { independentBusGroups } from "./route-independent-buses"
 import { retargetGeneratedEscape } from "./retarget-generated-escape"
@@ -427,7 +428,16 @@ export class BusLanesPipelineSolver extends BaseSolver {
         ? Infinity
         : performance.now() + options.maxRoutingTimeMs
     this.input = structuredClone(input)
-    this.routingInput = withInferredSurfaceLayers(this.input)
+    const routingInput = withInferredSurfaceLayers(this.input)
+    // Native grouped/carrier matching uses fixed length windows. The generated
+    // fanout path instead compacts paired tuning after matching; keep numerical
+    // room for that cleanup without changing the native matching strategies.
+    this.routingInput =
+      options.fanout !== "none" &&
+      (nativeGroupsEligible(routingInput) ||
+        nativeSingleCarrierEligible(routingInput))
+        ? routingInput
+        : withSkewRoundoffReserve(routingInput)
     this.options = { smoothTuning: true, denseSearch: true, ...options }
     this.stats = { carrierStrategy: this.carrierStrategy.name }
     // Surface routing negotiates carrier layers and owned approaches before

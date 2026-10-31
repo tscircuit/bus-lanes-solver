@@ -32,7 +32,25 @@ Bus solver `791e0b67fb3519a87fb296447905ccd4fafa83f8` fails with `No shared tuni
 
 [Before SVG](before.snap.svg). This is explicitly failed output, included to show the requested before/after comparison. It does not show a completed route.
 
-The independently captured SRJ fixture in `tests/fixtures/orangecrab-core-byte0/input.srj.json` and the source geometry are immutable. The two expected-failure tests reproduce the real byte-lane failure and the underlying paired-arc clearance error. The stacked fix removes the expected-failure markers while retaining the assertions.
+The independently captured SRJ fixture in `tests/fixtures/orangecrab-core-byte0/input.srj.json` and the source geometry are immutable. The two regression tests reproduce the real byte-lane failure and the underlying paired-arc clearance error. Both tests now run normally with the original assertions.
+
+## Fixed result
+
+![After: 11 matched and physically connected byte-zero signals](after.png)
+
+[After SVG](after.snap.svg) · [Measured comparison](comparison.json)
+
+The before and after requests have identical SRJ hashes. The fix publishes all
+11 traces and 22 vias, connects every one of the 22 endpoints, and reports zero
+native DRC, core physical/self-short or core matching errors. Measured final
+byte skew is about 0.499999 mm and DQS skew about 0.099999 mm, within the unchanged
+0.5/0.1 mm limits. Other DDR signals remain pending.
+
+The conservative tangent-based polygon is an additional candidate after the
+existing curve forms. Existing successful native matching paths retain their
+curve construction. Generated-fanout routing also reserves at most 1 nm inside
+the requested skew bounds for later polygon cleanup and compaction; the public
+input/output limits and physical-clearance rules stay unchanged.
 
 ## Cause
 
@@ -44,4 +62,4 @@ Native PCB commit: `c511d569fe2af39467041f888bc231020f40c6ac`; SHA-256: `4597f3a
 
 The hardware extraction modifies the original representation and scope. It is derived from OrangeCrab under [CERN OHL v1.2](LICENSE.hardware.txt); the original design remains available at the pinned source link.
 
-Benchmark effect: this reproduction changes no production solver behavior. Its new expected-failure tests and capture files do not alter AM3352 benchmark inputs, harness, budgets or acceptance rules. Fresh benchmark comparisons are run separately by the required workflow.
+Benchmark effect: paired tuning gains a conservative polygon candidate; generated-fanout matching reserves a small numerical margin. AM3352 inputs, budgets and acceptance checks are unchanged. The required fresh base/head comparison runs separately in CI; its results are reported in the PR.

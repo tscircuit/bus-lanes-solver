@@ -1,6 +1,10 @@
 import { bipolarPairedLobes } from "./bipolar-tuning"
 import { foldedPairedLobes } from "./folded-tuning"
-import { smoothPairedLobes, roundedPairedLobes } from "./smooth-tuning"
+import {
+  smoothPairedLobes,
+  roundedPairedLobes,
+  tangentPairedLobes,
+} from "./smooth-tuning"
 import { tuneSmoothLengths } from "./smooth-length-tuning"
 import { fixedRouteLength, minimumLengthTargets } from "./route-lengths"
 import { distance, length } from "./geometry"
@@ -117,6 +121,7 @@ export function tuneCoupledLengths(
                       bipolarPairedLobes,
                       roundedPairedLobes,
                       smoothPairedLobes,
+                      tangentPairedLobes,
                     ])
                       yield { fraction, lobes, createLobes, side }
 

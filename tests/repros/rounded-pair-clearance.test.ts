@@ -4,7 +4,7 @@ import { tuneCoupledLengths } from "../../lib/tune-coupled-lengths"
 import type { SimpleRouteJson, Trace } from "../../lib/types"
 
 // Board-world mm, +X right/+Y up. Measure emitted polylines, not ideal arcs.
-test.failing("a tight-gap pair can gain length without violating copper clearance", () => {
+test("a tight-gap pair can gain length without violating copper clearance", () => {
   const width = 0.089
   const gap = 0.089
   const spacing = width + gap

@@ -1,0 +1,27 @@
+{
+  "scope": "OrangeCrab byte zero only; 51 selected DDR source nets remain, with all 387 pads; other signals and termination remain pending",
+  "before": {
+    "base": "791e0b67fb3519a87fb296447905ccd4fafa83f8",
+    "publishedTraces": 0,
+    "inputSha256": "2a8ca16a2ef74245214dcc64aa03c7bed86c4013e74fe2819c8cebcba83c9825",
+    "failure": "No shared tuning corridor"
+  },
+  "after": {
+    "publishedTraces": 11,
+    "vias": 22,
+    "connectedEndpoints": 22,
+    "physicalErrors": 0,
+    "matchingErrors": 0,
+    "nativeDrcIssues": 0,
+    "byteSkewMm": 0.4999990113633075,
+    "pairSkewMm": 0.09999901090597163,
+    "inputSha256": "2a8ca16a2ef74245214dcc64aa03c7bed86c4013e74fe2819c8cebcba83c9825"
+  },
+  "runtime": {
+    "tscircuit": "0.0.3044",
+    "core": "0.0.2242",
+    "bun": "1.4.0"
+  },
+  "constraintsUnchanged": true,
+  "sameInput": true
+}
