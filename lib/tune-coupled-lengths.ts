@@ -57,6 +57,17 @@ export function tuneCoupledLengths(
     const spacing = width + gap,
       clearance =
         input.minTraceToPadEdgeClearance ?? input.defaultObstacleMargin ?? 0.075
+    const curveCandidates = [
+      bipolarPairedLobes,
+      roundedPairedLobes,
+      smoothPairedLobes,
+    ]
+    const needsTangentSegments = pairedArcNeedsTangents({
+      width,
+      gap,
+      clearance,
+    })
+    if (needsTangentSegments) curveCandidates.push(tangentPairedLobes)
     let accepted: Trace[] | undefined
     for (const folded of options.packMeanders ? [false, true] : [false]) {
       if (accepted) break
@@ -118,14 +129,7 @@ export function tuneCoupledLengths(
                     ).reverse()
                   : Array.from({ length: 16 }, (_, i) => i + 1))
                   for (const side of [1, -1])
-                    for (const createLobes of [
-                      bipolarPairedLobes,
-                      roundedPairedLobes,
-                      smoothPairedLobes,
-                      ...(pairedArcNeedsTangents({ width, gap, clearance })
-                        ? [tangentPairedLobes]
-                        : []),
-                    ])
+                    for (const createLobes of curveCandidates)
                       yield { fraction, lobes, createLobes, side }
 
             if (folded)

@@ -2,7 +2,8 @@ import type { SimpleRouteJson } from "./types"
 import { pairedArcNeedsTangents } from "./paired-arc-sampling"
 
 function reserveSkewRoundoff(limit: number): number {
-  return limit - Math.min(1e-6, limit / 1000)
+  const margin = Math.min(1e-6, limit / 1000)
+  return limit - margin
 }
 
 /** Private targets for clearance-limited paired polygons, in board-world mm. Polygon cleanup and envelope
@@ -14,19 +15,22 @@ export function withSkewRoundoffReserve(
 ): SimpleRouteJson {
   const clearance =
     input.minTraceToPadEdgeClearance ?? input.defaultObstacleMargin ?? 0.075
-  const pairs = new Set(
+  const affectedPairs = new Set(
     (input.differentialPairs ?? []).filter((pair) => {
       // Match BusLanesSolver.coupledPairs: length-only groups have no polygon.
-      if (pair.traceGap === undefined && pair.maxUncoupledLength === undefined)
-        return false
+      const isCoupledPair =
+        pair.traceGap !== undefined || pair.maxUncoupledLength !== undefined
+      if (!isCoupledPair) return false
       const gap = pair.traceGap ?? clearance
       return pair.connectionNames.some((name) => {
         const connection = input.connections.find(
           (connection) => connection.name === name,
         )
+        const bus = input.buses?.find((bus) =>
+          bus.connectionNames.includes(name),
+        )
         const width =
-          input.buses?.find((bus) => bus.connectionNames.includes(name))
-            ?.traceWidth ??
+          bus?.traceWidth ??
           connection?.nominalTraceWidth ??
           connection?.width ??
           input.minTraceWidth
@@ -34,25 +38,23 @@ export function withSkewRoundoffReserve(
       })
     }),
   )
-  if (!pairs.size) return input
-  const pairedNames = new Set(
-    [...pairs].flatMap((pair) => pair.connectionNames),
+  if (!affectedPairs.size) return input
+  const affectedNames = new Set(
+    [...affectedPairs].flatMap((pair) => pair.connectionNames),
   )
-  return {
-    ...input,
-    buses: input.buses?.map((bus) =>
-      bus.maxLengthSkew === undefined ||
-      !bus.connectionNames.some((name) => pairedNames.has(name))
-        ? bus
-        : { ...bus, maxLengthSkew: reserveSkewRoundoff(bus.maxLengthSkew) },
-    ),
-    differentialPairs: input.differentialPairs?.map((pair) =>
-      pairs.has(pair)
-        ? {
-            ...pair,
-            lengthTolerance: reserveSkewRoundoff(pair.lengthTolerance),
-          }
-        : pair,
-    ),
-  }
+  const buses = input.buses?.map((bus) => {
+    if (bus.maxLengthSkew === undefined) return bus
+    const includesAffectedPair = bus.connectionNames.some((name) =>
+      affectedNames.has(name),
+    )
+    if (!includesAffectedPair) return bus
+    const maxLengthSkew = reserveSkewRoundoff(bus.maxLengthSkew)
+    return { ...bus, maxLengthSkew }
+  })
+  const differentialPairs = input.differentialPairs?.map((pair) => {
+    if (!affectedPairs.has(pair)) return pair
+    const lengthTolerance = reserveSkewRoundoff(pair.lengthTolerance)
+    return { ...pair, lengthTolerance }
+  })
+  return { ...input, buses, differentialPairs }
 }

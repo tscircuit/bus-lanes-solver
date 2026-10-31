@@ -191,6 +191,8 @@ export function roundedPairedLobes(
   )
   const railCount = spacing === 0 ? 1 : 2
   const useTangents = tangentSegments && spacing > 0
+  let lastSample = samples
+  if (useTangents) lastSample += 1
   // Arc angles and offsets are invariant during the height bisection. Retain
   // the original arithmetic order so the final sampled points are identical.
   const templates: Array<{
@@ -207,31 +209,35 @@ export function roundedPairedLobes(
       [period - 2 * radius, 1, Math.PI / 2, 0],
       [period, 0, Math.PI, Math.PI * 1.5],
     ])
-      for (let i = 0; i <= samples + (useTangents ? 1 : 0); i++) {
+      for (let i = 0; i <= lastSample; i++) {
         const step = (end - start) / samples
-        const endpoint = i === 0 || i === samples + 1
-        const angle = !useTangents
-          ? start + ((end - start) * i) / samples
-          : i === 0
-            ? start
-            : i === samples + 1
-              ? end
-              : start + (i - 0.5) * step
+        let angle = start + ((end - start) * i) / samples
+        let scale = 1
         // Intersect successive circle tangents instead of joining sampled
         // points with chords. Both emitted rails then retain their requested
         // separation along every straight copper segment, including the bends.
-        const scale = !useTangents || endpoint ? 1 : 1 / Math.cos(step / 2)
+        if (useTangents) {
+          if (i === 0) angle = start
+          else if (i === lastSample) angle = end
+          else {
+            angle = start + (i - 0.5) * step
+            scale = 1 / Math.cos(step / 2)
+          }
+        }
         const direction = Math.sign(end - start)
         const tx = -Math.sin(angle) * direction,
           ty = side * Math.cos(angle) * direction
+        const lobeOriginX = l * period + cx
+        const circleX = radius * Math.cos(angle)
         for (let k = 0; k < railCount; k++) {
           const offset = ((k === 0 ? 1 : -1) * spacing) / 2
+          let px = lobeOriginX + circleX - ty * offset
+          if (useTangents) {
+            const pairedX = circleX - ty * offset
+            px = lobeOriginX + scale * pairedX
+          }
           templates.push({
-            px: useTangents
-              ? l * period +
-                cx +
-                scale * (radius * Math.cos(angle) - ty * offset)
-              : l * period + cx + radius * Math.cos(angle) - ty * offset,
+            px,
             sin: scale * radius * Math.sin(angle),
             offsetY: scale * tx * offset,
             raised: !!raised,

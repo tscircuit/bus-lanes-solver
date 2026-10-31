@@ -13,6 +13,8 @@ export function pairedArcNeedsTangents({
   gap: number
   clearance: number
 }): boolean {
-  const angle = Math.PI / (2 * ROUNDED_PAIR_ARC_SAMPLES)
-  return (width + gap) * Math.cos(angle / 2) - width < clearance - 1e-8
+  const segmentAngle = Math.PI / (2 * ROUNDED_PAIR_ARC_SAMPLES)
+  const centerlineSpacing = width + gap
+  const chordGap = centerlineSpacing * Math.cos(segmentAngle / 2) - width
+  return chordGap < clearance - 1e-8
 }
