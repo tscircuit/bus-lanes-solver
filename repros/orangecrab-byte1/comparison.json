@@ -12,5 +12,17 @@
     "seconds": 16.428807101000004,
     "error": "Error: Error: No shared tuning corridor for source_trace_48, source_trace_49"
   },
-  "after": null
+  "after": {
+    "solved": true,
+    "traces": 11,
+    "vias": 22,
+    "seconds": 23.145070610999998,
+    "connectedEndpoints": 22,
+    "nativeDrcValid": true,
+    "corePhysicalErrors": 0,
+    "coreMatchingErrors": 0,
+    "byteSkewMm": 0.49999899997431996,
+    "pairSkewMm": 0.07428331967759405,
+    "exteriorCouplingMatched": true
+  }
 }

@@ -723,6 +723,16 @@ export class BusLanesSolver extends BaseSolver {
         }
       }
     }
+    // A connected layout can still leave no room for length matching. Try
+    // the remaining lane orders before declaring the timing group impossible.
+    if (!this.useNegotiation && this.attempt + 1 < this.orders.length) {
+      this.pairedTraces = structuredClone(
+        original.filter((trace) => trace.coupledSection),
+      )
+      this.retry()
+      this.phase = "route"
+      return
+    }
     this.fail("length_matching_failed", String(error))
     return
   }
