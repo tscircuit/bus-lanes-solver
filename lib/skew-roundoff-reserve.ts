@@ -12,6 +12,9 @@ export function withSkewRoundoffReserve(
     input.minTraceToPadEdgeClearance ?? input.defaultObstacleMargin ?? 0.075
   const pairs = new Set(
     (input.differentialPairs ?? []).filter((pair) => {
+      // Match BusLanesSolver.coupledPairs: length-only groups have no polygon.
+      if (pair.traceGap === undefined && pair.maxUncoupledLength === undefined)
+        return false
       const gap = pair.traceGap ?? clearance
       return pair.connectionNames.some((name) => {
         const connection = input.connections.find(
