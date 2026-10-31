@@ -13,24 +13,19 @@ Install the repository dependencies first with `bun install`. Then, from this di
 ```sh
 npm ci --ignore-scripts --legacy-peer-deps
 bun run.tsx before /absolute/path/to/base-checkout/lib/index.ts
-bun validate.ts before
 bun run.tsx after /absolute/path/to/fix-checkout/lib/index.ts
 bun validate.ts after
 ```
 
-The default solver argument is this checkout's `../../lib/index.ts`. The local algorithm adapter runs a fresh solver for each request and returns its routes to core through `autoroutingphase.algorithmFn`; no saved routes are replayed. Core publishes the resulting Circuit JSON, which the official `circuit-to-svg` renderer converts to the SVG. The wrapper retains all non-byte-zero traces as pending source connections.
+The default solver argument is this checkout's `../../lib/index.ts`. The local algorithm adapter runs a fresh solver for each request and returns its routes to core through `autoroutingphase.algorithmFn`; no saved routes are replayed. Core publishes the resulting Circuit JSON. The separate validator exports a snapshot only after successful routing and all acceptance checks. The wrapper retains all non-byte-zero traces as pending source connections.
 
 The nested package pins the published core runtime. Its only override uses the same official npm `@tscircuit/jscad@0.0.3` artifact because the original CAD download host is unavailable in the capture environment. The solver, geometry and matching constraints are not patched in that runtime.
 
-`validate.ts` independently checks all 22 source endpoints, native copper DRC, core clearance/self-short checks, whole-copper bus/pair skew, and exterior coupling before exporting any nonempty routed snapshot. `results/` holds local inputs, actual Circuit JSON, output SRJ, solver state, checks and SVG/PNG files.
+`validate.ts` independently checks all 22 source endpoints, native copper DRC, core clearance/self-short checks, whole-copper bus/pair skew, and exterior coupling before exporting a completed routed snapshot. Failed runs retain JSON diagnostics locally and cannot export review snapshots. `results/` holds local inputs, actual Circuit JSON, output SRJ, solver state, checks and SVG/PNG files.
 
 ## Baseline
 
 Bus solver `791e0b67fb3519a87fb296447905ccd4fafa83f8` fails with `No shared tuning corridor`. Core publishes zero PCB routes.
-
-![Before: actual failed core output; zero routed byte-zero signals](before.png)
-
-[Before SVG](before.snap.svg). This is explicitly failed output, included to show the requested before/after comparison. It does not show a completed route.
 
 The independently captured SRJ fixture in `tests/fixtures/orangecrab-core-byte0/input.srj.json` and the source geometry are immutable. The two regression tests reproduce the real byte-lane failure and the underlying paired-arc clearance error. Both tests now run normally with the original assertions.
 

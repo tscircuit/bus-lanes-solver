@@ -1,6 +1,10 @@
 import type { SimpleRouteJson } from "./types"
 import { pairedArcNeedsTangents } from "./paired-arc-sampling"
 
+function reserveSkewRoundoff(limit: number): number {
+  return limit - Math.min(1e-6, limit / 1000)
+}
+
 /** Private targets for clearance-limited paired polygons, in board-world mm. Polygon cleanup and envelope
  * optimization use small geometric epsilons; reserve at most 1 nm inside each
  * requested skew bound so final copper also satisfies strict downstream checks.
@@ -26,7 +30,7 @@ export function withSkewRoundoffReserve(
           connection?.nominalTraceWidth ??
           connection?.width ??
           input.minTraceWidth
-        return pairedArcNeedsTangents(width, gap, clearance)
+        return pairedArcNeedsTangents({ width, gap, clearance })
       })
     }),
   )
@@ -34,20 +38,19 @@ export function withSkewRoundoffReserve(
   const pairedNames = new Set(
     [...pairs].flatMap((pair) => pair.connectionNames),
   )
-  const reserved = (limit: number) => limit - Math.min(1e-6, limit / 1000)
   return {
     ...input,
     buses: input.buses?.map((bus) =>
       bus.maxLengthSkew === undefined ||
       !bus.connectionNames.some((name) => pairedNames.has(name))
         ? bus
-        : { ...bus, maxLengthSkew: reserved(bus.maxLengthSkew) },
+        : { ...bus, maxLengthSkew: reserveSkewRoundoff(bus.maxLengthSkew) },
     ),
     differentialPairs: input.differentialPairs?.map((pair) =>
       pairs.has(pair)
         ? {
             ...pair,
-            lengthTolerance: reserved(pair.lengthTolerance),
+            lengthTolerance: reserveSkewRoundoff(pair.lengthTolerance),
           }
         : pair,
     ),

@@ -122,7 +122,7 @@ export function tuneCoupledLengths(
                       bipolarPairedLobes,
                       roundedPairedLobes,
                       smoothPairedLobes,
-                      ...(pairedArcNeedsTangents(width, gap, clearance)
+                      ...(pairedArcNeedsTangents({ width, gap, clearance })
                         ? [tangentPairedLobes]
                         : []),
                     ])
