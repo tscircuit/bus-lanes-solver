@@ -91,12 +91,10 @@ export function offsetPath(path: Point[], offset: number): Point[] {
   })
 }
 
-/** Route two rails through a shared corridor; only the package approaches may
- * separate. The return value remains subject to total-length and coupling checks. */
-export function* routeCoupledPair(
-  input: SimpleRouteJson,
-  pair: NonNullable<SimpleRouteJson["differentialPairs"]>[number],
-  fixed: Copper[],
+interface PairTopologyOptions {
+  input: SimpleRouteJson
+  pair: NonNullable<SimpleRouteJson["differentialPairs"]>[number]
+  fixed: Copper[]
   negotiation?: {
     copper: Copper[]
     penalty: number
@@ -108,8 +106,30 @@ export function* routeCoupledPair(
     allowProvisionalPairTuning?: boolean
     /** Complete paired geometries already tried by this bounded caller. */
     excludedPairRoutes?: ReadonlySet<string>
-  },
+  }
+  variant?: number
+}
+
+/** Route two rails through a shared corridor; only the package approaches may
+ * separate. The return value remains subject to total-length and coupling checks. */
+export function* routeCoupledPair(
+  input: SimpleRouteJson,
+  pair: NonNullable<SimpleRouteJson["differentialPairs"]>[number],
+  fixed: Copper[],
+  negotiation?: PairTopologyOptions["negotiation"],
 ): Generator<void, Trace[] | null> {
+  return yield* routeCoupledPairTopology({ input, pair, fixed, negotiation })
+}
+
+/** A fresh small-bus retry may change its package handoffs while retaining
+ * the existing greedy pair search and every fixed copper obstacle. */
+export function* routeCoupledPairTopology({
+  input,
+  pair,
+  fixed,
+  negotiation,
+  variant = negotiation?.variant ?? 0,
+}: PairTopologyOptions): Generator<void, Trace[] | null> {
   const members = pair.connectionNames.map(
     (n) => input.connections.find((c) => c.name === n)!,
   )
@@ -338,7 +358,6 @@ export function* routeCoupledPair(
       distance(point, centers[1 - end])
     handoffChoices[end].sort((a, b) => cost(a) - cost(b))
   }
-  const variant = negotiation?.variant ?? 0
   // Change both package approaches on each retry. A slow sweep of target
   // handoffs can otherwise leave a blocked source escape unchanged for many
   // stagnant bus passes. This diagonal traversal still visits every pairing.

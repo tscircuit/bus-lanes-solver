@@ -22,7 +22,7 @@ import { pairCouplingReports } from "./pair-coupling"
 import { tuningPathIsSelfClear } from "./length-tuning"
 import {
   pairHasUnroutedNativePads,
-  routeCoupledPair,
+  routeCoupledPairTopology,
 } from "./coupled-pair-routing"
 import { reduceOrdinaryTurns } from "./reduce-ordinary-turns"
 import { BaseSolver } from "@tscircuit/solver-utils"
@@ -73,6 +73,7 @@ export class BusLanesSolver extends BaseSolver {
   private bestPartial: Trace[] = []
   private pairedTraces: Trace[] = []
   private isRefinement = false
+  private pairVariant = 0
   private pairIndex = 0
   private congestionPass = 0
   private conflictingLanes = 0
@@ -98,6 +99,21 @@ export class BusLanesSolver extends BaseSolver {
     this.input = structuredClone(input)
     this.options = options
     this.MAX_ITERATIONS = options.maxSearchIterations ?? 200000
+  }
+  /** Start an ordinary fresh solve with a different package-entry topology.
+   * This does not restart refinement or validation probes. */
+  static forPairVariant({
+    input,
+    options,
+    variant,
+  }: {
+    input: SimpleRouteJson
+    options: SolverOptions
+    variant: number
+  }): BusLanesSolver {
+    const solver = new BusLanesSolver(input, options)
+    solver.pairVariant = variant
+    return solver
   }
   /** Rematch freshly computed carrier geometry after a pipeline refinement.
    * On failure, return control so the caller can choose another topology.
@@ -304,10 +320,12 @@ export class BusLanesSolver extends BaseSolver {
       this.startLane()
       return
     }
-    this.pairSearch ??= routeCoupledPair(this.input, pair, [
-      ...this.fixed,
-      ...this.traces.flatMap(routeCopper),
-    ])
+    this.pairSearch ??= routeCoupledPairTopology({
+      input: this.input,
+      pair,
+      fixed: [...this.fixed, ...this.traces.flatMap(routeCopper)],
+      variant: this.pairVariant,
+    })
     const step = this.pairSearch.next()
     if (!step.done) return
     if (!step.value) {
