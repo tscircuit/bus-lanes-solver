@@ -211,9 +211,14 @@ export function* planNativePairedCarriers(
       defaults,
       regions,
       stepMm: step,
+      targetLengthMm: options.busTargetLength,
     })
     if (candidates) {
       for (const centerlines of candidates) {
+        if (!centerlines) {
+          yield
+          continue
+        }
         const result = yield* planNativePairedCarriers(
           native,
           { ...options, centerlines },
@@ -227,7 +232,11 @@ export function* planNativePairedCarriers(
   }
   const centers =
     options.centerlines ??
-    defaultCenterlines({ native, step, packageRegions: options.packageRegions })
+    defaultCenterlines({
+      native,
+      step,
+      packageRegions: options.packageRegions,
+    })
   if (centers.length !== pairs.length)
     throw Error("Supply exactly one backbone for each differential pair")
   const regions =
