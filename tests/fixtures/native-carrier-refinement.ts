@@ -29,7 +29,7 @@ export function nativeCarrierRefinement() {
       connectedTo: [second.name],
     })
   options.singleCarrier.ordinaryCarrierLayers = ["bottom"]
-  options.singleCarrier.busTargetLength = 14
+  options.singleCarrier.busTargetLength = 12
   options.maxRoutingTimeMs = 20000
   return { input, options }
 }
