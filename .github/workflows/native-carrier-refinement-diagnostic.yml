@@ -1,0 +1,26 @@
+name: Native carrier refinement diagnostic
+
+on:
+  push:
+    branches: [diagnostic/native-carrier-regression-20261101]
+    paths:
+      - tests/fixtures/native-carrier-refinement.ts
+      - tests/repros/native-carrier-refinement.test.ts
+      - .github/workflows/native-carrier-refinement-diagnostic.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  focused:
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.0
+      - run: bun install --ignore-scripts
+      - run: bun test tests/repros/native-carrier-refinement.test.ts --timeout 60000
+      - run: bun run typecheck
