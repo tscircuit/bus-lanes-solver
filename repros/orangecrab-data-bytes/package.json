@@ -1,0 +1,12 @@
+{
+  "name": "orangecrab-data-bytes-core-repro",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "tscircuit": "0.0.3047",
+    "svgo": "4.0.0"
+  },
+  "overrides": {
+    "@tscircuit/jscad": "0.0.3"
+  }
+}
