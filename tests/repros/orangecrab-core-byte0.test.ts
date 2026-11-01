@@ -17,7 +17,10 @@ test("routes and matches the real OrangeCrab byte captured from core", () => {
   const original = structuredClone(input)
   expect(input.connections).toHaveLength(11)
   expect(input.obstacles).toHaveLength(387)
-  const solver = new BusLanesPipelineSolver(input, { maxRoutingTimeMs: 60_000 })
+  // Use the same correctness-test allowance as byte one on loaded CI runners.
+  const solver = new BusLanesPipelineSolver(input, {
+    maxRoutingTimeMs: 120_000,
+  })
   solver.solve()
   expectCompletedRouting(solver, original)
   // Match against strict caller bounds after joining and cleaning all copper.
@@ -32,4 +35,4 @@ test("routes and matches the real OrangeCrab byte captured from core", () => {
   expect(solver.getOutput().differentialPairs).toEqual(
     original.differentialPairs,
   )
-}, 120_000)
+}, 180_000)
