@@ -4,7 +4,7 @@ import { BusLanesPipelineSolver, type SimpleRouteJson } from "../../lib"
 import { expectCompletedRouting } from "../fixtures/expect-completed-routing"
 import { busLengthReports, pairLengthReports } from "../../lib/route-lengths"
 
-test.failing("routes and matches the real OrangeCrab second byte captured from core", () => {
+test("routes and matches the real OrangeCrab second byte captured from core", () => {
   const input: SimpleRouteJson = JSON.parse(
     readFileSync(
       new URL(
