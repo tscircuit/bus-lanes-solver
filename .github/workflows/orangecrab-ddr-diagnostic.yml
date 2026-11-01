@@ -1,0 +1,47 @@
+name: OrangeCrab fresh DDR routing diagnostic
+
+on:
+  push:
+    branches:
+      - diagnostic/native-carrier-refinement-20261101
+    paths:
+      - .github/workflows/orangecrab-ddr-diagnostic.yml
+      - scripts/route-orangecrab-ddr-diagnostic.ts
+      - scripts/orangecrab-ddr-diagnostic.test.ts
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: orangecrab-fresh-ddr-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  fresh-route:
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    timeout-minutes: 140
+    env:
+      BUN_JSC_forceRAMSize: "2147483648"
+      BUN_JSC_miniVMHeapGrowthFactor: "1.05"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.0
+      - name: Install unchanged snapshot and routing dependencies
+        run: bun install
+      - name: Verify canonical source provenance and outline
+        run: bun test tests/repros/orangecrab-reference.test.ts tests/repros/orangecrab-outline.test.ts
+      - name: Fresh solve and independent completed-routing snapshot
+        env:
+          RUN_ORANGECRAB_NATIVE_ROUTING: "1"
+        run: bun test scripts/orangecrab-ddr-diagnostic.test.ts --timeout 7800000
+      - name: Retain only successfully validated routing-model artifacts
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: orangecrab-completed-ddr-${{ github.sha }}
+          path: work/orangecrab-diagnostic/
+          if-no-files-found: error
+          retention-days: 14
