@@ -21,11 +21,14 @@ test("fixed-via refinement repairs a crossed interconnect with the original nati
   const before = structuredClone(input)
   const control = new BusLanesPipelineSolver(input, options)
   control.solve()
+  expect(control.error).toBeNull()
   expectCompletedRouting(control, before)
   const seed = crossedCarrierSeed({ input, traces: control.traces })
   const seedBefore = structuredClone(seed)
   const paired = seed.filter((trace) =>
-    input.differentialPairs![0].connectionNames.includes(trace.connection_name!),
+    input.differentialPairs![0].connectionNames.includes(
+      trace.connection_name!,
+    ),
   )
   const ordinary = seed.filter((trace) => !paired.includes(trace))
   const nativeInput = toNativeValidationSrj(input)
@@ -73,13 +76,25 @@ test("fixed-via refinement repairs a crossed interconnect with the original nati
     expect(bus.withinLengthLimit).toBe(true)
     expect(bus.matched).toBe(true)
   }
-  expect(pairLengthReports(input, traces).every((pair) => pair.matched)).toBe(true)
-  expect(pairCouplingReports(input, traces).every((pair) => pair.matched)).toBe(true)
+  expect(pairLengthReports(input, traces).every((pair) => pair.matched)).toBe(
+    true,
+  )
+  expect(pairCouplingReports(input, traces).every((pair) => pair.matched)).toBe(
+    true,
+  )
   expect(traces.every(nativeSignalGeometryIsValid)).toBe(true)
   for (const anchor of paired)
-    expect(traces.find((trace) => trace.connection_name === anchor.connection_name)).toEqual(anchor)
+    expect(
+      traces.find((trace) => trace.connection_name === anchor.connection_name),
+    ).toEqual(anchor)
   for (const previous of ordinary)
-    expect(fixedNativeEscapes(traces.find((trace) => trace.connection_name === previous.connection_name)!)).toEqual(fixedNativeEscapes(previous))
+    expect(
+      fixedNativeEscapes(
+        traces.find(
+          (trace) => trace.connection_name === previous.connection_name,
+        )!,
+      ),
+    ).toEqual(fixedNativeEscapes(previous))
   expect(seed).toEqual(seedBefore)
   expect(input).toEqual(before)
 }, 60000)
