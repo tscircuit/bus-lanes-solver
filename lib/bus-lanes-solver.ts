@@ -72,6 +72,7 @@ export class BusLanesSolver extends BaseSolver {
   private search?: VectorVisibilitySearch | GridVisibilitySearch
   private bestPartial: Trace[] = []
   private pairedTraces: Trace[] = []
+  private isRefinement = false
   private pairIndex = 0
   private congestionPass = 0
   private conflictingLanes = 0
@@ -99,6 +100,7 @@ export class BusLanesSolver extends BaseSolver {
     this.MAX_ITERATIONS = options.maxSearchIterations ?? 200000
   }
   /** Rematch freshly computed carrier geometry after a pipeline refinement.
+   * On failure, return control so the caller can choose another topology.
    * The ordinary output validator still checks every endpoint and copper edge. */
   static forRefinement(
     input: SimpleRouteJson,
@@ -106,6 +108,7 @@ export class BusLanesSolver extends BaseSolver {
     options: SolverOptions = {},
   ) {
     const solver = new BusLanesSolver(input, options)
+    solver.isRefinement = true
     solver.initialize()
     if (solver.failed) return solver
     if (solver.search instanceof GridVisibilitySearch) solver.search.cancel()
@@ -725,7 +728,11 @@ export class BusLanesSolver extends BaseSolver {
     }
     // A connected layout can still leave no room for length matching. Try
     // the remaining lane orders before declaring the timing group impossible.
-    if (!this.useNegotiation && this.attempt + 1 < this.orders.length) {
+    if (
+      !this.isRefinement &&
+      !this.useNegotiation &&
+      this.attempt + 1 < this.orders.length
+    ) {
       this.pairedTraces = structuredClone(
         original.filter((trace) => trace.coupledSection),
       )
