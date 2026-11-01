@@ -1,15 +1,22 @@
 import { expect, test } from "bun:test"
-import { validateRoutedCopperDrc } from "@tscircuit/fanout-solver"
+import {
+  validateOriginalEndpointConnectivity,
+  validateRoutedCopperDrc,
+} from "@tscircuit/fanout-solver"
 import { BusLanesPipelineSolver } from "../../lib"
 import { matchNativeCarrierSignals } from "../../lib/match-native-carrier-signals"
 import { toNativeValidationSrj } from "../../lib/native-validation-input"
+import { busLengthReports, pairLengthReports } from "../../lib/route-lengths"
+import { pairCouplingReports } from "../../lib/pair-coupling"
+import { nativeSignalGeometryIsValid } from "../../lib/native-signal-geometry"
 import { expectCompletedRouting } from "../fixtures/expect-completed-routing"
 import {
   crossedCarrierSeed,
+  fixedNativeEscapes,
   nativeCarrierRefinement,
 } from "../fixtures/native-carrier-refinement"
 
-test("native matching exhausts a crossed interconnect seed despite a legal fixed-via control", () => {
+test("fixed-via refinement repairs a crossed interconnect with the original native endpoints", () => {
   const { input, options } = nativeCarrierRefinement()
   const before = structuredClone(input)
   const control = new BusLanesPipelineSolver(input, options)
@@ -48,8 +55,80 @@ test("native matching exhausts a crossed interconnect seed despite a legal fixed
   )
   let result = work.next()
   while (!result.done) result = work.next()
-  expect(result.value).toBeNull()
-  expect(stages).not.toContain("native_fixed_via_repair")
+  expect(result.value).not.toBeNull()
+  const traces = result.value!
+  expect(stages).toContain("native_fixed_via_repair")
+  const native = {
+    inputSrj: nativeInput,
+    routedSrj: toNativeValidationSrj({ ...input, traces }),
+  }
+  const connectivity = validateOriginalEndpointConnectivity(native)
+  expect(connectivity.valid).toBe(true)
+  expect(connectivity.connectedConnectionCount).toBe(input.connections.length)
+  const drc = validateRoutedCopperDrc({
+    ...native,
+    clearance: input.minTraceToPadEdgeClearance!,
+    allowBlindAndBuriedVias: false,
+  })
+  expect(drc.issues).toEqual([])
+  for (const bus of busLengthReports(input, traces)) {
+    expect(bus.aboveMinimumLength).toBe(true)
+    expect(bus.withinLengthLimit).toBe(true)
+    expect(bus.matched).toBe(true)
+  }
+  expect(pairLengthReports(input, traces).every((pair) => pair.matched)).toBe(
+    true,
+  )
+  expect(pairCouplingReports(input, traces).every((pair) => pair.matched)).toBe(
+    true,
+  )
+  expect(traces.every(nativeSignalGeometryIsValid)).toBe(true)
+  for (const anchor of paired)
+    expect(
+      traces.find((trace) => trace.connection_name === anchor.connection_name),
+    ).toEqual(anchor)
+  for (const previous of ordinary)
+    expect(
+      fixedNativeEscapes(
+        traces.find(
+          (trace) => trace.connection_name === previous.connection_name,
+        )!,
+      ),
+    ).toEqual(fixedNativeEscapes(previous))
   expect(seed).toEqual(seedBefore)
+  expect(input).toEqual(before)
+}, 60000)
+
+test("already valid native routes retain their existing copper", () => {
+  const { input, options } = nativeCarrierRefinement()
+  const before = structuredClone(input)
+  const control = new BusLanesPipelineSolver(input, options)
+  control.solve()
+  expectCompletedRouting(control, before)
+  const previous = structuredClone(control.traces)
+  const names = input.differentialPairs![0].connectionNames
+  const paired = control.traces.filter((trace) =>
+    names.includes(trace.connection_name!),
+  )
+  const ordinary = control.traces.filter((trace) => !paired.includes(trace))
+  const stages: string[] = []
+  const work = matchNativeCarrierSignals(
+    input,
+    paired,
+    {
+      carrierLayer: "inner1",
+      ordinaryCarrierLayers: ["bottom"],
+      maxPasses: 1,
+      maxLocalPasses: 0,
+      maxExpansionsPerRoute: 1,
+    },
+    (progress) => stages.push(progress.stage),
+    ordinary,
+  )
+  let result = work.next()
+  while (!result.done) result = work.next()
+  expect(result.value).toEqual([...paired, ...ordinary])
+  expect(stages).not.toContain("native_fixed_via_repair")
+  expect(control.traces).toEqual(previous)
   expect(input).toEqual(before)
 }, 60000)
