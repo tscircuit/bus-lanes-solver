@@ -4,23 +4,42 @@ on:
   push:
     branches: [diagnostic/native-carrier-regression-20261101]
     paths:
-      - tests/fixtures/native-carrier-refinement.ts
-      - tests/repros/native-carrier-refinement.test.ts
       - .github/workflows/native-carrier-refinement-diagnostic.yml
   workflow_dispatch:
 
 permissions:
   contents: read
 
+env:
+  BUN_JSC_forceRAMSize: "2147483648"
+  BUN_JSC_miniVMHeapGrowthFactor: "1.05"
+
 jobs:
-  focused:
+  validate:
+    name: Pinned ${{ matrix.revision.name }} repro and package checks
     runs-on: blacksmith-4vcpu-ubuntu-2404
-    timeout-minutes: 10
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        revision:
+          - name: reproduction
+            sha: 3dd0428fb02660281cbc85295fc5acd9aa71a881
+          - name: repair
+            sha: 106c7f4601bd4155750615560b4dc49e6ff22060
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.revision.sha }}
+          persist-credentials: false
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.4.0
-      - run: bun install --ignore-scripts
-      - run: bun test tests/repros/native-carrier-refinement.test.ts --timeout 60000
-      - run: bun run typecheck
+      - name: Install pinned project
+        run: bun install
+      - name: Verify focused native repair regression
+        run: bun test tests/repros/native-carrier-refinement.test.ts
+      - name: Verify every reproduction
+        run: bun test tests/repros
+      - name: Verify public package exports and production isolation
+        run: bun run test:package
