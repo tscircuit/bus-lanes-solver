@@ -12,6 +12,7 @@ import { withInferredSurfaceLayers } from "./effective-carrier-layers"
 import { withSkewRoundoffReserve } from "./skew-roundoff-reserve"
 import { initialSignalDogbones } from "./initial-signal-dogbones"
 import { independentBusGroups } from "./route-independent-buses"
+import { routeFreshIndependentBuses } from "./route-fresh-independent-buses"
 import { retargetGeneratedEscape } from "./retarget-generated-escape"
 import { joinSignalEscapes } from "./join-signal-escapes"
 import {
@@ -607,6 +608,24 @@ export class BusLanesPipelineSolver extends BaseSolver {
     }
     return true
   }
+  private *finishIndependentCarrier({
+    input,
+    traces,
+    escapes,
+  }: {
+    input: SimpleRouteJson
+    traces: Trace[]
+    escapes: Trace[]
+  }): Generator<void, { traces: Trace[]; escapes: Trace[] }> {
+    const original = this.escapes
+    try {
+      this.escapes = escapes
+      const finished = yield* this.finishPackageCoupling(input, traces)
+      return { traces: finished, escapes: this.escapes }
+    } finally {
+      this.escapes = original
+    }
+  }
   private *finishPackageCoupling(
     input: SimpleRouteJson,
     lanes: Trace[],
@@ -965,6 +984,32 @@ export class BusLanesPipelineSolver extends BaseSolver {
       ...this.routingInput,
       connections: result.connections as SimpleRouteJson["connections"],
       traces: [...(this.routingInput.traces ?? []), ...this.escapes],
+    }
+    const independentGroups = independentBusGroups(laneInput)
+    const fixedEscapeSites = terminalLayers.size === 0
+    const allEscapesGenerated =
+      !this.routingInput.traces?.length &&
+      this.escapes.length === 2 * this.routingInput.connections.length
+    const smallCarrierGroups = independentGroups?.every(
+      (group) => group.connections.length <= 12,
+    )
+    if (
+      this.options.smoothTuning &&
+      this.options.denseSearch &&
+      independentGroups &&
+      fixedEscapeSites &&
+      allEscapesGenerated &&
+      smallCarrierGroups
+    ) {
+      this.sharedPackages = routeFreshIndependentBuses({
+        input: laneInput,
+        groups: independentGroups,
+        escapes: this.escapes,
+        options: this.childOptions(),
+        maxSteps: Math.floor((this.MAX_ITERATIONS - this.iterations) / 2),
+        finish: (context) => this.finishIndependentCarrier(context),
+      })
+      return
     }
     if (
       this.attempt === 0 &&

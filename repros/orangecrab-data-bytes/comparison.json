@@ -1,0 +1,41 @@
+{
+  "runtime": {
+    "bun": "1.4.3",
+    "tscircuit": "0.0.3047",
+    "core": "0.0.2245"
+  },
+  "base": "61e427477de6a668111f3206403d93f77a830c1b",
+  "inputSha256": "25b1a373576373a11350988a76d69d954e1404e9569ad33025306e7b2c73f09b",
+  "budgetSeconds": 120,
+  "before": {
+    "label": "baseline-main",
+    "id": "orangecrab",
+    "seconds": 121.372392918,
+    "asyncErrors": ["Error: Routing exceeded its elapsed-time budget"],
+    "traces": 0,
+    "vias": 0,
+    "pads": 387,
+    "sourceTraces": 51,
+    "solved": false
+  },
+  "after": {
+    "label": "after-v3",
+    "seconds": 83.56253690199999,
+    "solved": true,
+    "traces": 22,
+    "vias": 44,
+    "pads": 387,
+    "sourceTraces": 51,
+    "asyncErrors": []
+  },
+  "checks": {
+    "connectedSignals": 22,
+    "connectedEndpoints": 44,
+    "nativeDrcErrors": 0,
+    "corePhysicalErrors": 0,
+    "coreMatchingErrors": 0,
+    "busSkewMm": [0.4850201214916403, 0.4999990009457491],
+    "pairSkewMm": [0.09999900100213921, 0.09999899999957051],
+    "separatedExteriorPairLengthMm": [0, 0]
+  }
+}

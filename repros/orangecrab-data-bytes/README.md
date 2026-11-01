@@ -2,7 +2,9 @@
 
 Routes both data bytes of the real [OrangeCrab r0.2.1](../orangecrab-byte0/README.md#source-and-license) through published `tscircuit@0.0.3047` / core `0.0.2245`. It reuses the original extracted TSX: all 387 pads and 51 source traces remain declared. Both byte groups share one routing phase, with byte zero on inner1 and byte one on inner2.
 
-Each byte routes independently, but this combined request times out without publishing any of its 22 PCB traces. Joint escape placement leaves a legal local via assignment; the carrier search and final DQS approach checks cannot complete it.
+Main times out after 120 seconds with **0/22 traces**. The fix reserves all 44 escape vias together, searches the separate carrier layers with fresh small-bus solvers, and retries a different DQS package entry when the first matched route fails exterior coupling. The same TSX/core request then publishes **22/22 traces and 44 vias**.
+
+The captured completed run has 44/44 connected endpoints, zero native/core physical errors, byte skews of 0.4851/0.5000 mm and DQS skews below 0.1 mm. Both DQS pairs remain coupled outside their package approaches. [Measured comparison](comparison.json).
 
 ![OrangeCrab two-byte result](board.snap.svg)
 
