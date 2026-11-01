@@ -1,5 +1,6 @@
 import { offsetPath } from "./coupled-pair-routing"
-import { distance, simplify } from "./geometry"
+import { distance, length, simplify } from "./geometry"
+import { packageCenterlineDetours } from "./package-centerline-detours"
 import { nativePairHalfPitch } from "./native-pair-spacing"
 import { packageApproachRegions, pointInBox } from "./package-approach-regions"
 import { fixedCopper, VectorScene } from "./vector-scene"
@@ -19,6 +20,7 @@ interface OffsetPackageSearch {
   preferred: Point[]
   halfPitchMm: number
   stepMm: number
+  targetLengthMm?: number
 }
 
 function boxCenter(bounds: SimpleRouteJson["bounds"]): Point {
@@ -107,9 +109,10 @@ function packageMouths(
 
 function* searchOffsetPackageCenterlines(
   search: OffsetPackageSearch,
-): Generator<Point[][]> {
+): Generator<Point[][] | null> {
   const seen = new Set<string>()
   const preferred = simplify(search.defaults[0])
+  const detourBases: Point[][] = preferred.length >= 2 ? [preferred] : []
   if (preferred.length >= 2 && centerlineIsClear(search, preferred)) {
     seen.add(JSON.stringify(preferred))
     yield [preferred]
@@ -137,7 +140,36 @@ function* searchOffsetPackageCenterlines(
       const key = JSON.stringify(path)
       if (path.length < 2 || seen.has(key)) continue
       seen.add(key)
+      detourBases.push(path)
       if (centerlineIsClear(search, path)) yield [path]
+    }
+  }
+  // Retain every established direct choice first. A blocked direct corridor
+  // can also seed a legal excursion outside the monotone package envelope.
+  for (const path of detourBases) {
+    const approachMm = search.preferred.reduce(
+      (sum, point, side) =>
+        sum + distance(point, path[side ? path.length - 1 : 0]),
+      0,
+    )
+    for (const detour of packageCenterlineDetours({
+      input: search.input,
+      path,
+      halfPitchMm: search.halfPitchMm,
+      preferredAddedLengthMm: Math.max(
+        0,
+        (search.targetLengthMm ?? 0) - length(path) - approachMm,
+      ),
+    })) {
+      if (!detour) {
+        yield null
+        continue
+      }
+      if (!centerlineIsClear(search, detour)) continue
+      const key = JSON.stringify(detour)
+      if (seen.has(key)) continue
+      seen.add(key)
+      yield [detour]
     }
   }
 }
@@ -148,12 +180,14 @@ export function offsetPackageCenterlines({
   defaults,
   regions,
   stepMm,
+  targetLengthMm,
 }: {
   input: SimpleRouteJson
   defaults: Point[][]
   regions: ReturnType<typeof packageApproachRegions>
   stepMm: number
-}): Generator<Point[][]> | undefined {
+  targetLengthMm?: number
+}): Generator<Point[][] | null> | undefined {
   if (input.differentialPairs?.length !== 1) return
   const pair = input.differentialPairs[0]
   const connections = pair.connectionNames.map(
@@ -209,5 +243,6 @@ export function offsetPackageCenterlines({
     preferred,
     halfPitchMm: nativePairHalfPitch(input, pair),
     stepMm,
+    targetLengthMm,
   })
 }
