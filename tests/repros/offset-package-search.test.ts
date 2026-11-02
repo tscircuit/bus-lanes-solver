@@ -41,7 +41,9 @@ test("offset search retains more than 512 distinct legal corridors, including lo
   )
   const corridors: string[] = []
   const lengthsMm: number[] = []
-  for (const [centerline] of candidates!) {
+  for (const candidate of candidates!) {
+    if (!candidate) continue
+    const [centerline] = candidate
     expect(
       scenes.every((scene, rail) =>
         scene.pathVisible(offsetPath(centerline, rail ? 0.1 : -0.1)),
