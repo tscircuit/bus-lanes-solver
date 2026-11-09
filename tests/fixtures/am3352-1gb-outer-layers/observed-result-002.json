@@ -1,0 +1,45 @@
+{
+  "status": "wall_time_budget_reached",
+  "elapsedMs": 1200001,
+  "solved": false,
+  "failed": false,
+  "acceptedSignalRoutes": 0,
+  "failureCode": null,
+  "error": null,
+  "state": {
+    "phase": "route_shared_layers",
+    "solved": false,
+    "failed": false,
+    "failureCode": null,
+    "error": null,
+    "iterations": 3715684,
+    "traceCount": 0,
+    "stats": {
+      "carrierStrategy": "preferred"
+    },
+    "child": null,
+    "activeSubSolver": null,
+    "surfaceFinishing": null
+  },
+  "lengthBudgets": {
+    "DDR_BYTE0": {
+      "maxPlanarLengthMm": 27.400000000000002,
+      "maxSkewMm": 0.635
+    },
+    "DDR_BYTE1": {
+      "maxPlanarLengthMm": 29.800000000000004,
+      "maxSkewMm": 0.635
+    },
+    "DDR_ADDRESS_COMMAND_CLOCK": {
+      "targetPlanarLengthMm": 36.62,
+      "minimumMm": 35.349999999999994,
+      "maximumMm": 37.89,
+      "maxSkewMm": 0.635
+    }
+  },
+  "inputSha256": "84e1668ef4e27390c157f11aad3694b323bfb1a3d1f140bbd8891e0e851ada11",
+  "inputReplayedByteForByte": true,
+  "powerSupportIntegrated": false,
+  "manualRepairsApplied": false,
+  "repairApprovalRequired": true
+}
