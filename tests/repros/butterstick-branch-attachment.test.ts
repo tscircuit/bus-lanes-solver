@@ -82,7 +82,7 @@ test("ButterStick pending native-pad access after RAM branches", async (): Promi
     search.cancel()
   }
 
-  // The next address request starts at this native ball. It needs enough
+  // The later LDQS_N request starts at this native ball. It needs enough
   // planar access to leave the package before choosing its carrier layer.
   const pad = output.obstacles.find(
     (obstacle) =>
@@ -97,7 +97,7 @@ test("ButterStick pending native-pad access after RAM branches", async (): Promi
       .filter((obstacle) => obstacle.componentId === pad.componentId)
       .map((obstacle) => obstacle.center.x + obstacle.width / 2),
   )
-  const addressExit: Connection = {
+  const strobeExit: Connection = {
     name: "pcb_port_381",
     width: inputSrj.minTraceWidth,
     pointsToConnect: [
@@ -114,14 +114,9 @@ test("ButterStick pending native-pad access after RAM branches", async (): Promi
     ],
   }
   const exitSearch = new GridVisibilitySearch(
-    new VectorScene(
-      output,
-      addressExit,
-      addressExit.width!,
-      fixedCopper(output),
-    ),
-    addressExit.pointsToConnect[0],
-    addressExit.pointsToConnect[1],
+    new VectorScene(output, strobeExit, strobeExit.width!, fixedCopper(output)),
+    strobeExit.pointsToConnect[0],
+    strobeExit.pointsToConnect[1],
     [],
     0,
     undefined,
@@ -130,7 +125,7 @@ test("ButterStick pending native-pad access after RAM branches", async (): Promi
   try {
     while (!exitSearch.solved && !exitSearch.failed) exitSearch.step()
     const graphics = new BusLanesSolver(futureInput).visualize()
-    graphics.title = `ButterStick: 16 DDR nets complete; pending address escape ${exitSearch.solved ? "open" : "blocked"}`
+    graphics.title = `ButterStick: 16 DDR nets complete; pending LDQS_N escape ${exitSearch.solved ? "open" : "blocked"}`
     graphics.texts = [
       {
         x: Math.min(
@@ -149,7 +144,7 @@ test("ButterStick pending native-pad access after RAM branches", async (): Promi
     graphics.points!.push({
       ...pad.center,
       color: "#e11d48",
-      label: "Pending address pad",
+      label: "Pending LDQS_N pad",
     })
     await expect(
       getSvgFromGraphicsObject(graphics, { backgroundColor: "white" }),
