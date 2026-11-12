@@ -1,6 +1,8 @@
 import {
   applyToPoint,
   compose,
+  inverse,
+  type Matrix,
   rotateDEG,
   translate,
 } from "transformation-matrix"
@@ -20,6 +22,11 @@ export interface Copper {
   layer: string
   owners: string[]
   rect?: { minX: number; maxX: number; minY: number; maxY: number }
+  orientedRect?: {
+    boardToPad: Matrix
+    padToBoard: Matrix
+    rect: { minX: number; maxX: number; minY: number; maxY: number }
+  }
 }
 // Scene copper ownership is immutable; index large alias lists once per array.
 const ownerIndexes = new WeakMap<string[], Set<string>>()
@@ -42,24 +49,35 @@ export function fixedCopper(input: SimpleRouteJson): Copper[] {
         translate(o.center.x, o.center.y),
         rotateDEG(ccwRotationDegrees),
       )
-      let start = { x: -o.width / 2, y: 0 }
-      let end = { x: o.width / 2, y: 0 }
-      let radius = o.height / 2
-      if (o.height > o.width) {
-        start = { x: 0, y: -o.height / 2 }
-        end = { x: 0, y: o.height / 2 }
-        radius = o.width / 2
+      const rect = {
+        minX: -o.width / 2,
+        maxX: o.width / 2,
+        minY: -o.height / 2,
+        maxY: o.height / 2,
       }
-      // A capsule encloses the full rectangle, including its corners, without
-      // filling the gaps beside rotated pads. Geometry is board-world mm:
-      // +X right, +Y up, right-handed with +Z above.
+      const corners = [
+        { x: rect.minX, y: rect.minY },
+        { x: rect.maxX, y: rect.minY },
+        { x: rect.maxX, y: rect.maxY },
+        { x: rect.minX, y: rect.maxY },
+      ].map((corner) => applyToPoint(padToBoard, corner))
+      const bounds = {
+        minX: Math.min(...corners.map((corner) => corner.x)),
+        maxX: Math.max(...corners.map((corner) => corner.x)),
+        minY: Math.min(...corners.map((corner) => corner.y)),
+        maxY: Math.max(...corners.map((corner) => corner.y)),
+      }
+      // Keep the world AABB for broad phases; test physical pad edges in the
+      // local pad frame so no artificial round cap blocks a legal pad exit.
       for (const layer of o.layers)
         result.push({
-          a: applyToPoint(padToBoard, start),
-          b: applyToPoint(padToBoard, end),
-          radius,
+          a: o.center,
+          b: o.center,
+          radius: 0,
           layer,
           owners: o.connectedTo,
+          rect: bounds,
+          orientedRect: { boardToPad: inverse(padToBoard), padToBoard, rect },
         })
       continue
     }
@@ -154,6 +172,10 @@ const intersectsRect = (a: Point, b: Point, r: NonNullable<Copper["rect"]>) => {
   return true
 }
 export function clearanceToCopper(a: Point, b: Point, c: Copper) {
+  if (c.orientedRect) {
+    a = applyToPoint(c.orientedRect.boardToPad, a)
+    b = applyToPoint(c.orientedRect.boardToPad, b)
+  }
   if (!c.rect) {
     // Raster occupancy asks about points, and circular pads/vias have a
     // zero-length centerline. Avoid four equivalent segment projections.
@@ -165,7 +187,7 @@ export function clearanceToCopper(a: Point, b: Point, c: Copper) {
       return pointSegmentDistance(c.a, [a, b]) - c.radius
     return segmentDistance([a, b], [c.a, c.b]) - c.radius
   }
-  const r = c.rect
+  const r = c.orientedRect?.rect ?? c.rect
   if (intersectsRect(a, b, r)) return 0
   const corners = [
     { x: r.minX, y: r.minY },
@@ -422,14 +444,19 @@ export class VectorScene {
       epsilon = 1e-5
     for (const c of this.copper) {
       if (c.rect) {
-        const r = c.rect,
+        const r = c.orientedRect?.rect ?? c.rect,
           m = this.margin + epsilon
-        result.push(
+        const corners = [
           { x: r.minX - m, y: r.minY - m },
           { x: r.minX - m, y: r.maxY + m },
           { x: r.maxX + m, y: r.minY - m },
           { x: r.maxX + m, y: r.maxY + m },
-        )
+        ]
+        for (const corner of corners) {
+          if (c.orientedRect)
+            result.push(applyToPoint(c.orientedRect.padToBoard, corner))
+          else result.push(corner)
+        }
       } else {
         const r = c.radius + this.margin + epsilon
         for (const p of distance(c.a, c.b) < 1e-9 ? [c.a] : [c.a, c.b])
