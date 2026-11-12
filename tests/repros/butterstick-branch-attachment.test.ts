@@ -17,7 +17,7 @@ type PhysicalInput = SimpleRouteJson & {
   traces: (Trace & { connection_name: string })[]
 }
 
-test("ButterStick RAM branches leave the native UDM pin reachable", async (): Promise<void> => {
+test("ButterStick pending native-pad access after RAM branches", async (): Promise<void> => {
   const { inputSrj, physicalInputSrj, futureConnection } = JSON.parse(
     gunzipSync(
       readFileSync(
@@ -64,12 +64,6 @@ test("ButterStick RAM branches leave the native UDM pin reachable", async (): Pr
     ...output,
     connections: [...output.connections, futureConnection],
   }
-  const graphics = new BusLanesSolver(futureInput).visualize()
-  graphics.title = "ButterStick: sixteen completed DDR nets, UDM still pending"
-  await expect(
-    getSvgFromGraphicsObject(graphics, { backgroundColor: "white" }),
-  ).toMatchSvgSnapshot(import.meta.path)
-
   const scene = new VectorScene(
     futureInput,
     futureConnection,
@@ -86,5 +80,77 @@ test("ButterStick RAM branches leave the native UDM pin reachable", async (): Pr
     expect(search.solved).toBe(true)
   } finally {
     search.cancel()
+  }
+
+  // The later LDQS_N request starts at this native ball. It needs enough
+  // planar access to leave the package before choosing its carrier layer.
+  const pad = output.obstacles.find(
+    (obstacle) =>
+      (
+        obstacle as typeof obstacle & {
+          circuitJsonMetadata?: { pcb_port_id?: string }
+        }
+      ).circuitJsonMetadata?.pcb_port_id === "pcb_port_381",
+  )!
+  const edge = Math.max(
+    ...output.obstacles
+      .filter((obstacle) => obstacle.componentId === pad.componentId)
+      .map((obstacle) => obstacle.center.x + obstacle.width / 2),
+  )
+  const strobeExit: Connection = {
+    name: "pcb_port_381",
+    width: inputSrj.minTraceWidth,
+    pointsToConnect: [
+      { ...pad.center, layer: "top", pcb_port_id: "pcb_port_381" },
+      {
+        x:
+          edge +
+          inputSrj.minTraceWidth / 2 +
+          inputSrj.minTraceToPadEdgeClearance! +
+          inputSrj.minViaPadDiameter! / 2,
+        y: pad.center.y,
+        layer: "top",
+      },
+    ],
+  }
+  const exitSearch = new GridVisibilitySearch(
+    new VectorScene(output, strobeExit, strobeExit.width!, fixedCopper(output)),
+    strobeExit.pointsToConnect[0],
+    strobeExit.pointsToConnect[1],
+    [],
+    0,
+    undefined,
+    { allTerminalAttachments: true, checkReachability: true },
+  )
+  try {
+    while (!exitSearch.solved && !exitSearch.failed) exitSearch.step()
+    const graphics = new BusLanesSolver(futureInput).visualize()
+    graphics.title = `ButterStick: 16 DDR nets complete; pending LDQS_N escape ${exitSearch.solved ? "open" : "blocked"}`
+    graphics.texts = [
+      {
+        x: Math.min(
+          ...inputSrj.obstacles.map((pad) => pad.center.x - pad.width / 2),
+        ),
+        y:
+          Math.max(
+            ...inputSrj.obstacles.map((pad) => pad.center.y + pad.height / 2),
+          ) + 1,
+        text: graphics.title,
+        color: "#111827",
+        fontSize: 0.55,
+        anchorSide: "bottom_left",
+      },
+    ]
+    graphics.points!.push({
+      ...pad.center,
+      color: "#e11d48",
+      label: "Pending LDQS_N pad",
+    })
+    await expect(
+      getSvgFromGraphicsObject(graphics, { backgroundColor: "white" }),
+    ).toMatchSvgSnapshot(import.meta.path)
+    expect(exitSearch.solved).toBe(false)
+  } finally {
+    exitSearch.cancel()
   }
 })
