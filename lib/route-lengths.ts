@@ -89,8 +89,10 @@ export function minimumLengthTargets(input: SimpleRouteJson, traces: Trace[]) {
   for (let pass = 0; pass < targets.size; pass++) {
     let changed = false
     for (const { names, tolerance } of constraints) {
-      const floor = Math.max(...names.map((n) => targets.get(n)!)) - tolerance
-      for (const name of names)
+      const present = names.filter((n) => targets.has(n))
+      if (!present.length) continue
+      const floor = Math.max(...present.map((n) => targets.get(n)!)) - tolerance
+      for (const name of present)
         if (targets.get(name)! < floor - 1e-9) {
           targets.set(name, floor)
           changed = true
