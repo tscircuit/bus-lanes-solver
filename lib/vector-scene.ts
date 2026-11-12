@@ -111,7 +111,11 @@ export function fixedCopper(input: SimpleRouteJson): Copper[] {
     for (let i = 0; i < t.route.length; i++) {
       const p = t.route[i],
         q = t.route[i + 1],
-        owners = [t.connection_name ?? "", t.source_trace_id ?? ""]
+        owners = [
+          t.connection_name ?? "",
+          t.source_trace_id ?? "",
+          ...(t.connectsTo ?? []),
+        ]
       if (p.route_type === "via") {
         const a = layers.indexOf(p.from_layer),
           b = layers.indexOf(p.to_layer)

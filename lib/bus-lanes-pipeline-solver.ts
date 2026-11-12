@@ -16,6 +16,10 @@ import {
 import { withInferredSurfaceLayers } from "./effective-carrier-layers"
 import { withSkewRoundoffReserve } from "./skew-roundoff-reserve"
 import { initialSignalDogbones } from "./initial-signal-dogbones"
+import {
+  reuseSuppliedSignalEscapes,
+  suppliedEscapesArePreserved,
+} from "./reuse-supplied-signal-escapes"
 import { routeMultiTerminalBuses } from "./route-multi-terminal-buses"
 import { routeGeneratedSignalSites } from "./route-generated-signal-sites"
 import { independentBusGroups } from "./route-independent-buses"
@@ -211,6 +215,8 @@ export class BusLanesPipelineSolver extends BaseSolver {
               continue
             }
             const complete = view.join(carriers)
+            if (!suppliedEscapesArePreserved(this.suppliedEscapes, complete))
+              continue
             const after = signalEnvelope(complete)
             if (
               !Number.isFinite(after.areaMm2) ||
@@ -314,6 +320,8 @@ export class BusLanesPipelineSolver extends BaseSolver {
           )) {
             if (carriers) {
               const complete = view.join(carriers)
+              if (!suppliedEscapesArePreserved(this.suppliedEscapes, complete))
+                continue
               if (
                 complete.some(
                   (trace) =>
@@ -390,6 +398,7 @@ export class BusLanesPipelineSolver extends BaseSolver {
     }
     if (
       !this.acceptedTraces ||
+      !suppliedEscapesArePreserved(this.suppliedEscapes, this.acceptedTraces) ||
       this.acceptedTraces.some(
         (trace) =>
           !joinedSignalGeometryIsValid({
@@ -414,6 +423,7 @@ export class BusLanesPipelineSolver extends BaseSolver {
   private backwardPackages?: Generator<void, RepairedBusDogbones | null>
   private child?: BusLanesSolver
   private escapes: Trace[] = []
+  private suppliedEscapes: Trace[] = []
   private attempt = 0
   private completedLanes: Trace[] = []
   private remainingInput?: SimpleRouteJson
@@ -463,7 +473,7 @@ export class BusLanesPipelineSolver extends BaseSolver {
         nativeSingleCarrierEligible(routingInput))
     if (!usesNativeMatching)
       routingInput = withSkewRoundoffReserve(routingInput)
-    this.routingInput = routingInput
+    this.routingInput = { ...routingInput }
     this.options = { smoothTuning: true, denseSearch: true, ...options }
     this.stats = { carrierStrategy: this.carrierStrategy.name }
     // Surface routing negotiates carrier layers and owned approaches before
@@ -718,25 +728,29 @@ export class BusLanesPipelineSolver extends BaseSolver {
       throw Error(
         "Pair approaches still separate outside native package fanouts",
       )
+    const suppliedIds = new Set(this.suppliedEscapes.map((t) => t.pcb_trace_id))
+    const mutableEscapes = this.escapes.filter(
+      (t) => !suppliedIds.has(t.pcb_trace_id),
+    )
     const tunedEscapes = yield* tuneGeneratedPairEscapes(
       input,
       refined,
-      this.escapes,
+      mutableEscapes,
       this.options,
     )
     if (tunedEscapes) {
-      this.escapes = tunedEscapes.escapes
+      this.escapes = [...this.suppliedEscapes, ...tunedEscapes.escapes]
       return tunedEscapes.traces
     }
     if (input.buses?.some((b) => b.maxLength !== undefined)) {
       const repaired = yield* rebalancePairEscapes(
         input,
         refined,
-        this.escapes,
+        mutableEscapes,
         this.options,
       )
       if (repaired) {
-        this.escapes = repaired.escapes
+        this.escapes = [...this.suppliedEscapes, ...repaired.escapes]
         return repaired.traces
       }
     }
@@ -799,6 +813,34 @@ export class BusLanesPipelineSolver extends BaseSolver {
         this.routingInput.allowedLayers.includes(layer),
     )
     if (!layers.length) throw Error("No allowed signal layers")
+    const reusedByLayer = new Map<
+      string,
+      ReturnType<typeof reuseSuppliedSignalEscapes>
+    >()
+    const canUseLayer = (
+      connection: Connection,
+      point: Terminal,
+      layer: string,
+    ) => {
+      if (
+        (point.layers ?? [point.layer]).includes(layer) ||
+        isUnroutedComponentPad(this.routingInput, connection, point)
+      )
+        return true
+      let reused = reusedByLayer.get(layer)
+      if (!reused) {
+        reused = reuseSuppliedSignalEscapes(
+          this.routingInput,
+          new Map(this.routingInput.connections.map((c) => [c.name, layer])),
+        )
+        reusedByLayer.set(layer, reused)
+      }
+      return reused.escapes.some(
+        (t) =>
+          t.connection_name === connection.name &&
+          Math.hypot(t.route[0].x - point.x, t.route[0].y - point.y) < 1e-7,
+      )
+    }
     // Matching buses constrain total copper lengths, not carrier-layer identity.
     // Only differential partners require a shared carrier layer.
     const names = new Set(this.routingInput.connections.map((c) => c.name))
@@ -851,10 +893,8 @@ export class BusLanesPipelineSolver extends BaseSolver {
                 candidate.allowedLayers.includes(layer),
             ) &&
             members.every((connection) =>
-              connection.pointsToConnect.every(
-                (point) =>
-                  (point.layers ?? [point.layer]).includes(layer) ||
-                  isUnroutedComponentPad(this.routingInput, connection, point),
+              connection.pointsToConnect.every((point) =>
+                canUseLayer(connection, point, layer),
               ),
             ),
         )
@@ -879,10 +919,8 @@ export class BusLanesPipelineSolver extends BaseSolver {
             (b) => !b.allowedLayers || b.allowedLayers.includes(layer),
           ) &&
           members.every((connection) =>
-            connection.pointsToConnect.every(
-              (point) =>
-                (point.layers ?? [point.layer]).includes(layer) ||
-                isUnroutedComponentPad(this.routingInput, connection, point),
+            connection.pointsToConnect.every((point) =>
+              canUseLayer(connection, point, layer),
             ),
           ),
       )
@@ -974,8 +1012,9 @@ export class BusLanesPipelineSolver extends BaseSolver {
         this.routingInput.minTraceWidth,
     )
     // The shared site matcher uses a conservative width while reserving sites.
+    const reused = reuseSuppliedSignalEscapes(this.routingInput, targets)
     const result = initialSignalDogbones(
-      this.routingInput,
+      reused.input,
       {
         targetLayers: targets,
         viaDiameter: this.routingInput.minViaPadDiameter ?? 0.6,
@@ -991,7 +1030,9 @@ export class BusLanesPipelineSolver extends BaseSolver {
       },
       this.attempt,
     )
-    this.escapes = result.traces.map((t) => ({
+    this.suppliedEscapes = reused.escapes
+    this.routingInput.traces = reused.input.traces
+    this.escapes = [...reused.escapes, ...result.traces].map((t) => ({
       ...t,
       source_trace_id:
         this.routingInput.connections.find((c) => c.name === t.connection_name)
@@ -1645,6 +1686,8 @@ export class BusLanesPipelineSolver extends BaseSolver {
     }
   }
   private acceptGeneratedTraces(traces: Trace[]): void {
+    if (!suppliedEscapesArePreserved(this.suppliedEscapes, traces))
+      throw Error("Generated route changed a supplied signal escape")
     if (
       traces.some(
         (trace) =>

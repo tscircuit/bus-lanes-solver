@@ -26,7 +26,7 @@
     "@tscircuit/am3352-fanout-generator": "github:tscircuit/fanout-solver#e202cef0a97f59bb9a72357e8eeb5e9f1349529e",
     "@tscircuit/checks": "0.0.264",
     "@tscircuit/circuit-json-util": "0.0.119",
-    "@tscircuit/fanout-solver": "github:tscircuit/fanout-solver#1c726cc7cfdd2ce0c93b928a133b918d301dcdf4",
+    "@tscircuit/fanout-solver": "github:tscircuit/fanout-solver#1efc79b30bafed8092444e6d96a130bab333fd15",
     "@tscircuit/math-utils": "^0.0.38",
     "@tscircuit/solver-utils": "^0.0.21",
     "@types/bun": "latest",
