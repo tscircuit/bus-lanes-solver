@@ -374,7 +374,13 @@ export function* routeCoupledPairTopology({
     ]
   }
   const names = new Set(
-    members.flatMap((c) => [c.name, c.source_trace_id ?? c.name]),
+    members.flatMap((c) => [
+      c.name,
+      c.source_trace_id ?? c.name,
+      ...c.pointsToConnect
+        .flatMap((p) => [p.pointId, p.pcb_port_id])
+        .filter((id): id is string => !!id),
+    ]),
   )
   const corridorCopper = fixed.filter(
     (c) => !c.owners.some((n) => names.has(n)),
@@ -490,14 +496,62 @@ export function* routeCoupledPairTopology({
               step() {},
             }
           : fine || input.connections.length > 12
-            ? new GridVisibilitySearch(
-                scene,
-                ends[0],
-                ends[1],
-                negotiation?.copper,
-                negotiation?.penalty,
-                negotiation?.history,
-              )
+            ? (() => {
+                try {
+                  return new GridVisibilitySearch(
+                    scene,
+                    ends[0],
+                    ends[1],
+                    negotiation?.copper,
+                    negotiation?.penalty,
+                    negotiation?.history,
+                  )
+                } catch (error) {
+                  if (
+                    !(error instanceof Error) ||
+                    error.message !== "Dense grid search budget exceeded" ||
+                    negotiation?.history
+                  )
+                    throw error
+                  // A full board's unrelated fixed copper may exceed the dense
+                  // grid budget. Retry around this pair's package handoffs;
+                  // the scene still checks all copper and the real board outline.
+                  const points = [
+                    ...handoffChoices.flat(),
+                    ...ends,
+                    ...members.flatMap((c) => c.pointsToConnect),
+                  ]
+                  const padding = Math.max(2, distance(ends[0], ends[1]) / 2)
+                  return new GridVisibilitySearch(
+                    scene,
+                    ends[0],
+                    ends[1],
+                    negotiation?.copper,
+                    negotiation?.penalty,
+                    undefined,
+                    {
+                      bounds: {
+                        minX: Math.max(
+                          input.bounds.minX,
+                          Math.min(...points.map((p) => p.x)) - padding,
+                        ),
+                        maxX: Math.min(
+                          input.bounds.maxX,
+                          Math.max(...points.map((p) => p.x)) + padding,
+                        ),
+                        minY: Math.max(
+                          input.bounds.minY,
+                          Math.min(...points.map((p) => p.y)) - padding,
+                        ),
+                        maxY: Math.min(
+                          input.bounds.maxY,
+                          Math.max(...points.map((p) => p.y)) + padding,
+                        ),
+                      },
+                    },
+                  )
+                }
+              })()
             : new VectorVisibilitySearch(scene, ends[0], ends[1])
         try {
           while (

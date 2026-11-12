@@ -1,5 +1,10 @@
 import "bun-match-svg"
 import { expect, test } from "bun:test"
+import {
+  validateOriginalEndpointConnectivity,
+  validateRoutedCopperDrc,
+} from "@tscircuit/fanout-solver"
+import { pairLengthReports } from "../lib/route-lengths"
 import { BusLanesPipelineSolver } from "../lib"
 import type { SimpleRouteJson, Trace } from "../lib/types"
 import fixture from "./fixtures/hdmi-shared-pad.json"
@@ -12,9 +17,43 @@ test("sequential HDMI routing reuses the supplied ESD pad escapes", async () => 
   const solver = new BusLanesPipelineSolver(input)
   solver.solve()
   expect(JSON.stringify(input)).toBe(before)
-  expect(solver.failed).toBe(true)
-  expect(solver.error).toContain("No collision-free local dogbone assignment")
-  expect(solver.traces).toHaveLength(0)
+  expect(solver.error).toBeNull()
+  expect(solver.solved).toBe(true)
+  expect(solver.traces).toHaveLength(2)
+  const output = solver.getOutput()
+  expect(output.traces.slice(0, input.traces!.length)).toEqual(input.traces!)
+  const connections = [
+    ...input.connections,
+    ...input.traces!.map((t) => ({
+      name: t.connection_name!,
+      pointsToConnect: [
+        t.route[0],
+        t.route.at(-1)!,
+      ] as SimpleRouteJson["connections"][number]["pointsToConnect"],
+    })),
+  ]
+  const context = {
+    inputSrj: { ...input, connections },
+    routedSrj: { ...output, connections },
+  } as unknown as Parameters<typeof validateOriginalEndpointConnectivity>[0]
+  expect(validateOriginalEndpointConnectivity(context).issues).toEqual([])
+  expect(
+    validateRoutedCopperDrc({ ...context, clearance: 0.1 }).issues,
+  ).toEqual([])
+  expect(pairLengthReports(input, solver.traces).every((r) => r.matched)).toBe(
+    true,
+  )
+  for (const trace of solver.traces) {
+    const prior = input.traces!.find(
+      (t) => t.connection_name === `CPU_${trace.connection_name}`,
+    )!
+    expect(trace.route.slice(0, 3)).toEqual(prior.route.slice(0, 3))
+    expect(
+      trace.route
+        .filter((p) => p.route_type === "via")
+        .every((p) => p.layers?.join() === "top,inner1,inner2,bottom"),
+    ).toBe(true)
+  }
 
   const sx = (x: number) => 480 + x * 105
   const sy = (y: number) => 315 - y * 140

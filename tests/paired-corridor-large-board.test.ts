@@ -1,6 +1,11 @@
 import "bun-match-svg"
 import { expect, test } from "bun:test"
 import { routeCoupledPairTopology } from "../lib/coupled-pair-routing"
+import {
+  validateOriginalEndpointConnectivity,
+  validateRoutedCopperDrc,
+} from "@tscircuit/fanout-solver"
+import { pairLengthReports } from "../lib/route-lengths"
 import { fixedCopper } from "../lib/vector-scene"
 import type { SimpleRouteJson, Trace } from "../lib/types"
 
@@ -69,8 +74,17 @@ test("a short paired corridor can detour on a board larger than the dense-grid b
   } finally {
     route.return(null)
   }
-  expect(String(error)).toContain("Dense grid search budget exceeded")
-  expect(traces).toHaveLength(0)
+  expect(error).toBeUndefined()
+  expect(traces).toHaveLength(2)
+  const context = {
+    inputSrj: input,
+    routedSrj: { ...input, traces },
+  } as unknown as Parameters<typeof validateOriginalEndpointConnectivity>[0]
+  expect(validateOriginalEndpointConnectivity(context).issues).toEqual([])
+  expect(
+    validateRoutedCopperDrc({ ...context, clearance: 0.06 }).issues,
+  ).toEqual([])
+  expect(pairLengthReports(input, traces).every((r) => r.matched)).toBe(true)
   const sx = (x: number) => 230 + x * 55,
     sy = (y: number) => 145 - y * 43
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="980" height="700"><rect width="980" height="700" fill="#122330"/><g font-family="Arial" fill="#edf3f7"><text x="28" y="42" font-size="25">A short HDMI pair on a large board</text><text x="28" y="78" font-size="19">${traces.length ? "AFTER: both signals detour around the obstacle; clearance and matching pass" : "BEFORE: no route; unrelated distant copper exceeds the grid budget"}</text><rect x="${sx(-1)}" y="${sy(-4.85)}" width="110" height="12.9" fill="#df7e72"/>
