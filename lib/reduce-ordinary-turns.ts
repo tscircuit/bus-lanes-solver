@@ -31,7 +31,9 @@ export function reduceOrdinaryTurns(
         for (const replacement of candidates) {
           if (
             length(replacement) > old + 1e-8 ||
-            pathCost(replacement) > pathCost(result.slice(i, j + 1)) + 1e-8 ||
+            (pathCost !== length &&
+              pathCost(replacement) >
+                pathCost(result.slice(i, j + 1)) + 1e-8) ||
             (replacement.length >= j - i + 1 &&
               length(replacement) >= old - 1e-8) ||
             !scene.pathVisible(replacement)
