@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="750"><rect width="980" height="750" fill="#122330"/>
+<g font-family="Arial" fill="#edf3f7"><text x="28" y="42" font-size="25">HDMI routing through shared ESD pads</text>
+<text x="28" y="78" font-size="19">BEFORE: 0/2 connector signals; existing CPU copper blocks new escapes</text>
+<text x="100" y="150" font-size="18">Existing CPU copper</text><text x="630" y="150" font-size="18">Connector J1</text>
+<rect x="254.25" y="224" width="31.5" height="42" fill="#b38336" stroke="#e0bd76"/><rect x="674.25" y="224" width="31.5" height="42" fill="#b38336" stroke="#e0bd76"/><rect x="254.25" y="364" width="31.5" height="42" fill="#b38336" stroke="#e0bd76"/><rect x="674.25" y="364" width="31.5" height="42" fill="#b38336" stroke="#e0bd76"/>
+<path d="M270 245L322.5 245" stroke="#879ba9" stroke-width="10.5" fill="none"/><path d="M322.5 245L165 245" stroke="#879ba9" stroke-width="10.5" fill="none"/><circle cx="322.5" cy="245" r="15.75" stroke="#879ba9" stroke-width="5" fill="#122330"/><path d="M270 385L322.5 385" stroke="#879ba9" stroke-width="10.5" fill="none"/><path d="M322.5 385L165 385" stroke="#879ba9" stroke-width="10.5" fill="none"/><circle cx="322.5" cy="385" r="15.75" stroke="#879ba9" stroke-width="5" fill="#122330"/>
+<text x="247" y="208" font-size="17">ESD P</text><text x="247" y="427" font-size="17">ESD N</text>
+<text x="28" y="640" font-size="17">Gray = supplied CPU routes. Cyan = accepted routes. Rings = through vias.</text>
+<text x="28" y="695" font-family="monospace" font-size="17">&lt;trace from=".ESD &gt; .P" to=".J1 &gt; .P" /&gt;</text>
+<text x="28" y="725" font-family="monospace" font-size="17">&lt;board layers={4} allowBlindAndBuriedVias={false} /&gt;</text></g></svg>
