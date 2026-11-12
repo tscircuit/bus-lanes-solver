@@ -15,6 +15,7 @@ import { bevelPairApproaches } from "./bevel-pair-approaches"
 import { routeAnglesAreConventional } from "./route-angle-validation"
 import { chamferOrdinaryCorners } from "./chamfer-ordinary-corners"
 import { spreadCoupledTuningLanes } from "./spread-coupled-tuning-lanes"
+import { spreadDemandSizedTuningLanes } from "./spread-demand-sized-tuning-lanes"
 import { simplifyMatchedTraces } from "./simplify-matched-traces"
 import { tuneCoupledLengths } from "./tune-coupled-lengths"
 import { negotiateLanes } from "./negotiate-lanes"
@@ -527,6 +528,8 @@ export class BusLanesSolver extends BaseSolver {
       this.retry()
     }
   }
+  /** The accepted tuning banks fill the corridor between the packages. */
+  usedDemandSizedBanks = false
   private match() {
     const input = this.input
     const original = this.traces
@@ -542,6 +545,8 @@ export class BusLanesSolver extends BaseSolver {
     const compactCorridors = new WeakSet<Trace[]>()
     const demandPackedCorridors = new WeakSet<Trace[]>()
     const narrowCorridors = new WeakSet<Trace[]>()
+    const demandSizedCorridors = new WeakSet<Trace[]>()
+    const boardAwareCorridors = new WeakSet<Trace[]>()
     const packBanks =
       this.options.smoothTuning && original.some((t) => t.coupledSection)
     function* candidates() {
@@ -626,6 +631,25 @@ export class BusLanesSolver extends BaseSolver {
             "diagonal",
           )
           if (spread) yield spread
+        }
+        // Uniform banks failed. Size every bank to its own length deficit.
+        const sized = spreadDemandSizedTuningLanes(input, original)
+        if (sized) {
+          compactCorridors.add(sized)
+          demandSizedCorridors.add(sized)
+          yield sized
+        }
+        // On a populated board other parts' vias and pads sit inside the
+        // tuning window, and a lane can carry a kink where it steps past a
+        // via. Fit the banks to the board.
+        const fitted = spreadDemandSizedTuningLanes(input, original, {
+          boardAware: true,
+        })
+        if (fitted) {
+          compactCorridors.add(fitted)
+          demandSizedCorridors.add(fitted)
+          boardAwareCorridors.add(fitted)
+          yield fitted
         }
         return
       }
@@ -715,6 +739,7 @@ export class BusLanesSolver extends BaseSolver {
                   packageOnlyPairTuning,
                   protectPairedTerminalVias:
                     this.options.protectPairedTerminalVias,
+                  allowKinks: boardAwareCorridors.has(corridor),
                 },
               )
             } else {
@@ -742,6 +767,7 @@ export class BusLanesSolver extends BaseSolver {
               )
             )
               throw Error("Length tuning separated the exterior pair rails")
+            this.usedDemandSizedBanks = demandSizedCorridors.has(corridor)
             this.phase = "validate_output"
             return
           } catch (e) {
@@ -797,6 +823,9 @@ export class BusLanesSolver extends BaseSolver {
         !tuningPathIsSelfClear(
           t.route,
           this.widths.get(c.name)! / 2 + scene.margin,
+          // A lane may step a few hundredths of a mm past a via. That kink
+          // is one copper body, not a returning arm.
+          { allowKinks: true },
         )
       )
         throw Error("Final self-clearance violation")
