@@ -1,0 +1,17 @@
+{
+  "nativeCircuit": "Allwinner A13 SBC CPU-side DDR bus, second byte beside completed first byte",
+  "sourceRepository": "https://github.com/vd-rd/sbc_allwinner_a13",
+  "sourceCommit": "8973c32c64349515da64e268cc03ea8c0789ca2a",
+  "sourcePath": "hardware/module.kicad_pcb",
+  "tsxSource": "https://github.com/ShiboSoftwareDev/core-ddr-benchmark/tree/8ad0e1e2cc4c7069ce8d52e4a7d7e0ccc1cfb67c/circuits",
+  "coreMain": "8bb3fefe5f273b9d5ab15a2f33e5aaf1f90b5865",
+  "coreVersion": "0.0.2346",
+  "busBase": "bd977a6285041c1fa788aaf9e857f60daa105e66",
+  "corePhase": "byte1",
+  "newSignals": 8,
+  "suppliedSignals": 8,
+  "inputSha256": "5105a4dad308d42c8a0108bd20ba18b94ee93303a32be6d71d9eaab42b468955",
+  "retainedCopper": "Input includes unchanged completed byte0 traces from Core. Preserve them byte-for-byte.",
+  "geometry": "Unchanged native component placements, pad centers/dimensions/rotations, stack and clearance rules.",
+  "testBudget": "20,000 search iterations per layer bounds the snapshot test. Production routing limits are unchanged. Full TSX/Core base also times out after120s with only the first byte complete."
+}
