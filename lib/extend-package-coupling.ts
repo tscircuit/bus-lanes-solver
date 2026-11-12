@@ -225,18 +225,32 @@ export function* extendPackageCoupling(
         // deeper into the same native fanout when that join fails geometry.
         for (; join < other.route.length; join++) {
           if (!pointInBox(other.route[join], region.copper)) continue
-          // Reconnect inside the package for supplied/generated handoffs too.
-          // Unrelated board copper must not expand this local grid. A failed
-          // local edit is declined; final matching and clearance checks remain.
-          const search = new GridVisibilitySearch(
-            scene,
-            path.at(-1)!,
-            other.route[join],
-            undefined,
-            undefined,
-            undefined,
-            { bounds: region.copper },
-          )
+          const createSearch = (bounded: boolean) =>
+            new GridVisibilitySearch(
+              scene,
+              path.at(-1)!,
+              other.route[join],
+              undefined,
+              undefined,
+              undefined,
+              bounded ? { bounds: region.copper } : undefined,
+            )
+          let search: GridVisibilitySearch
+          try {
+            // Keep existing searches unchanged when they fit. Native-pad
+            // approaches already use the package bounds.
+            search = createSearch(nativePairPads)
+          } catch (error) {
+            if (
+              !(error instanceof Error) ||
+              error.message !== "Dense grid search budget exceeded" ||
+              nativePairPads
+            )
+              throw error
+            // Unrelated board copper must not prevent a local reconnection.
+            // The bounded retry retains the full scene and acceptance checks.
+            search = createSearch(true)
+          }
           try {
             let steps = 0
             while (
