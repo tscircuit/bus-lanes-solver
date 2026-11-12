@@ -170,6 +170,13 @@ function copperEntry(copper: Copper, margin: number): CopperEntry {
       a: { ...copper.a },
       b: { ...copper.b },
       rect: copper.rect ? { ...copper.rect } : undefined,
+      orientedRect: copper.orientedRect
+        ? {
+            boardToPad: { ...copper.orientedRect.boardToPad },
+            padToBoard: { ...copper.orientedRect.padToBoard },
+            rect: { ...copper.orientedRect.rect },
+          }
+        : undefined,
     }),
     minX: r.minX - margin,
     maxX: r.maxX + margin,
@@ -511,7 +518,15 @@ export class GridVisibilitySearch extends GridHistoryProjector {
       scene.input.minBoardEdgeClearance,
       scene.input.bounds,
       scene.input.outline,
-      scene.copper.map((c) => [c.a.x, c.a.y, c.b.x, c.b.y, c.radius, c.rect]),
+      scene.copper.map((c) => [
+        c.a.x,
+        c.a.y,
+        c.b.x,
+        c.b.y,
+        c.radius,
+        c.rect,
+        c.orientedRect,
+      ]),
     ])
     let cachedGrid = grids.get(gridKey)
     const attachments =
@@ -696,6 +711,7 @@ export class GridVisibilitySearch extends GridHistoryProjector {
           copper.b.y,
           copper.radius,
           copper.rect,
+          copper.orientedRect,
         ])
         const entry =
           previous?.copper.get(key) ?? copperEntry(copper, this.softMargin)
