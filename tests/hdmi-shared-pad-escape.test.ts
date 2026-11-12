@@ -43,15 +43,15 @@ test("sequential HDMI routing reuses the supplied ESD pad escapes", async () => 
         return lines + vias
       })
       .join("")
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="980" height="580"><rect width="980" height="580" fill="#122330"/>
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="980" height="750"><rect width="980" height="750" fill="#122330"/>
 <g font-family="Arial" fill="#edf3f7"><text x="28" y="42" font-size="25">HDMI routing through shared ESD pads</text>
 <text x="28" y="78" font-size="19">${solver.solved ? "AFTER: 2/2 connector signals connected; existing escapes preserved" : "BEFORE: 0/2 connector signals; existing CPU copper blocks new escapes"}</text>
 <text x="100" y="150" font-size="18">Existing CPU copper</text><text x="630" y="150" font-size="18">Connector J1</text>
 ${input.obstacles.map((o) => `<rect x="${sx(o.center.x - o.width / 2)}" y="${sy(o.center.y + o.height / 2)}" width="${o.width * 105}" height="${o.height * 140}" fill="#b38336" stroke="#e0bd76"/>`).join("")}
 ${draw(input.traces!, "#879ba9")}${draw(solver.traces, "#63d9fc")}
 <text x="247" y="208" font-size="17">ESD P</text><text x="247" y="427" font-size="17">ESD N</text>
-<text x="28" y="478" font-size="17">Gray = supplied CPU routes. Cyan = accepted connector routes. Rings = through vias.</text>
-<text x="28" y="525" font-family="monospace" font-size="17">&lt;trace from=".ESD &gt; .P" to=".J1 &gt; .P" /&gt;</text>
-<text x="28" y="555" font-family="monospace" font-size="17">&lt;board layers={4} allowBlindAndBuriedVias={false} /&gt;</text></g></svg>`
+<text x="28" y="640" font-size="17">Gray = supplied CPU routes. Cyan = accepted routes. Rings = through vias.</text>
+<text x="28" y="695" font-family="monospace" font-size="17">&lt;trace from=".ESD &gt; .P" to=".J1 &gt; .P" /&gt;</text>
+<text x="28" y="725" font-family="monospace" font-size="17">&lt;board layers={4} allowBlindAndBuriedVias={false} /&gt;</text></g></svg>`
   await expect(svg).toMatchSvgSnapshot(import.meta.path)
 })
