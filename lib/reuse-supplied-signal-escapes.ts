@@ -60,7 +60,11 @@ export function reuseSuppliedSignalEscapes(
           if (index < 1) continue
           // Curved prefixes need their chord metadata remapped before reuse.
           // Leave those to the existing router until that representation is supported.
-          if (trace.curvedSegments?.length) continue
+          const curvedPrefix = trace.curvedSegments?.some((i) => {
+            const endingIndex = reversed ? trace.route.length - i : i
+            return endingIndex > 0 && endingIndex < index
+          })
+          if (curvedPrefix) continue
           const prefix = route.slice(0, index)
           if (
             prefix.some(

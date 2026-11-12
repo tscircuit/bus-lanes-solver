@@ -54,6 +54,21 @@ test("shared escapes require physical continuity, ownership and the SRJ via poli
       ),
     ).toEqual(["N"])
   }
+  const curvedCarrier = structuredClone(input)
+  curvedCarrier.traces![0].curvedSegments = [4]
+  expect(
+    reuseSuppliedSignalEscapes(curvedCarrier, targets).escapes,
+  ).toHaveLength(2)
+  const reversed = structuredClone(curvedCarrier)
+  reversed.traces![0].route = reversed
+    .traces![0].route.toReversed()
+    .map((p) =>
+      p.route_type === "via"
+        ? { ...p, from_layer: p.to_layer, to_layer: p.from_layer }
+        : p,
+    )
+  reversed.traces![0].curvedSegments = [1]
+  expect(reuseSuppliedSignalEscapes(reversed, targets).escapes).toHaveLength(2)
   for (const policy of [undefined, false, true]) {
     const configured = {
       ...structuredClone(input),
