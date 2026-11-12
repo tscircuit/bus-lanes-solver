@@ -5,14 +5,40 @@ import { packageApproachRegions } from "./package-approach-regions"
 
 const certificates = new WeakMap<SimpleRouteJson, Map<string, Trace[]>>()
 
-/** Preserve local access to connected package pads that belong to a later
- * routing request. These soft guides stop at the pad field, never become
- * routed connections, and retain the native connectivity aliases. */
+/** Preserve access for later pads while adding a branch to an existing
+ * package-to-package trunk. These soft guides stop at the pad field and
+ * retain native connectivity aliases; they never become routed connections. */
 export function* pendingPackageExits(
   input: SimpleRouteJson,
   fixed: Copper[],
 ): Generator<void, Copper[]> {
   const pads = input.obstacles.filter((pad) => pad.componentId)
+  const activeOwners = new Set(
+    input.connections.flatMap((connection) => [
+      connection.name,
+      connection.source_trace_id,
+    ]),
+  )
+  const hasCompletedTrunk = input.traces?.some((trace) => {
+    const owners = [trace.connection_name, trace.source_trace_id].filter(
+      (owner): owner is string => !!owner,
+    )
+    if (!owners.some((owner) => activeOwners.has(owner))) return false
+    const components = [trace.route[0], trace.route.at(-1)].map((point) =>
+      point?.route_type === "wire"
+        ? pads.find(
+            (pad) =>
+              pad.layers.includes(point.layer) &&
+              Math.hypot(pad.center.x - point.x, pad.center.y - point.y) <
+                1e-8 &&
+              pad.connectedTo.some((owner) => owners.includes(owner)),
+          )?.componentId
+        : undefined,
+    )
+    // A local fanout is not a completed package-to-package trunk.
+    return components[0] && components[1] && components[0] !== components[1]
+  })
+  if (!hasCompletedTrunk) return []
   const regions = packageApproachRegions(input, 0)
   const fields = new Map(
     [...new Set(pads.map((pad) => pad.componentId!))].map((id, index) => [
