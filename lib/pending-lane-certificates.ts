@@ -1,8 +1,145 @@
 import { GridVisibilitySearch } from "./grid-visibility"
 import { VectorScene, type Copper } from "./vector-scene"
 import type { Connection, SimpleRouteJson, Trace } from "./types"
+import { packageApproachRegions } from "./package-approach-regions"
 
 const certificates = new WeakMap<SimpleRouteJson, Map<string, Trace[]>>()
+
+/** Preserve access for later pads while adding a branch to an existing
+ * package-to-package trunk. These soft guides stop at the pad field and
+ * retain native connectivity aliases; they never become routed connections. */
+export function* pendingPackageExits(
+  input: SimpleRouteJson,
+  fixed: Copper[],
+): Generator<void, Copper[]> {
+  const pads = input.obstacles.filter((pad) => pad.componentId)
+  const activeOwners = new Set(
+    input.connections.flatMap((connection) => [
+      connection.name,
+      connection.source_trace_id,
+    ]),
+  )
+  const hasCompletedTrunk = input.traces?.some((trace) => {
+    const owners = [trace.connection_name, trace.source_trace_id].filter(
+      (owner): owner is string => !!owner,
+    )
+    if (!owners.some((owner) => activeOwners.has(owner))) return false
+    const components = [trace.route[0], trace.route.at(-1)].map((point) =>
+      point?.route_type === "wire"
+        ? pads.find(
+            (pad) =>
+              pad.layers.includes(point.layer) &&
+              Math.hypot(pad.center.x - point.x, pad.center.y - point.y) <
+                1e-8 &&
+              pad.connectedTo.some((owner) => owners.includes(owner)),
+          )?.componentId
+        : undefined,
+    )
+    // A local fanout is not a completed package-to-package trunk.
+    return components[0] && components[1] && components[0] !== components[1]
+  })
+  if (!hasCompletedTrunk) return []
+  const regions = packageApproachRegions(input, 0)
+  const fields = new Map(
+    [...new Set(pads.map((pad) => pad.componentId!))].map((id, index) => [
+      id,
+      regions[index].pads,
+    ]),
+  )
+  const groups = new Map<string, Set<(typeof pads)[number]>>()
+  for (const pad of pads) {
+    const touching = pad.connectedTo.flatMap((alias) =>
+      groups.has(alias) ? [groups.get(alias)!] : [],
+    )
+    const group = new Set([pad, ...touching.flatMap((set) => [...set])])
+    for (const member of group)
+      for (const alias of member.connectedTo) groups.set(alias, group)
+  }
+  const assigned = new Set([
+    ...input.connections.flatMap((connection) => [
+      connection.name,
+      connection.source_trace_id,
+      ...connection.pointsToConnect.flatMap((point) => [
+        point.pointId,
+        point.pcb_port_id,
+      ]),
+    ]),
+    ...(input.traces ?? []).flatMap((trace) => [
+      trace.connection_name,
+      trace.source_trace_id,
+    ]),
+  ])
+  const width = input.minTraceWidth
+  const clearance =
+    input.minTraceToPadEdgeClearance ?? input.defaultObstacleMargin ?? 0.075
+  const extension = (input.minViaPadDiameter ?? 0.6) / 2 + width / 2 + clearance
+  const result: Copper[] = []
+  for (const group of new Set(groups.values())) {
+    if (group.size < 2) continue
+    const owners = [...new Set([...group].flatMap((pad) => pad.connectedTo))]
+    if (owners.some((owner) => assigned.has(owner))) continue
+    const ports = new Set(
+      [...group].flatMap((pad) => {
+        const port = (
+          pad as typeof pad & { circuitJsonMetadata?: { pcb_port_id?: string } }
+        ).circuitJsonMetadata?.pcb_port_id
+        return port ? [port] : []
+      }),
+    )
+    if (ports.size < 2) continue
+    for (const pad of group) {
+      const port = (
+        pad as typeof pad & { circuitJsonMetadata?: { pcb_port_id?: string } }
+      ).circuitJsonMetadata?.pcb_port_id
+      if (!port) continue
+      const field = fields.get(pad.componentId!)!
+      for (const layer of pad.layers) {
+        const start = { ...pad.center, layer, pcb_port_id: port }
+        const end = [
+          { x: field.minX - extension, y: start.y, layer },
+          { x: field.maxX + extension, y: start.y, layer },
+          { x: start.x, y: field.minY - extension, layer },
+          { x: start.x, y: field.maxY + extension, layer },
+        ].sort(
+          (a, b) =>
+            Math.hypot(a.x - start.x, a.y - start.y) -
+            Math.hypot(b.x - start.x, b.y - start.y),
+        )[0]
+        const connection: Connection = {
+          name: port,
+          pointsToConnect: [start, end],
+        }
+        const scene = new VectorScene(
+          input,
+          connection,
+          width,
+          fixed.filter(
+            (copper) => !copper.owners.some((owner) => owners.includes(owner)),
+          ),
+        )
+        const search = new GridVisibilitySearch(scene, start, end, [], 0)
+        try {
+          while (!search.solved && !search.failed) {
+            search.step()
+            yield
+          }
+          if (search.solved)
+            for (let index = 1; index < search.result.length; index++)
+              result.push({
+                a: search.result[index - 1],
+                b: search.result[index],
+                radius: width / 2,
+                layer,
+                owners,
+              })
+        } finally {
+          if (!search.solved && !search.failed) search.cancel()
+        }
+      }
+    }
+  }
+  return result
+}
 
 /** Compute provisional paths for pending terminals. These are soft search
  * preferences, never output copper or saved route guides. A later route can
