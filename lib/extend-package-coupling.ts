@@ -225,6 +225,9 @@ export function* extendPackageCoupling(
         // deeper into the same native fanout when that join fails geometry.
         for (; join < other.route.length; join++) {
           if (!pointInBox(other.route[join], region.copper)) continue
+          // Reconnect inside the package for supplied/generated handoffs too.
+          // Unrelated board copper must not expand this local grid. A failed
+          // local edit is declined; final matching and clearance checks remain.
           const search = new GridVisibilitySearch(
             scene,
             path.at(-1)!,
@@ -232,7 +235,7 @@ export function* extendPackageCoupling(
             undefined,
             undefined,
             undefined,
-            nativePairPads ? { bounds: region.copper } : undefined,
+            { bounds: region.copper },
           )
           try {
             let steps = 0

@@ -75,7 +75,7 @@ const run = (input: SimpleRouteJson, traces: Trace[]) => {
   return step.value as Trace[]
 }
 
-test("unrelated board copper exhausts a generated-handoff package search", () => {
+test("unrelated board copper does not enlarge a generated-handoff package search", () => {
   const { input, traces } = fixture()
   input.minTraceWidth = 0.06
   input.bounds = { minX: -50, maxX: 50, minY: -37.5, maxY: 37.5 }
@@ -89,7 +89,14 @@ test("unrelated board copper exhausts a generated-handoff package search", () =>
     })),
   )
   const before = structuredClone({ input, traces })
-  expect(() => run(input, traces)).toThrow("Dense grid search budget exceeded")
+  const result = run(input, traces)
+  for (const trace of result)
+    expect(trace.route[trace.coupledSection![1]].x).toBeGreaterThan(9)
+  expect(sharedPairSpacingReports(input, result).every((r) => r.matched)).toBe(
+    true,
+  )
+  expect(pairLengthReports(input, result).every((r) => r.matched)).toBe(true)
+  expect(routeAnglesAreConventional(result)).toBe(true)
   expect({ input, traces }).toEqual(before)
 })
 
