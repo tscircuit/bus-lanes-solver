@@ -18,6 +18,7 @@ import { spreadCoupledTuningLanes } from "./spread-coupled-tuning-lanes"
 import { simplifyMatchedTraces } from "./simplify-matched-traces"
 import { tuneCoupledLengths } from "./tune-coupled-lengths"
 import { negotiateLanes } from "./negotiate-lanes"
+import { pendingPackageExits } from "./pending-lane-certificates"
 import { pairCouplingReports } from "./pair-coupling"
 import { tuningPathIsSelfClear } from "./length-tuning"
 import {
@@ -82,6 +83,8 @@ export class BusLanesSolver extends BaseSolver {
   private pairedNetwork?: Generator<void, Trace[] | null>
   private pairedNetworkAttempted = false
   private negotiated?: Generator<Trace[], Trace[] | null>
+  private pendingExits?: Copper[]
+  private pendingExitSearch?: Generator<void, Copper[]>
   private reservePackageExits?: boolean
   private pairSearch?: Generator<void, Trace[] | null>
   private reportedRoutes?: Array<{ trace: Trace; route: Trace["route"] }>
@@ -163,8 +166,10 @@ export class BusLanesSolver extends BaseSolver {
     this.pairedNetwork = undefined
     this.pairSearch?.return(null)
     this.negotiated?.return(null)
+    this.pendingExitSearch?.return([])
     this.pairSearch = undefined
     this.negotiated = undefined
+    this.pendingExitSearch = undefined
   }
   tryFinalAcceptance() {
     this.pairedNetwork?.return(null)
@@ -352,9 +357,35 @@ export class BusLanesSolver extends BaseSolver {
     }
     const c = this.orders[this.attempt][this.lane],
       [a, b] = c.pointsToConnect
+    const exitScene = this.pendingExits?.length
+      ? new VectorScene(
+          this.input,
+          c,
+          this.widths.get(c.name)!,
+          this.pendingExits,
+        )
+      : undefined
     this.search = this.useNegotiation
       ? new GridVisibilitySearch(this.scene(c), a, b)
-      : new VectorVisibilitySearch(this.scene(c), a, b)
+      : new VectorVisibilitySearch(
+          this.scene(c),
+          a,
+          b,
+          exitScene
+            ? (path) =>
+                path
+                  .slice(1)
+                  .reduce(
+                    (cost, point, index) =>
+                      cost +
+                      distance(path[index], point) +
+                      (exitScene.visible(path[index], point)
+                        ? 0
+                        : 10 * this.input.minTraceWidth),
+                    0,
+                  )
+            : undefined,
+        )
   }
   private retry() {
     if (this.traces.length > this.bestPartial.length)
@@ -393,6 +424,18 @@ export class BusLanesSolver extends BaseSolver {
     this.startLane()
   }
   private route() {
+    if (
+      !this.useNegotiation &&
+      this.input.buses?.length &&
+      this.pendingExits === undefined
+    ) {
+      this.pendingExitSearch ??= pendingPackageExits(this.input, this.fixed)
+      const step = this.pendingExitSearch.next()
+      if (!step.done) return
+      this.pendingExits = step.value
+      this.pendingExitSearch = undefined
+      this.startLane()
+    }
     if (this.useNegotiation) {
       // Dense negotiation owns its searches; the initial lane search is unused.
       if (this.search instanceof GridVisibilitySearch) this.search.cancel()
@@ -507,7 +550,13 @@ export class BusLanesSolver extends BaseSolver {
         pcb_trace_id: `bus_lane_${c.name}`,
         connection_name: c.name,
         source_trace_id: c.source_trace_id ?? c.name,
-        route: reduceOrdinaryTurns(s.result, this.scene(c)).map((p) => ({
+        route: reduceOrdinaryTurns(
+          s.result,
+          this.scene(c),
+          0,
+          false,
+          s instanceof VectorVisibilitySearch ? s.pathCost : undefined,
+        ).map((p) => ({
           route_type: "wire",
           x: p.x,
           y: p.y,

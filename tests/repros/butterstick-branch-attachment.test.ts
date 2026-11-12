@@ -154,7 +154,7 @@ test("ButterStick pending native-pad access after RAM branches", async (): Promi
     await expect(
       getSvgFromGraphicsObject(graphics, { backgroundColor: "white" }),
     ).toMatchSvgSnapshot(import.meta.path)
-    expect(exitSearch.solved).toBe(false)
+    expect(exitSearch.solved).toBe(true)
   } finally {
     exitSearch.cancel()
   }

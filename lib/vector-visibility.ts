@@ -50,6 +50,7 @@ export class VectorVisibilitySearch {
     readonly scene: VectorScene,
     readonly start: Point,
     readonly end: Point,
+    readonly pathCost: (path: Point[]) => number = length,
   ) {
     this.vertices = [start, end]
     this.open.push({ id: 0, g: 0, f: distance(start, end) })
@@ -71,7 +72,11 @@ export class VectorVisibilitySearch {
             Math.abs(this.end.y - this.start.y),
           )
       for (const path of connectors(this.start, this.end)) {
-        if (length(path) > lowerBound + 1e-9 || !this.scene.pathVisible(path))
+        if (
+          length(path) > lowerBound + 1e-9 ||
+          !this.scene.pathVisible(path) ||
+          this.pathCost(path) > lowerBound + 1e-9
+        )
           continue
         this.visibleEdges = [path]
         this.result = simplify(path)
@@ -109,13 +114,16 @@ export class VectorVisibilitySearch {
       const to = this.vertices[id],
         lower = cur.g + distance(from, to)
       if (lower >= (this.best.get(id) ?? Infinity) - 1e-9) continue
-      const candidates = connectors(from, to).sort(
-        (a, b) => length(a) - length(b),
-      )
-      for (const path of candidates) {
-        const g = cur.g + length(path)
+      const candidates = connectors(from, to)
+        .filter(
+          (path) => this.pathCost === length || this.scene.pathVisible(path),
+        )
+        .map((path) => ({ path, cost: this.pathCost(path) }))
+        .sort((a, b) => a.cost - b.cost)
+      for (const { path, cost } of candidates) {
+        const g = cur.g + cost
         if (g >= (this.best.get(id) ?? Infinity) - 1e-9) continue
-        if (!this.scene.pathVisible(path)) continue
+        if (this.pathCost === length && !this.scene.pathVisible(path)) continue
         this.best.set(id, g)
         this.open.push({
           id,
