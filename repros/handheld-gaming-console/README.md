@@ -1,8 +1,8 @@
 # Handheld Gaming Console — six-layer CPU/RAM reproduction
 
-![Unrouted CPU/RAM input — zero accepted routes, dashed lines are requests](board.snap.svg)
+![Failed routing attempt — unaccepted candidate paths, zero accepted routes](board.snap.svg)
 
-[CPU escape snapshot](cpu-escape.snap.svg) · [Immutable SRJ](../../tests/fixtures/handheld-gaming-console/input.srj.json) · [Recorded baseline](baseline.json) · [Source provenance](provenance.json)
+[Input-only overview](input.snap.svg) · [CPU escape snapshot](cpu-escape.snap.svg) · [Immutable SRJ](../../tests/fixtures/handheld-gaming-console/input.srj.json) · [Recorded baseline](baseline.json) · [Source provenance](provenance.json)
 
 This six-layer experiment reproduces the RK3562 / Rayson RS512M32LO4D1BDS-53BT routing failure using the unmodified bus-lanes solver. It requests all 65 memory signals from the saved R269 handheld board, retaining the placements and 816 pad obstacles. No saved routes are replayed and no custom escape or repair code is injected.
 
@@ -16,6 +16,8 @@ bun test ./tests/handheld-gaming-console-fixture.test.ts
 bun repros/handheld-gaming-console/run.ts matched
 bun repros/handheld-gaming-console/run.ts connectivity
 bun repros/handheld-gaming-console/snapshot.ts
+bun repros/handheld-gaming-console/routing-snapshot.ts
+bun test ./tests/handheld-routing-snapshot.test.ts
 ```
 
 Each routing command runs independently. Exit code **2** means failure or budget exhaustion; it is expected on the recorded baseline. Exit code 0 only means the solver reports success and returns every requested signal. It does not mean electrical or manufacturing approval. The fixture test verifies source integrity and endpoint conversion, not routing success.
@@ -38,9 +40,9 @@ Version **0.0.55**, checkout `b13b6399e727dd7f73350341cae609d6f95fbe1e`, with th
 - Matched routing exhausts the 120-second cooperative budget in `route_shared_layers` and returns zero accepted traces.
 - Connectivity negotiation reaches candidates for all 65 signals but retains one conflict after 300 passes. It fails with `Single-layer negotiation exhausted its pass budget` and returns zero accepted traces.
 
-Candidate counts in solver statistics must not be described as completed routing. No internal candidate geometry or diagnostic solver modifications are included in this repro. The fixture is not weakened to turn the failure into a pass.
+Candidate counts in solver statistics must not be described as completed routing. The requested failure snapshot includes a hashed, recorded capture of unaccepted candidates. It is never fed into routing. No diagnostic changes are applied to the solver library in this repro. The fixture is not weakened to turn the failure into a pass.
 
-`results/` contains ignored, locally generated reports; `baseline.json` retains the compact measured failure evidence. The two tracked snapshots show original pad geometry and dashed **unrouted requests**, never internal candidate copper. The exporter refuses supplied traces and a baseline with accepted output. Deterministic snapshot tests compare the committed SVGs and enforce these labels and guards. The connectivity conflict location is not exported by the stock solver, so neither image claims to locate it.
+`results/` contains ignored, locally generated reports; `baseline.json` retains the compact measured failure evidence. The input-only overview and CPU escape snapshots retain their original input-only guards. The main board.snap.svg now shows the explicitly requested failed attempt, with the DQ5_A / DQ13_A crossing highlighted. Its candidate geometry comes from a diagnostics-only capture outside this repository, stored in tests/fixtures/handheld-gaming-console/failed-candidates.json.gz and hash-checked by routing-expectation.json. The stock solver does not publish candidates through its public output. The fresh-solve regression test independently reproduces the stock failure (300 passes, one conflict, zero accepted routes), verifies the recorded capture still violates copper clearance, and compares the rendered SVG. In the fix revision the same test requires a fresh solve, all 65 endpoints, copper clearance, drill spacing and self-clearance before checking the replacement routed SVG. No saved routes seed either solve.
 
 ![CPU byte A0 pad escape requests — input only](cpu-escape.snap.svg)
 

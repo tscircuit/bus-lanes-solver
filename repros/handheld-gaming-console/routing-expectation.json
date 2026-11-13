@@ -1,0 +1,7 @@
+{
+  "solved": false,
+  "fixtureSha256": "402dddb152ba3bd050cf62de2926c446d030fe76d017257e1be7e67f80b70ac6",
+  "candidateSha256": "c7757e0dd5e78531996f9bbc2558af511e0642d4f9c7f1b7091e703d286cd9ca",
+  "sourceSolverCommit": "be9fc18b294d51e627b9ddb592584d0aa03e14d8",
+  "note": "Recorded unaccepted candidates captured with diagnostics-only instrumentation outside this clean repository. Fresh tests replay the stock failure and verify the snapshot and candidate conflict; candidates are never replayed into the solver."
+}

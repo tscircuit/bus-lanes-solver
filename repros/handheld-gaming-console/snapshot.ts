@@ -192,7 +192,7 @@ export function renderInputSnapshot(
 if (import.meta.main) {
   const input = loadInput()
   for (const [name, zoom] of [
-    ["board.snap.svg", false],
+    ["input.snap.svg", false],
     ["cpu-escape.snap.svg", true],
   ] as const)
     writeFileSync(

@@ -1,0 +1,5 @@
+User-requested failure visualization.
+
+The stock solver returns zero accepted traces on failure and exposes no candidate copper through its public output. A separate local copy added diagnostics assignments only: clone the routed map at each negotiation pass and record the existing conflict pair. Routing choices, costs, budgets, input geometry and solver constraints were unchanged. The final 300-pass candidate state is stored compressed and SHA-256 checked. The highlighted crossing belongs to DQ5_A and DQ13_A on top copper.
+
+The production library in this repro is untouched. The fresh regression test replays the failure from the immutable fixture and verifies the diagnostic capture is still physically rejected. The candidate file is never loaded as solver input and is not completed routing. The fix revision uses only newly computed, validated output to generate its replacement snapshot.
