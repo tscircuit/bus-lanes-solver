@@ -1,0 +1,8 @@
+{
+  "solved": true,
+  "fixtureSha256": "402dddb152ba3bd050cf62de2926c446d030fe76d017257e1be7e67f80b70ac6",
+  "candidateSha256": "c7757e0dd5e78531996f9bbc2558af511e0642d4f9c7f1b7091e703d286cd9ca",
+  "sourceSolverCommit": "be9fc18b294d51e627b9ddb592584d0aa03e14d8",
+  "note": "Fresh solver output must connect all 65 signals and pass copper, drill and self-clearance checks before replacing the failed board snapshot. No saved routes are supplied.",
+  "fixImplementationCommit": "fe9eca375cfa708244d453a3168ef35d70c500e9"
+}
