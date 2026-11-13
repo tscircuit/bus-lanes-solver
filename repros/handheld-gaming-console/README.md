@@ -57,3 +57,12 @@ The SRJ intentionally omits existing traces, vias, filled planes and the native 
 The hardware is user-provided. No new redistribution license is asserted for the board snapshot. This snapshot is provided for the routing reproduction. It does not authorize hardware orders or establish manufacturing readiness.
 
 Benchmark effect: no production solver, dependency version, benchmark harness or existing fixture is changed. This adds a separate handheld failure case and source-integrity test. The original PR head `48921aa` passed the required 11/11 AM3352 CI benchmark. Updated-head benchmark checks must finish again before merge; no performance claim is made.
+
+### Test-output snapshot
+
+`bun test tests/handheld-routing-snapshot.test.ts` freshly runs the solver and
+uses the repository-standard `toMatchSvgSnapshot(import.meta.path)` matcher.
+Its committed output is `tests/__snapshots__/handheld-routing-snapshot.snap.svg`.
+The repro commits the failed state; the stacked fix modifies that exact file
+to the validated 65-connection state. No saved routes seed the fresh solve.
+This proves connectivity geometry only, not DDR timing or length matching.
