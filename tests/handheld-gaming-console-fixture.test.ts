@@ -98,7 +98,7 @@ test("handheld input snapshots are reproducible and refuse candidate copper", as
   const input = loadInput()
   const unchanged = JSON.stringify(input)
   for (const [file, zoom] of [
-    ["board.snap.svg", false],
+    ["input.snap.svg", false],
     ["cpu-escape.snap.svg", true],
   ] as const) {
     const svg = renderInputSnapshot(input, zoom)
