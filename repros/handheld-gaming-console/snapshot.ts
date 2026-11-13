@@ -28,7 +28,9 @@ export function renderInputSnapshot(
   )
   if (
     Object.values(baseline.cases).some(
-      (r: any) => r.status !== "solver_failed" || r.returnedTraces !== 0,
+      (r: any) =>
+        !["solver_failed", "budget_exhausted"].includes(r.status) ||
+        r.returnedTraces !== 0,
     )
   )
     throw Error(
@@ -83,8 +85,8 @@ export function renderInputSnapshot(
       28,
       68,
       zoom
-        ? "CPU byte A0 escape request — INPUT ONLY"
-        : "RK3562 + LPDDR4X — INPUT ONLY",
+        ? "Six-layer CPU byte A0 escape request — INPUT ONLY"
+        : "RK3562 + LPDDR4X — SIX LAYERS — INPUT ONLY",
       18,
     ),
     text(
@@ -125,25 +127,34 @@ export function renderInputSnapshot(
     }
   }
   parts.push("</g>")
+  const matched = baseline.cases.matched
+  const connectivity = baseline.cases.connectivity
+  if (
+    matched.physicalLayers !== input.layerCount ||
+    connectivity.physicalLayers !== input.layerCount
+  )
+    throw Error("Snapshot baseline layer count differs from fixture")
   const details = [
-    "STOCK SOLVER v0.0.55",
-    "Matched / five signal layers",
-    "Native carrier matching exhausted",
-    "its routing plans.",
+    "SIX PHYSICAL LAYERS · STOCK v0.0.55",
+    "L1 signal / L2 ground / L3 power",
+    "L4 signal / L5 ground / L6 signal",
     "",
-    "Connectivity / one inner carrier",
-    "300 passes; 1 conflict remains.",
-    "65 candidates ≠ 65 accepted routes.",
+    "Matched / three signal layers",
+    matched.status === "budget_exhausted"
+      ? "120-second routing budget exhausted."
+      : "Routing failed; zero accepted routes.",
     "",
-    "Scope",
+    "Connectivity / inner3 carrier",
+    `${(connectivity.stats?.pass ?? -1) + 1} passes; ${connectivity.stats?.conflicts ?? "unknown"} conflicts remain.`,
+    "Candidate paths are not accepted routes.",
+    "",
     "65 signals · 816 native pad obstacles",
     "6 bus groups · 6 differential pairs",
     "No saved routes or custom escapes",
     "",
-    "Not shown",
-    "Internal candidate copper is not exported",
-    "by the stock solver after failure.",
-    "This picture does not locate that conflict.",
+    "Stock solver exports no failed candidate",
+    "copper. Dashed lines are input requests.",
+    "This picture does not locate a conflict.",
     "",
     "Not timing, impedance or hardware approval.",
   ]
@@ -170,7 +181,7 @@ export function renderInputSnapshot(
     text(
       28,
       759,
-      "Failure baseline: be9fc18 / v0.0.55 · snapshot regenerated from the immutable SRJ",
+      "Six-layer experiment · stock v0.0.55 · original eight-layer source preserved",
       13,
       "#91a6c2",
     ),

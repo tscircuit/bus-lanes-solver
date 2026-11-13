@@ -1,11 +1,9 @@
 {
-  "layerCount": 8,
+  "layerCount": 6,
   "allowedLayers": [
-    "inner2",
+    "top",
     "inner3",
-    "inner5",
-    "bottom",
-    "top"
+    "bottom"
   ],
   "minTraceWidth": 0.09,
   "minViaPadDiameter": 0.25,

@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1180" height="780" viewBox="0 0 1180 780"><title>Handheld Gaming Console: unrouted input failure diagnostic</title><rect width="1180" height="780" fill="#0c1422"/><g font-family="Arial, sans-serif">
 <text x="28" y="38" font-size="26" fill="#dbe7f5">Handheld Gaming Console</text>
-<text x="28" y="68" font-size="18" fill="#dbe7f5">CPU byte A0 escape request — INPUT ONLY</text>
+<text x="28" y="68" font-size="18" fill="#dbe7f5">Six-layer CPU byte A0 escape request — INPUT ONLY</text>
 <text x="28" y="99" font-size="16" fill="#ffbe78">UNROUTED INPUT · 0 / 65 accepted routes · dashed lines are requests, not copper</text>
 <defs><clipPath id="board"><rect x="28" y="130" width="640" height="570"/></clipPath></defs><g clip-path="url(#board)"><rect x="28" y="130" width="640" height="570" fill="#142238"/>
 <rect x="-306.143" y="-851.214" width="86.857" height="73.286" fill="#65748b"/>
@@ -842,26 +842,26 @@
 <line data-airwire="DQS0_t_A" x1="415.857" y1="503.214" x2="195.321" y2="-535.000" stroke="#55c1ff" stroke-width="1.4" stroke-opacity="0.85" stroke-dasharray="5 5"/>
 <text x="420.8571428571429" y="498.21428571428567" font-size="11" fill="#55c1ff">DQS0_t_A</text>
 </g>
-<text x="705" y="150" font-size="18" fill="#ffbe78">STOCK SOLVER v0.0.55</text>
-<text x="705" y="175" font-size="15" fill="#dbe7f5">Matched / five signal layers</text>
-<text x="705" y="200" font-size="15" fill="#dbe7f5">Native carrier matching exhausted</text>
-<text x="705" y="225" font-size="15" fill="#dbe7f5">its routing plans.</text>
-<text x="705" y="250" font-size="15" fill="#dbe7f5"></text>
-<text x="705" y="275" font-size="15" fill="#dbe7f5">Connectivity / one inner carrier</text>
-<text x="705" y="300" font-size="15" fill="#dbe7f5">300 passes; 1 conflict remains.</text>
-<text x="705" y="325" font-size="15" fill="#dbe7f5">65 candidates ≠ 65 accepted routes.</text>
-<text x="705" y="350" font-size="15" fill="#dbe7f5"></text>
-<text x="705" y="375" font-size="15" fill="#dbe7f5">Scope</text>
-<text x="705" y="400" font-size="15" fill="#dbe7f5">65 signals · 816 native pad obstacles</text>
-<text x="705" y="425" font-size="15" fill="#dbe7f5">6 bus groups · 6 differential pairs</text>
-<text x="705" y="450" font-size="15" fill="#dbe7f5">No saved routes or custom escapes</text>
-<text x="705" y="475" font-size="15" fill="#dbe7f5"></text>
-<text x="705" y="500" font-size="15" fill="#dbe7f5">Not shown</text>
-<text x="705" y="525" font-size="15" fill="#dbe7f5">Internal candidate copper is not exported</text>
-<text x="705" y="550" font-size="15" fill="#dbe7f5">by the stock solver after failure.</text>
-<text x="705" y="575" font-size="15" fill="#dbe7f5">This picture does not locate that conflict.</text>
+<text x="705" y="150" font-size="18" fill="#ffbe78">SIX PHYSICAL LAYERS · STOCK v0.0.55</text>
+<text x="705" y="175" font-size="15" fill="#dbe7f5">L1 signal / L2 ground / L3 power</text>
+<text x="705" y="200" font-size="15" fill="#dbe7f5">L4 signal / L5 ground / L6 signal</text>
+<text x="705" y="225" font-size="15" fill="#dbe7f5"></text>
+<text x="705" y="250" font-size="15" fill="#dbe7f5">Matched / three signal layers</text>
+<text x="705" y="275" font-size="15" fill="#dbe7f5">120-second routing budget exhausted.</text>
+<text x="705" y="300" font-size="15" fill="#dbe7f5"></text>
+<text x="705" y="325" font-size="15" fill="#dbe7f5">Connectivity / inner3 carrier</text>
+<text x="705" y="350" font-size="15" fill="#dbe7f5">300 passes; 1 conflicts remain.</text>
+<text x="705" y="375" font-size="15" fill="#dbe7f5">Candidate paths are not accepted routes.</text>
+<text x="705" y="400" font-size="15" fill="#dbe7f5"></text>
+<text x="705" y="425" font-size="15" fill="#dbe7f5">65 signals · 816 native pad obstacles</text>
+<text x="705" y="450" font-size="15" fill="#dbe7f5">6 bus groups · 6 differential pairs</text>
+<text x="705" y="475" font-size="15" fill="#dbe7f5">No saved routes or custom escapes</text>
+<text x="705" y="500" font-size="15" fill="#dbe7f5"></text>
+<text x="705" y="525" font-size="15" fill="#dbe7f5">Stock solver exports no failed candidate</text>
+<text x="705" y="550" font-size="15" fill="#dbe7f5">copper. Dashed lines are input requests.</text>
+<text x="705" y="575" font-size="15" fill="#dbe7f5">This picture does not locate a conflict.</text>
 <text x="705" y="600" font-size="15" fill="#dbe7f5"></text>
 <text x="705" y="625" font-size="15" fill="#dbe7f5">Not timing, impedance or hardware approval.</text>
 <text x="28" y="733" font-size="14" fill="#dbe7f5">Zoom retains original pad positions; clipped dashed lines continue toward RAM.</text>
-<text x="28" y="759" font-size="13" fill="#91a6c2">Failure baseline: be9fc18 / v0.0.55 · snapshot regenerated from the immutable SRJ</text>
+<text x="28" y="759" font-size="13" fill="#91a6c2">Six-layer experiment · stock v0.0.55 · original eight-layer source preserved</text>
 </g></svg>

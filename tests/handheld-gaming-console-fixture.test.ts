@@ -24,6 +24,49 @@ test("handheld reproduction retains native pad positions and all 65 requested ne
   const pads = JSON.parse(
     read("../../tests/fixtures/handheld-gaming-console/pads.json").toString(),
   )
+  const eightLayerRaw = read(
+    "../../tests/fixtures/handheld-gaming-console/eight-layer.input.srj.json",
+  )
+  expect(sha(eightLayerRaw)).toBe(meta.source_eight_layer_input_sha256)
+  const eightLayer = JSON.parse(eightLayerRaw.toString())
+  expect(eightLayer.layerCount).toBe(8)
+  expect(input).toEqual({
+    ...eightLayer,
+    layerCount: 6,
+    allowedLayers: ["top", "inner3", "bottom"],
+  })
+  expect(meta.physical_layers).toBe(6)
+  expect(meta.connectivity_carrier).toBe("inner3")
+  expect(meta.layer_plan.map((p: any) => p.layer)).toEqual([
+    "top",
+    "inner1",
+    "inner2",
+    "inner3",
+    "inner4",
+    "bottom",
+  ])
+  expect(
+    meta.layer_plan
+      .filter((p: any) => p.role === "signal")
+      .map((p: any) => p.layer),
+  ).toEqual(input.allowedLayers)
+  expect(meta.source_physical_layers).toBe(8)
+  const validLayers = new Set([
+    "top",
+    "inner1",
+    "inner2",
+    "inner3",
+    "inner4",
+    "bottom",
+  ])
+  for (const o of input.obstacles)
+    for (const layer of o.layers) expect(validLayers.has(layer)).toBe(true)
+  for (const c of input.connections)
+    for (const p of c.pointsToConnect)
+      expect(validLayers.has(p.layer)).toBe(true)
+  for (const b of input.buses ?? [])
+    for (const layer of b.allowedLayers ?? [])
+      expect(input.allowedLayers).toContain(layer)
   expect(input.connections).toHaveLength(65)
   expect(input.obstacles).toHaveLength(pads.length)
   expect(new Set(input.connections.map((c: any) => c.name)).size).toBe(65)
@@ -61,6 +104,7 @@ test("handheld input snapshots are reproducible and refuse candidate copper", as
     const svg = renderInputSnapshot(input, zoom)
     expect(svg).toBe(read(file).toString())
     expect(svg).toContain("UNROUTED INPUT")
+    expect(svg).toContain("SIX PHYSICAL LAYERS")
     expect(svg).toContain("0 / 65 accepted routes")
     expect(svg).toContain("dashed lines are requests, not copper")
     expect(svg.match(/data-airwire=/g)?.length).toBe(

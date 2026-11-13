@@ -22,7 +22,7 @@ const sha = (b: Buffer | string) => createHash("sha256").update(b).digest("hex")
 if (sha(raw) !== provenance.input_sha256)
   throw Error("Immutable fixture hash mismatch")
 const input: SimpleRouteJson = JSON.parse(raw.toString())
-if (mode === "connectivity") input.allowedLayers = ["inner2"]
+if (mode === "connectivity") input.allowedLayers = ["inner3"]
 const original = JSON.stringify(input)
 const options = {
   goal: mode as "matched" | "connectivity",
@@ -79,6 +79,9 @@ const report = {
   phase: solver?.phase,
   stats: solver?.stats,
   requestedSignals: input.connections.length,
+  physicalLayers: input.layerCount,
+  allowedSignalLayers: input.allowedLayers,
+  layerPlan: provenance.layer_plan,
   returnedTraces: traces.length,
   allRequestedReturned,
   busReports: busLengthReports(input, traces),
