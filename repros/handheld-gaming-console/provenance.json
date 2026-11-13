@@ -1,0 +1,22 @@
+{
+  "title": "Handheld Gaming Console",
+  "cpu": "Rockchip RK3562",
+  "ram": "Rayson RS512M32LO4D1BDS-53BT",
+  "baseline_solver_commit": "be9fc18b294d51e627b9ddb592584d0aa03e14d8",
+  "baseline_solver_version": "0.0.55",
+  "source_revision": "R269 native RAM calibration",
+  "source_board_sha256": "c17a35a2c1706079e3fa3a23561b58258736acbc7f3a6c87d2b4f571767af09d",
+  "input_sha256": "cd8920e11e8a1410d3a1b31415a867bdf0913c7618ab9669be821320113123be",
+  "source_pads_sha256": "73c13d437118f734916b4e82359f64de2bbbfbe2a475bae7775ba936227658d2",
+  "requested_signals": 65,
+  "pad_obstacles": 816,
+  "physical_layers": 8,
+  "coordinate_transform": "x = native_x - 100; y = 100 - native_y; millimeters",
+  "obstacle_policy": "Circular pads preserved. Rounded rectangular pads conservatively represented by axis-aligned bounding rectangles. Existing copper, vias, zones and board outline are not imported into SRJ; routing bounds are experimental.",
+  "limitations": [
+    "This isolates pad escape and signal routing, not complete handheld power/ground integration.",
+    "Matching limits are provisional geometry objectives, not verified DDR timing.",
+    "Connectivity mode uses one inner carrier and 0.09mm clearance; not full multi-layer matching or new SI clearance approval."
+  ],
+  "source_ownership": "User-provided handheld design; retained locally, no new hardware redistribution license asserted."
+}
