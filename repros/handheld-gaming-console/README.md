@@ -1,5 +1,9 @@
 # Handheld Gaming Console CPU/RAM reproduction
 
+![Unrouted CPU/RAM input — zero accepted routes, dashed lines are requests](board.snap.svg)
+
+[CPU escape snapshot](cpu-escape.snap.svg) · [Immutable SRJ](../../tests/fixtures/handheld-gaming-console/input.srj.json) · [Recorded baseline](baseline.json) · [Source provenance](provenance.json)
+
 This case reproduces the RK3562 / Rayson RS512M32LO4D1BDS-53BT routing failure using the unmodified bus-lanes solver. It requests all 65 memory signals from the saved R269 handheld board, retaining the placements and 816 pad obstacles. No saved routes are replayed and no custom escape or repair code is injected.
 
 ## Run
@@ -11,6 +15,7 @@ bun install --frozen-lockfile --ignore-scripts
 bun test ./tests/handheld-gaming-console-fixture.test.ts
 bun repros/handheld-gaming-console/run.ts matched
 bun repros/handheld-gaming-console/run.ts connectivity
+bun repros/handheld-gaming-console/snapshot.ts
 ```
 
 Each routing command runs independently. Exit code **2** means failure or budget exhaustion; it is expected on the recorded baseline. Exit code 0 only means the solver reports success and returns every requested signal. It does not mean electrical or manufacturing approval. The fixture test verifies source integrity and endpoint conversion, not routing success.
@@ -33,14 +38,18 @@ Version **0.0.55**, commit `be9fc18b294d51e627b9ddb592584d0aa03e14d8`:
 
 Candidate counts in solver statistics must not be described as completed routing. No internal candidate geometry or diagnostic solver modifications are included in this repro. The fixture is not weakened to turn the failure into a pass.
 
-`results/` contains ignored, locally generated reports. No failed routing snapshot is published. A future successful result still requires independent connectivity, copper DRC, group/pair matching and coupling checks before generating a completed-route artifact. No such completed-route exporter is provided here.
+`results/` contains ignored, locally generated reports; `baseline.json` retains the compact measured failure evidence. The two tracked snapshots show original pad geometry and dashed **unrouted requests**, never internal candidate copper. The exporter refuses supplied traces and a baseline with accepted output. Deterministic snapshot tests compare the committed SVGs and enforce these labels and guards. The connectivity conflict location is not exported by the stock solver, so neither image claims to locate it.
+
+![CPU byte A0 pad escape requests — input only](cpu-escape.snap.svg)
+
+This structure follows Seve's [MT8395 repro PR #134](https://github.com/tscircuit/bus-lanes-solver/pull/134): immutable fixtures under `tests/fixtures`, replay tooling, measured baseline, input snapshots, and separate source-integrity/visualization checks. Unlike that core capture, this input is extracted from native KiCad pads; it is not represented as an exact core-emitted request. A future successful result requires independent connectivity, copper DRC, group/pair matching and coupling checks before replacing these input diagnostics with completed copper.
 
 ## Source and scope
 
-`source/board.kicad_pcb.gz` preserves the native R269 board. `source/pads.json` captures its pad geometry; `provenance.json` records immutable hashes. Coordinates convert as `x = native_x - 100`, `y = 100 - native_y`, in millimeters. Circular pads remain circles; rounded rectangles use conservative axis-aligned bounds.
+`source/board.kicad_pcb.gz` preserves the native R269 board. `../../tests/fixtures/handheld-gaming-console/pads.json` captures its pad geometry; `provenance.json` records immutable hashes. Coordinates convert as `x = native_x - 100`, `y = 100 - native_y`, in millimeters. Circular pads remain circles; rounded rectangles use conservative axis-aligned bounds.
 
 The SRJ intentionally omits existing traces, vias, filled planes and the native board outline. Its search bounds are experimental. This isolates package escape and interconnect routing; it is not a drop-in replacement for the complete handheld board. Power, ground, package delays, signal integrity, impedance, DDR firmware and physical operation remain outside this reproduction.
 
 The hardware is user-provided. No new redistribution license is asserted for the board snapshot. This snapshot is provided for the routing reproduction. It does not authorize hardware orders or establish manufacturing readiness.
 
-Benchmark effect: no production solver, dependency version, benchmark harness or existing fixture is changed. This adds a separate handheld failure case and source-integrity test. Full paired AM3352 benchmark validation has not been run, and no performance or regression claim is made. Repository-required benchmark checks remain required before any future PR/merge.
+Benchmark effect: no production solver, dependency version, benchmark harness or existing fixture is changed. This adds a separate handheld failure case and source-integrity test. The original PR head `48921aa` passed the required 11/11 AM3352 CI benchmark. Updated-head benchmark checks must finish again before merge; no performance claim is made.

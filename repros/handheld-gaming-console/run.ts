@@ -12,7 +12,9 @@ const mode = process.argv[2] ?? "matched"
 if (!["matched", "connectivity"].includes(mode))
   throw Error("Usage: bun run.ts [matched|connectivity]")
 const dir = new URL("./", import.meta.url)
-const raw = readFileSync(new URL("input.srj.json", dir))
+const raw = readFileSync(
+  new URL("../../tests/fixtures/handheld-gaming-console/input.srj.json", dir),
+)
 const provenance = JSON.parse(
   readFileSync(new URL("provenance.json", dir), "utf8"),
 )
