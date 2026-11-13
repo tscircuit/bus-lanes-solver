@@ -26,7 +26,7 @@ if (mode === "connectivity") input.allowedLayers = ["inner3"]
 const original = JSON.stringify(input)
 const options = {
   goal: mode as "matched" | "connectivity",
-  maxRoutingTimeMs: 120_000,
+  maxRoutingTimeMs: 600_000,
   connectivity: {
     gridStep: 0.1,
     maxPasses: 300,
