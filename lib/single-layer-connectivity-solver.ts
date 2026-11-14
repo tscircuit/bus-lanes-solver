@@ -1,3 +1,10 @@
+import {
+  canonicalConnectivityTrace,
+  simplifyConnectivityTrace,
+  connectivityDrillConflicts,
+  connectivityViaShortcuts,
+} from "./connectivity-geometry"
+import { joinedSignalGeometryIsValid } from "./joined-signal-geometry"
 import type { GraphicsObject } from "graphics-debug"
 import { boardOutlineError, traceStaysInsideOutline } from "./board-outline"
 import { layerColor } from "./layer-colors"
@@ -21,6 +28,8 @@ import type { Trace, Connection, Point, Wire, SimpleRouteJson } from "./types"
 export interface SingleLayerConnectivityOptions {
   /** Original connections owning supplied immutable copper not in the routing requests. */
   fixedConnections?: Connection[]
+  /** Bounded local grid halvings after negotiation stalls; zero disables refinement. */
+  maxRefinements?: number
   gridStep?: number
   maxPasses?: number
   maxExpansionsPerRoute?: number
@@ -78,6 +87,17 @@ export class SingleLayerConnectivitySolver extends BaseSolver {
       (options.maxPasses ?? 300) < 0
     )
       throw Error("maxPasses must be a nonnegative integer")
+    if (
+      !Number.isInteger(options.maxRefinements ?? 2) ||
+      (options.maxRefinements ?? 2) < 0 ||
+      (options.maxRefinements ?? 2) > 4
+    )
+      throw Error("maxRefinements must be an integer between 0 and 4")
+    if (
+      !Number.isFinite(input.minViaHoleEdgeToViaHoleEdgeClearance ?? 0) ||
+      (input.minViaHoleEdgeToViaHoleEdgeClearance ?? 0) < 0
+    )
+      throw Error("Via hole clearance must be finite and nonnegative")
     const outlineError = boardOutlineError(input.outline)
     if (outlineError) throw Error(outlineError)
     if (
@@ -267,10 +287,17 @@ export class SingleLayerConnectivitySolver extends BaseSolver {
       best = new Float64Array(N * 3),
       parent = new Int32Array(N * 3),
       history = [new Float32Array(N), new Float32Array(N)]
-    const cached = new Map<string, GridRoutingAccess>(),
-      cacheKey = (c: Connection, l: string, w: number) => `${c.name}:${l}:${w}`
-    function hardGrid(c: Connection, layer: string, width: number) {
-      const key = cacheKey(c, layer, width)
+    const cached = new Map<string, GridRoutingAccess>()
+    const hardGrid = ({
+      c,
+      layer,
+      width,
+    }: {
+      c: Connection
+      layer: string
+      width: number
+    }) => {
+      const key = `${c.name}:${layer}:${width}`
       if (cached.has(key)) return cached.get(key)!
       const conn = {
         ...c,
@@ -291,12 +318,35 @@ export class SingleLayerConnectivitySolver extends BaseSolver {
       if (cached.size > 30) cached.delete(cached.keys().next().value!)
       return g
     }
-    function* solve(
-      c: Connection,
-      pass: number,
+    const solve = function* ({
+      c,
+      pass,
       strict = false,
       repair = false,
-    ): Generator<void, Trace | null> {
+    }: {
+      c: Connection
+      pass: number
+      strict?: boolean
+      repair?: boolean
+    }): Generator<void, Trace | null> {
+      const firstVia = new Int32Array(N * 3).fill(-1)
+      const fixedVias = (input.traces ?? []).flatMap((t) =>
+        t.route.filter(
+          (p): p is import("./types").Via => p.route_type === "via",
+        ),
+      )
+      const movableVias = [...routed.values()].flatMap((t) =>
+        t.route.filter(
+          (p): p is import("./types").Via => p.route_type === "via",
+        ),
+      )
+      const drillClear = (point: Point, via: import("./types").Via) =>
+        Math.hypot(point.x - via.x, point.y - via.y) >=
+        (input.minViaHoleEdgeToViaHoleEdgeClearance ?? 0) +
+          ((input.minViaHoleDiameter ?? 0.15) +
+            (via.via_hole_diameter ?? input.minViaHoleDiameter ?? 0.15)) /
+            2 -
+          1e-8
       const soft = fixedCopper({
         ...input,
         obstacles: [],
@@ -320,7 +370,9 @@ export class SingleLayerConnectivitySolver extends BaseSolver {
         search.cancel()
         return g
       })
-      const vias = layers.map((l) => hardGrid(c, l, viaDiameter))
+      const vias = layers.map((l) =>
+        hardGrid({ c, layer: l, width: viaDiameter }),
+      )
       const softVia = ["top", carrier].map((layer) => {
         const conn = {
           ...c,
@@ -418,6 +470,7 @@ export class SingleLayerConnectivitySolver extends BaseSolver {
           if (nc < best[ni] - 1e-9) {
             best[ni] = nc
             parent[ni] = id
+            firstVia[ni] = firstVia[id]
             heap.push(ni, nc, nc + heuristic(ni))
           }
         }
@@ -432,18 +485,31 @@ export class SingleLayerConnectivitySolver extends BaseSolver {
           a.y <= bounds.maxY - viaMargin &&
           stage < 2 &&
           (stage === 0 || within(a, targetBox)) &&
-          vias.every((v) => !v.isBlocked(cell))
+          vias.every((v) => !v.isBlocked(cell)) &&
+          fixedVias.every((v) => drillClear(a, v)) &&
+          (stage === 0 ||
+            (firstVia[id] >= 0 &&
+              Math.hypot(a.x - p(firstVia[id]).x, a.y - p(firstVia[id]).y) >=
+                (input.minViaHoleEdgeToViaHoleEdgeClearance ?? 0) +
+                  (input.minViaHoleDiameter ?? 0.15) -
+                  1e-8))
         ) {
           const ni = id + N
-          const viaSoft = softVia.reduce(
-            (sum, v) => sum + (v.softEdgeIsClear(a, a) ? 0 : penalty * 4),
-            0,
-          )
+          const viaSoft =
+            movableVias.reduce(
+              (sum, v) => sum + (drillClear(a, v) ? 0 : penalty * 4),
+              0,
+            ) +
+            softVia.reduce(
+              (sum, v) => sum + (v.softEdgeIsClear(a, a) ? 0 : penalty * 4),
+              0,
+            )
           if (strict && viaSoft) continue
           const nc = cost + 100 + viaSoft + history[0][cell] + history[1][cell]
           if (nc < best[ni] - 1e-9) {
             best[ni] = nc
             parent[ni] = id
+            firstVia[ni] = stage === 0 ? cell : firstVia[id]
             heap.push(ni, nc, nc + heuristic(ni))
           }
         }
@@ -530,10 +596,13 @@ export class SingleLayerConnectivitySolver extends BaseSolver {
         if (pass >= 12 && !trouble.has(c.name)) continue
         routed.delete(c.name)
         const t =
-          (pass >= 12 ? yield* solve(c, pass, true) : null) ??
-          (yield* solve(c, pass))
+          (pass >= 12 ? yield* solve({ c, pass, strict: true }) : null) ??
+          (yield* solve({ c, pass }))
         if (!t) throw Error(`No route for ${c.name}`)
-        routed.set(c.name, t)
+        routed.set(
+          c.name,
+          canonicalConnectivityTrace({ input, connection: c, trace: t }),
+        )
         yield
       }
       const all = [...routed.values()],
@@ -570,6 +639,24 @@ export class SingleLayerConnectivitySolver extends BaseSolver {
             2,
           )
         }
+      for (const hit of connectivityDrillConflicts(input, all)) {
+        count++
+        for (const name of hit.names)
+          trouble.set(name, (trouble.get(name) ?? 0) + 1)
+        const [a, b] = hit.points
+        for (const plane of [0, 1])
+          projector.penalizeIntersection(
+            history[plane],
+            a,
+            a,
+            b,
+            b,
+            (input.minViaHoleEdgeToViaHoleEdgeClearance ?? 0) +
+              (input.minViaHoleDiameter ?? 0.15),
+            true,
+            2,
+          )
+      }
       this.stats = {
         pass,
         conflicts: count,
@@ -580,6 +667,44 @@ export class SingleLayerConnectivitySolver extends BaseSolver {
       if (!count) {
         complete = true
         break
+      }
+    }
+    if (
+      !complete &&
+      routed.size === input.connections.length &&
+      trouble.size &&
+      (options.maxRefinements ?? 2) > 0
+    ) {
+      const requests = input.connections.filter((c) => trouble.has(c.name))
+      const retained = input.connections.filter((c) => !trouble.has(c.name))
+      const fixedRoutes = retained.map((c) => routed.get(c.name)!)
+      const refinement = new SingleLayerConnectivitySolver(
+        {
+          ...input,
+          connections: requests,
+          traces: [...(input.traces ?? []), ...fixedRoutes],
+        },
+        {
+          ...options,
+          gridStep: step / 2,
+          maxRefinements: (options.maxRefinements ?? 2) - 1,
+          fixedConnections: [...(options.fixedConnections ?? []), ...retained],
+        },
+      )
+      while (!refinement.solved && !refinement.failed) {
+        refinement.step()
+        yield
+      }
+      if (refinement.solved) {
+        for (const trace of refinement.traces)
+          routed.set(trace.connection_name!, trace)
+        complete = true
+        this.stats = {
+          ...this.stats,
+          refinedSignals: requests.length,
+          refinementGridStep: step / 2,
+          conflicts: 0,
+        }
       }
     }
     if (!complete)
@@ -599,12 +724,44 @@ export class SingleLayerConnectivitySolver extends BaseSolver {
       )
         continue
       routed.delete(c.name)
-      const repaired = yield* solve(c, 5, true, true)
+      const repaired = yield* solve({ c, pass: 5, strict: true, repair: true })
       if (!repaired) throw Error(`No legal terminal via for ${c.name}`)
       routed.set(c.name, repaired)
       yield
     }
+    for (const c of input.connections) {
+      const normalized = canonicalConnectivityTrace({
+        input,
+        connection: c,
+        trace: routed.get(c.name)!,
+      })
+      routed.set(
+        c.name,
+        simplifyConnectivityTrace({
+          input,
+          connection: c,
+          trace: normalized,
+          others: [...routed.values()].filter(
+            (t) => t.connection_name !== c.name,
+          ),
+        }),
+      )
+      yield
+    }
     const result = input.connections.map((c) => routed.get(c.name)!)
+    if (
+      connectivityDrillConflicts(input, [...(input.traces ?? []), ...result])
+        .length
+    )
+      throw Error("Single-layer connectivity violates drill spacing")
+    if (
+      result.some(
+        (trace) =>
+          !joinedSignalGeometryIsValid({ input, trace, smoothTuning: false }) ||
+          connectivityViaShortcuts(input, trace),
+      )
+    )
+      throw Error("Single-layer connectivity has invalid joined geometry")
     if (result.some((trace) => !traceStaysInsideOutline(input, trace)))
       throw Error("Generated connectivity copper crosses the board outline")
     const drc = validateRoutedCopperDrc({
