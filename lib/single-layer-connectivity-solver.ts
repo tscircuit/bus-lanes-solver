@@ -287,10 +287,17 @@ export class SingleLayerConnectivitySolver extends BaseSolver {
       best = new Float64Array(N * 3),
       parent = new Int32Array(N * 3),
       history = [new Float32Array(N), new Float32Array(N)]
-    const cached = new Map<string, GridRoutingAccess>(),
-      cacheKey = (c: Connection, l: string, w: number) => `${c.name}:${l}:${w}`
-    function hardGrid(c: Connection, layer: string, width: number) {
-      const key = cacheKey(c, layer, width)
+    const cached = new Map<string, GridRoutingAccess>()
+    const hardGrid = ({
+      c,
+      layer,
+      width,
+    }: {
+      c: Connection
+      layer: string
+      width: number
+    }) => {
+      const key = `${c.name}:${layer}:${width}`
       if (cached.has(key)) return cached.get(key)!
       const conn = {
         ...c,
@@ -311,12 +318,17 @@ export class SingleLayerConnectivitySolver extends BaseSolver {
       if (cached.size > 30) cached.delete(cached.keys().next().value!)
       return g
     }
-    function* solve(
-      c: Connection,
-      pass: number,
+    const solve = function* ({
+      c,
+      pass,
       strict = false,
       repair = false,
-    ): Generator<void, Trace | null> {
+    }: {
+      c: Connection
+      pass: number
+      strict?: boolean
+      repair?: boolean
+    }): Generator<void, Trace | null> {
       const firstVia = new Int32Array(N * 3).fill(-1)
       const fixedVias = (input.traces ?? []).flatMap((t) =>
         t.route.filter(
@@ -358,7 +370,9 @@ export class SingleLayerConnectivitySolver extends BaseSolver {
         search.cancel()
         return g
       })
-      const vias = layers.map((l) => hardGrid(c, l, viaDiameter))
+      const vias = layers.map((l) =>
+        hardGrid({ c, layer: l, width: viaDiameter }),
+      )
       const softVia = ["top", carrier].map((layer) => {
         const conn = {
           ...c,
@@ -582,10 +596,13 @@ export class SingleLayerConnectivitySolver extends BaseSolver {
         if (pass >= 12 && !trouble.has(c.name)) continue
         routed.delete(c.name)
         const t =
-          (pass >= 12 ? yield* solve(c, pass, true) : null) ??
-          (yield* solve(c, pass))
+          (pass >= 12 ? yield* solve({ c, pass, strict: true }) : null) ??
+          (yield* solve({ c, pass }))
         if (!t) throw Error(`No route for ${c.name}`)
-        routed.set(c.name, canonicalConnectivityTrace(input, c, t))
+        routed.set(
+          c.name,
+          canonicalConnectivityTrace({ input, connection: c, trace: t }),
+        )
         yield
       }
       const all = [...routed.values()],
@@ -707,25 +724,27 @@ export class SingleLayerConnectivitySolver extends BaseSolver {
       )
         continue
       routed.delete(c.name)
-      const repaired = yield* solve(c, 5, true, true)
+      const repaired = yield* solve({ c, pass: 5, strict: true, repair: true })
       if (!repaired) throw Error(`No legal terminal via for ${c.name}`)
       routed.set(c.name, repaired)
       yield
     }
     for (const c of input.connections) {
-      const normalized = canonicalConnectivityTrace(
+      const normalized = canonicalConnectivityTrace({
         input,
-        c,
-        routed.get(c.name)!,
-      )
+        connection: c,
+        trace: routed.get(c.name)!,
+      })
       routed.set(
         c.name,
-        simplifyConnectivityTrace(
+        simplifyConnectivityTrace({
           input,
-          c,
-          normalized,
-          [...routed.values()].filter((t) => t.connection_name !== c.name),
-        ),
+          connection: c,
+          trace: normalized,
+          others: [...routed.values()].filter(
+            (t) => t.connection_name !== c.name,
+          ),
+        }),
       )
       yield
     }

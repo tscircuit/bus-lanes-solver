@@ -73,12 +73,14 @@ test("bounded refinement repairs a synthetic crossed pad bank without changing i
     expect(refined.stats.refinedSignals).toBeGreaterThan(0)
     expect(input).toEqual(before)
     expect(connectivityDrillConflicts(input, refined.traces)).toEqual([])
+    // The fanout API's legacy SRJ type requires rectangular obstacles, while
+    // its DRC implementation also supports our circular native pads.
     const drc = validateRoutedCopperDrc({
       inputSrj: input,
       routedSrj: refined.getOutput(),
       clearance: 0.09,
       allowBlindAndBuriedVias: false,
-    } as any)
+    } as unknown as Parameters<typeof validateRoutedCopperDrc>[0])
     expect(drc.valid).toBe(true)
   }
 }, 30000)

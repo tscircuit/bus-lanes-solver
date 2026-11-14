@@ -5,7 +5,15 @@ import {
   connectivityViaShortcuts,
 } from "../lib/connectivity-geometry"
 import type { SimpleRouteJson, Trace, Wire, Via } from "../lib/types"
-const wire = (x: number, y: number, layer = "top"): Wire => ({
+const wire = ({
+  x,
+  y,
+  layer = "top",
+}: {
+  x: number
+  y: number
+  layer?: string
+}): Wire => ({
   route_type: "wire",
   x,
   y,
@@ -76,24 +84,28 @@ test("owned pad normalization removes false path length while preserving endpoin
       ],
     }
     const t = trace(c.name, [
-      wire(offset, 0),
-      wire(offset, 0.2),
-      wire(offset + 0.2, 0.2),
-      wire(offset + 0.2, 0),
+      wire({ x: offset, y: 0 }),
+      wire({ x: offset, y: 0.2 }),
+      wire({ x: offset + 0.2, y: 0.2 }),
+      wire({ x: offset + 0.2, y: 0 }),
       via(offset + 0.2, 0),
-      wire(offset + 0.2, 0, "inner1"),
-      wire(offset + 4, 0, "inner1"),
+      wire({ x: offset + 0.2, y: 0, layer: "inner1" }),
+      wire({ x: offset + 4, y: 0, layer: "inner1" }),
       { ...via(offset + 4, 0), from_layer: "inner1", to_layer: "top" },
-      wire(offset + 4, 0),
+      wire({ x: offset + 4, y: 0 }),
     ])
     const before = structuredClone(t)
-    const result = canonicalConnectivityTrace(f, c, t)
+    const result = canonicalConnectivityTrace({
+      input: f,
+      connection: c,
+      trace: t,
+    })
     expect(t).toEqual(before)
     expect(result.route[0]).toEqual(t.route[0])
     expect(result.route.at(-1)).toEqual(t.route.at(-1))
     expect(result.route.slice(0, 3)).toEqual([
-      wire(offset, 0),
-      wire(offset + 0.2, 0),
+      wire({ x: offset, y: 0 }),
+      wire({ x: offset + 0.2, y: 0 }),
       via(offset + 0.2, 0),
     ])
   }
@@ -107,33 +119,31 @@ test("zero-length via excursion is removed without introducing a layer jump", ()
     ],
   }
   const t = trace("loop", [
-    wire(0, 0),
-    wire(1, 0),
+    wire({ x: 0, y: 0 }),
+    wire({ x: 1, y: 0 }),
     via(1, 0),
-    wire(1, 0, "inner1"),
+    wire({ x: 1, y: 0, layer: "inner1" }),
     { ...via(1, 0), from_layer: "inner1", to_layer: "top" },
-    wire(1, 0),
-    wire(2, 0),
+    wire({ x: 1, y: 0 }),
+    wire({ x: 2, y: 0 }),
   ])
-  expect(canonicalConnectivityTrace(input, c, t).route).toEqual([
-    wire(0, 0),
-    wire(1, 0),
-    wire(2, 0),
-  ])
+  expect(
+    canonicalConnectivityTrace({ input, connection: c, trace: t }).route,
+  ).toEqual([wire({ x: 0, y: 0 }), wire({ x: 1, y: 0 }), wire({ x: 2, y: 0 })])
 })
 test("nonlocal via contact is rejected but a local handoff remains valid", () => {
   const clean = trace("test", [
-    wire(0, 0),
+    wire({ x: 0, y: 0 }),
     via(0, 0),
-    wire(0, 0, "inner1"),
-    wire(2, 0, "inner1"),
+    wire({ x: 0, y: 0, layer: "inner1" }),
+    wire({ x: 2, y: 0, layer: "inner1" }),
   ])
   expect(connectivityViaShortcuts(input, clean)).toBe(false)
   const loop = trace("test", [
     ...clean.route,
-    wire(2, 1, "inner1"),
-    wire(0, 1, "inner1"),
-    wire(0, 0.05, "inner1"),
+    wire({ x: 2, y: 1, layer: "inner1" }),
+    wire({ x: 0, y: 1, layer: "inner1" }),
+    wire({ x: 0, y: 0.05, layer: "inner1" }),
   ])
   expect(connectivityViaShortcuts(input, loop)).toBe(true)
 })

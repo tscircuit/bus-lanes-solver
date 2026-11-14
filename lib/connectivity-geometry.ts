@@ -37,11 +37,15 @@ export function connectivityDrillConflicts(
 
 /** Remove zero-length layer excursions and paths bypassed by an owned pad/via
  * overlap. This does not move terminals, vias, or any supplied fixed copper. */
-export function canonicalConnectivityTrace(
-  input: SimpleRouteJson,
-  connection: Connection,
-  trace: Trace,
-): Trace {
+export function canonicalConnectivityTrace({
+  input,
+  connection,
+  trace,
+}: {
+  input: SimpleRouteJson
+  connection: Connection
+  trace: Trace
+}): Trace {
   let route = structuredClone(trace.route)
   const indices = route.flatMap((p, i) => (p.route_type === "via" ? [i] : []))
   if (indices.length === 2) {
@@ -86,12 +90,17 @@ export function canonicalConnectivityTrace(
 
 /** Clearance-aware simplification of native escapes; unlike tuning this only
  * shortens copper and never changes fixed neighbor geometry. */
-export function simplifyConnectivityTrace(
-  input: SimpleRouteJson,
-  connection: Connection,
-  trace: Trace,
-  others: Trace[],
-): Trace {
+export function simplifyConnectivityTrace({
+  input,
+  connection,
+  trace,
+  others,
+}: {
+  input: SimpleRouteJson
+  connection: Connection
+  trace: Trace
+  others: Trace[]
+}): Trace {
   const fixed = fixedCopper({
     ...input,
     traces: [...(input.traces ?? []), ...others],
