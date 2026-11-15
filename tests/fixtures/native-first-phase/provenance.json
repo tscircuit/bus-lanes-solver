@@ -1,0 +1,10 @@
+{
+  "source": "AM3352 native TSX attempt18, RAM rotation 180 degrees, phase DDR_BYTE1",
+  "inputSha256": "7d1272f090390cf5530797396991678b4ee11bdf7b522a1aef75320409b3c50a",
+  "priorTraces": 0,
+  "viaDrillMm": 0.3,
+  "viaDiameterMm": 0.5,
+  "savedRoutes": false,
+  "coordinateSystem": "board-world XY mm, +X right, +Y up",
+  "scope": "BYTE1 first-phase input only; not a completed SBC"
+}
