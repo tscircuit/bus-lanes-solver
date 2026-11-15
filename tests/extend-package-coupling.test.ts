@@ -75,6 +75,24 @@ const run = (input: SimpleRouteJson, traces: Trace[]) => {
   return step.value as Trace[]
 }
 
+test("unrelated board copper exhausts a generated-handoff package search", () => {
+  const { input, traces } = fixture()
+  input.minTraceWidth = 0.06
+  input.bounds = { minX: -50, maxX: 50, minY: -37.5, maxY: 37.5 }
+  input.obstacles.push(
+    ...[-1, 1].map((sign) => ({
+      center: { x: sign * 49, y: sign * 36 },
+      width: 0.3,
+      height: 0.3,
+      layers: ["bottom"],
+      connectedTo: ["unrelated"],
+    })),
+  )
+  const before = structuredClone({ input, traces })
+  expect(() => run(input, traces)).toThrow("Dense grid search budget exceeded")
+  expect({ input, traces }).toEqual(before)
+})
+
 test("pair remains together up to the native package region, with endpoints and matching preserved", () => {
   const { input, traces } = fixture(),
     before = structuredClone({ input, traces })
