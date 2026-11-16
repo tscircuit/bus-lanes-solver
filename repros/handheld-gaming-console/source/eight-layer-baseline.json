@@ -1,0 +1,127 @@
+{
+  "description": "Fresh stock solver runs; no internal candidate copper or diagnostic patches.",
+  "cases": {
+    "matched": {
+      "status": "solver_failed",
+      "error": "Error: Native carrier matching exhausted its routing plans",
+      "options": {
+        "goal": "matched",
+        "maxRoutingTimeMs": 120000,
+        "connectivity": {
+          "gridStep": 0.1,
+          "maxPasses": 300,
+          "maxExpansionsPerRoute": 300000
+        }
+      },
+      "solverCommit": "be9fc18b294d51e627b9ddb592584d0aa03e14d8",
+      "solverVersion": "0.0.55",
+      "runtime": {
+        "node": "26.3.0",
+        "bun": "1.4.4",
+        "boringssl": "41bf9b59c2ebf277a7aa427e1ecad5cc80dd4d4f",
+        "openssl": "1.1.0",
+        "llhttp": "9.4.2",
+        "libarchive": "27cbc7827172698143e440801fc0ba39ccb4f1f5",
+        "mimalloc": "92ef6587c57b262f6e6abf513f7776a2f8d12aeb",
+        "picohttpparser": "f4d94b48b31e0abae029ebeafcfd9ca0680ede58",
+        "uwebsockets": "38afee6c84fcf48c0edb2466aa4b27d287a59c30",
+        "webkit": "d6375c72affe0f70222cdcb45012b10f0bf3a9d5",
+        "zig": "04e7f6ac1e009525bc00934f20199c68f04e0a24",
+        "zlib": "12731092979c6d07f42da27da673a9f6c7b13586",
+        "tinycc": "05f0fafaa3be31e31d7b4b5c17dc60f62c991171",
+        "lolhtml": "725ce499aa9b71e38b7a2d0a9fbb6d7294a4079e",
+        "ares": "c7a3138dcfe3bb0eaaf10c0c24c36dc66dc790ab",
+        "libdeflate": "92e6a0db9fa848d742f9eb286c92afc60f2c3dda",
+        "usockets": "38afee6c84fcf48c0edb2466aa4b27d287a59c30",
+        "lshpack": "cf0f70dd10b352194c97448eb5d00b4aa484f531",
+        "zstd": "f8745da6ff1ad1e7bab384bd1f9d742439278e99",
+        "v8": "14.6.202.34-node.20",
+        "uv": "1.48.0",
+        "napi": "10",
+        "icu": "78.3",
+        "unicode": "17.0",
+        "sqlite": "3.53.4",
+        "typescript": "7.0.2",
+        "modules": "147"
+      },
+      "runtimeMs": 817.35708,
+      "fixtureSha256": "cd8920e11e8a1410d3a1b31415a867bdf0913c7618ab9669be821320113123be",
+      "effectiveInputSha256": "8c03d86943dd8d1899c6faf55b316c6e0d7bc0608b56c1be64817b80491d27b9",
+      "inputUnchanged": true,
+      "phase": "failed",
+      "stats": {
+        "carrierStrategy": "preferred"
+      },
+      "requestedSignals": 65,
+      "returnedTraces": 0,
+      "allRequestedReturned": false,
+      "nativeBoardDrcVerified": false,
+      "electricalTimingVerified": false,
+      "impedanceVerified": false,
+      "manufacturingRelease": false
+    },
+    "connectivity": {
+      "status": "solver_failed",
+      "error": "Error: Single-layer negotiation exhausted its pass budget",
+      "options": {
+        "goal": "connectivity",
+        "maxRoutingTimeMs": 120000,
+        "connectivity": {
+          "gridStep": 0.1,
+          "maxPasses": 300,
+          "maxExpansionsPerRoute": 300000
+        }
+      },
+      "solverCommit": "be9fc18b294d51e627b9ddb592584d0aa03e14d8",
+      "solverVersion": "0.0.55",
+      "runtime": {
+        "node": "26.3.0",
+        "bun": "1.4.4",
+        "boringssl": "41bf9b59c2ebf277a7aa427e1ecad5cc80dd4d4f",
+        "openssl": "1.1.0",
+        "llhttp": "9.4.2",
+        "libarchive": "27cbc7827172698143e440801fc0ba39ccb4f1f5",
+        "mimalloc": "92ef6587c57b262f6e6abf513f7776a2f8d12aeb",
+        "picohttpparser": "f4d94b48b31e0abae029ebeafcfd9ca0680ede58",
+        "uwebsockets": "38afee6c84fcf48c0edb2466aa4b27d287a59c30",
+        "webkit": "d6375c72affe0f70222cdcb45012b10f0bf3a9d5",
+        "zig": "04e7f6ac1e009525bc00934f20199c68f04e0a24",
+        "zlib": "12731092979c6d07f42da27da673a9f6c7b13586",
+        "tinycc": "05f0fafaa3be31e31d7b4b5c17dc60f62c991171",
+        "lolhtml": "725ce499aa9b71e38b7a2d0a9fbb6d7294a4079e",
+        "ares": "c7a3138dcfe3bb0eaaf10c0c24c36dc66dc790ab",
+        "libdeflate": "92e6a0db9fa848d742f9eb286c92afc60f2c3dda",
+        "usockets": "38afee6c84fcf48c0edb2466aa4b27d287a59c30",
+        "lshpack": "cf0f70dd10b352194c97448eb5d00b4aa484f531",
+        "zstd": "f8745da6ff1ad1e7bab384bd1f9d742439278e99",
+        "v8": "14.6.202.34-node.20",
+        "uv": "1.48.0",
+        "napi": "10",
+        "icu": "78.3",
+        "unicode": "17.0",
+        "sqlite": "3.53.4",
+        "typescript": "7.0.2",
+        "modules": "147"
+      },
+      "runtimeMs": 46666.279758000004,
+      "fixtureSha256": "cd8920e11e8a1410d3a1b31415a867bdf0913c7618ab9669be821320113123be",
+      "effectiveInputSha256": "bee551aa469490f72c63ca801df729ccd782cff083b08850f9802a8f4ab7eb39",
+      "inputUnchanged": true,
+      "phase": "failed",
+      "stats": {
+        "pass": 299,
+        "conflicts": 1,
+        "routedSignals": 65,
+        "matchingEnforced": false,
+        "goal": "connectivity"
+      },
+      "requestedSignals": 65,
+      "returnedTraces": 0,
+      "allRequestedReturned": false,
+      "nativeBoardDrcVerified": false,
+      "electricalTimingVerified": false,
+      "impedanceVerified": false,
+      "manufacturingRelease": false
+    }
+  }
+}
