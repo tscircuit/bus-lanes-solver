@@ -24,7 +24,7 @@ const finish = (query: Generator<void, SurfaceBridgeRoute | null>) => {
 }
 
 for (const shape of ["circle", "rotated-rect"] as const) {
-  test(`reproduces accepted current bridge drilling through native ${shape} pads`, () => {
+  test(`keeps current bridge drills outside native ${shape} pads`, () => {
     const input = currentViaDrillFixture({ shape })
     const original = JSON.stringify(input)
     // This independent manufactured route is legal before any search. It
@@ -44,7 +44,7 @@ for (const shape of ["circle", "rotated-rect"] as const) {
       ),
     ).toHaveLength(2)
     expect(JSON.stringify(input)).toBe(original)
-    expect(physicalViaPadErrors(input, traces)).toHaveLength(2)
+    expect(physicalViaPadErrors(input, traces)).toEqual([])
   }, 3_000)
 }
 

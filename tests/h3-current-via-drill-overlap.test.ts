@@ -121,9 +121,9 @@ function padLabel(pad: Pad): string {
     .join(" / ")
 }
 
-// This user-requested reproduction intentionally records solver-accepted
-// copper with a clearly labeled manufacturing failure. It is not DRC clean.
-test("native H3 byte one accepts three forbidden own-pad drill overlaps", async () => {
+// Export only after current connectivity, fixed copper, future access and
+// independent manufacturing validation all pass.
+test("native H3 byte one keeps every drill outside SMT pads", async () => {
   const original = structuredClone(input)
   const pads = native.filter(
     (element): element is Pad => element.type === "pcb_smtpad",
@@ -179,44 +179,33 @@ test("native H3 byte one accepts three forbidden own-pad drill overlaps", async 
     }
   }
   const errors = checkViasInPads(circuit)
-  expect(errors).toHaveLength(3)
-  const errorIds = new Set(errors.map((error) => error.pcb_placement_error_id))
-  const violations = vias.flatMap((via) =>
-    pads.flatMap((pad) => {
-      if (!errorIds.has(`via_in_pad_${via.pcb_via_id}_${pad.pcb_smtpad_id}`))
-        return []
-      // Every native pad involved in this captured failure is explicitly a
-      // circle. The signed drill gap is exact, not an obstacle-AABB estimate.
-      if (pad.shape !== "circle")
-        throw Error("Expected the captured native circular pad")
-      return [
-        {
-          via,
-          pad,
-          gap:
-            Math.hypot(via.x - pad.x, via.y - pad.y) -
-            via.hole_diameter / 2 -
-            pad.radius,
-        },
-      ]
-    }),
+  expect(errors).toHaveLength(0)
+  const details = ["pcb_smtpad_10", "pcb_smtpad_14", "pcb_smtpad_312"].map(
+    (id) => {
+      const pad = pads.find((pad) => pad.pcb_smtpad_id === id)!
+      if (pad.shape !== "circle") throw Error("Expected native circular pad")
+      const gap = Math.min(
+        ...vias
+          .filter((via) => via.layers.includes(pad.layer))
+          .map(
+            (via) =>
+              Math.hypot(via.x - pad.x, via.y - pad.y) -
+              via.hole_diameter / 2 -
+              pad.radius,
+          ),
+      )
+      expect(gap).toBeGreaterThanOrEqual(-1e-8)
+      circuit.push(
+        ...marker({
+          id: "repaired_" + id,
+          x: pad.x,
+          y: pad.y,
+          half: pad.radius + 0.18,
+        }),
+      )
+      return { pad, gap }
+    },
   )
-  expect(violations).toHaveLength(errors.length)
-  expect(violations.map((pair) => pair.pad.pcb_smtpad_id).sort()).toEqual([
-    "pcb_smtpad_10",
-    "pcb_smtpad_14",
-    "pcb_smtpad_312",
-  ])
-  expect(violations.every((pair) => pair.gap < -1e-9)).toBe(true)
-  for (const pair of violations)
-    circuit.push(
-      ...marker({
-        id: "drill_overlap_" + pair.pad.pcb_smtpad_id,
-        x: pair.pad.x,
-        y: pair.pad.y,
-        half: pair.pad.shape === "circle" ? pair.pad.radius + 0.18 : 0.4,
-      }),
-    )
 
   const board = native.find((element) => element.type === "pcb_board")
   if (!board || board.width === undefined || board.height === undefined)
@@ -257,21 +246,21 @@ test("native H3 byte one accepts three forbidden own-pad drill overlaps", async 
     ...requestGuides,
     note({
       id: "repro_title",
-      text: "Repro: solver accepts 3 forbidden via drills inside own pads",
+      text: "Fixed: all via drills remain outside native SMT pads",
       x: board.center.x,
       y: bounds.maxY + 2.7,
       size: 0.58,
     }),
     note({
       id: "repro_scope",
-      text: "16 connected current routes; 8 supplied routes unchanged; 37 later nets pending. Via-in-pad DRC FAILS.",
+      text: "16 connected current routes; 8 supplied routes unchanged; 37 later nets pending. Via-in-pad DRC passes.",
       x: board.center.x,
       y: bounds.maxY + 1.9,
       size: 0.38,
     }),
     note({
       id: "repro_legend",
-      text: "Red/blue: actual copper. Orange boxes: forbidden drill/pad overlap. Green dashed: pending, unrouted requests.",
+      text: "Red/blue: actual copper. Orange boxes: previously overlapping pads. Green dashed: pending, unrouted requests.",
       x: board.center.x,
       y: bounds.maxY + 1.1,
       size: 0.33,
@@ -291,7 +280,7 @@ test("native H3 byte one accepts three forbidden own-pad drill overlaps", async 
     },
   })
 
-  for (const pair of violations) {
+  for (const pair of details) {
     const label = padLabel(pair.pad)
     const detail = convertCircuitJsonToPcbSvg(circuit, {
       ...svgOptions,
@@ -310,7 +299,7 @@ test("native H3 byte one accepts three forbidden own-pad drill overlaps", async 
       text.replaceAll("&", "&amp;").replaceAll("<", "&lt;")
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="900" height="1100" viewBox="0 0 900 1100">
       <rect width="900" height="1100" fill="white"/>
-      <text x="450" y="42" text-anchor="middle" font-family="sans-serif" font-size="25">${escapeXml(label)}: forbidden via drill overlap</text>
+      <text x="450" y="42" text-anchor="middle" font-family="sans-serif" font-size="25">${escapeXml(label)}: drill remains outside pad</text>
       <text x="450" y="82" text-anchor="middle" font-family="sans-serif" font-size="22">Signed drill-to-pad gap: ${pair.gap.toFixed(5)} mm; allowViaInPad = false</text>
       <g transform="translate(0,120)">${detail.replace(/^<\?xml[^>]*>\s*/, "")}</g>
       <text x="450" y="1060" text-anchor="middle" font-family="sans-serif" font-size="19">Copper annulus may join its own pad; the drill must stay outside.</text>

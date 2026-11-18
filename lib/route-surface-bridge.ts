@@ -33,7 +33,7 @@ import type {
   Via,
   Wire,
 } from "./types"
-import { fixedCopper, VectorScene } from "./vector-scene"
+import { copperTooClose, fixedCopper, VectorScene } from "./vector-scene"
 import { connectors } from "./vector-visibility"
 
 export interface SurfaceBridgeOptions {
@@ -351,6 +351,25 @@ function* routeSurfaceBridgePass({
       maximumCarrierLength(input, connection.name),
     ),
     fixed = fixedCopper(input),
+    // Drill exclusion is independent of electrical ownership: an SMT pad on
+    // our own net is not a permissible drilled landing unless enabled.
+    // Only explicit SMT provenance establishes this rule; traces and planes
+    // must not be reclassified from component names or obstacle dimensions.
+    smtPads =
+      input.allowViaInPad === true
+        ? []
+        : fixedCopper({
+            ...input,
+            traces: [],
+            obstacles: input.obstacles.filter((obstacle) => {
+              const metadata = (
+                obstacle as typeof obstacle & {
+                  circuitJsonMetadata?: { pcb_smtpad_id?: unknown }
+                }
+              ).circuitJsonMetadata
+              return typeof metadata?.pcb_smtpad_id === "string"
+            }),
+          }),
     layers = [surface, bridge],
     carrierLayers = signalLayers(input, connection),
     scenes = layers.map(
@@ -468,6 +487,11 @@ function* routeSurfaceBridgePass({
     if (lands[cell]) return lands[cell] === 1
     const at = point(cell),
       clear =
+        !smtPads.some(
+          (pad) =>
+            physical.includes(pad.layer) &&
+            copperTooClose(at, at, pad, hole / 2 - 1e-8),
+        ) &&
         landScenes.every((scene) => scene.visible(at, at)) &&
         !oldVias.some(
           (via) =>
