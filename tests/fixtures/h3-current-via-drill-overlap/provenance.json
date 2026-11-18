@@ -1,0 +1,73 @@
+{
+  "schema": "native-h3-current-via-drill-repro/v1",
+  "coreCommit": "06173cbee3caa7421227d568efeea22102e4c3a7",
+  "busCommit": "e6c3ffd80983afc3bfc570b7d9618a0001e79505",
+  "busTree": "fd0a59e152dff9c207697e673a6caaa3f23cbc4f",
+  "actualBusExecutableSha256": "93138890b90e1c9aa4ffed7873265354d2e1b3f5e203209186991a1922e54170",
+  "officialBuildRecord": "https://github.com/tscircuit/bus-lanes-solver/actions/runs/44200806456/job/134454058588",
+  "actualFullCoreCapture": "work/core-native-h3-consumer-06173-e6c3ffd-run1",
+  "actualConstructorInputMatchesAnnounced": true,
+  "nativePadCount": 445,
+  "obstacleShapes": {
+    "circle": 443,
+    "rect": 2
+  },
+  "currentConnections": 8,
+  "suppliedTraces": 8,
+  "pendingConnections": 37,
+  "pendingTerminals": 76,
+  "files": [
+    {
+      "path": "input.json.gz",
+      "sha256": "8e8b05d38fc14c3222b139c83e7b15ed91f4111171c4a860bf408dcd43504e9a",
+      "uncompressedSha256": "a3bd009fe288993d48b480629fb8191e92cb2d51d69cea33ecb18d3219e34d6d",
+      "bytes": 16290,
+      "uncompressedBytes": 317970,
+      "capturedSource": "work/core-native-h3-consumer-06173-e6c3ffd-run1/phase-1-actual-bus-input.json",
+      "projection": "None: raw actual Core adapter constructor input bytes, gzip mtime=0."
+    },
+    {
+      "path": "native-circuit.json.gz",
+      "sha256": "8a54d2fdb4d44ee68d269c7d8269e268d88aa1d14263a8e6198fad7fa3123378",
+      "uncompressedSha256": "7a2fe0715c674e8544d96b0328bf234e98379e59f0a56d904e643c19a13323b3",
+      "bytes": 30916,
+      "uncompressedBytes": 717207,
+      "capturedSource": "work/core-native-h3-consumer-06173-e6c3ffd-run1/initial-circuit.json",
+      "projection": "None: raw native circuit JSON before any routing, gzip mtime=0."
+    },
+    {
+      "path": "fixed-connections.json",
+      "sha256": "84de07ff351756abe1dbb910995b44ce0426f75d5485b6244e34ba8c1adb7363",
+      "uncompressedSha256": "84de07ff351756abe1dbb910995b44ce0426f75d5485b6244e34ba8c1adb7363",
+      "bytes": 3852,
+      "uncompressedBytes": 3852,
+      "capturedSource": "work/core-native-h3-consumer-06173-e6c3ffd-run1/routing-run.json",
+      "projection": "Exact stage0 observedBusInput.connections; these are the supplied eight completed connections in stage1."
+    }
+  ],
+  "rulesAndGeometryUnchanged": true,
+  "purpose": "Reproduce accepted current-phase via drills intruding into physical own pads while allowViaInPad=false. Saved full Core output is diagnostic provenance, never a solver seed.",
+  "nativeTsxEvidence": {
+    "fixtureSha256": "5eb3790b04c95ea93001e979bc8d4823b43573532d899a94588a946a5176a209",
+    "boardTsxSha256": "505c085e8c66fa7752360bd7e17918c3f527438ced1100db4b70006e2ecbc99a",
+    "nativePartSha256": "6ae96d413447a5b07c280df7ba7adaf0d290eba48ab9d6117bfa978c9f45f061"
+  },
+  "confirmedCurrentDrillIntrusions": [
+    {
+      "padId": "pcb_smtpad_14",
+      "nativeLabel": "DU1 / BALL_C3",
+      "drillGapMm": -0.015934618818146035
+    },
+    {
+      "padId": "pcb_smtpad_10",
+      "nativeLabel": "DU1 / BALL_B8",
+      "drillGapMm": -0.01820212778306432
+    },
+    {
+      "padId": "pcb_smtpad_312",
+      "nativeLabel": "U1 / BALL_M19",
+      "drillGapMm": -0.06797594920828265
+    }
+  ],
+  "scope": "SMT drill-overlap reproduction only; successful current connectivity and pending access do not imply full manufacturing DRC. The later actual Core phase has separate DRC failures."
+}
