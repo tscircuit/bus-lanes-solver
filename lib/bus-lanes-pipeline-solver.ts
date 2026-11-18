@@ -1,4 +1,13 @@
 import { effectiveCarrierLayers } from "./effective-carrier-layers"
+import { PendingPadAccess } from "./pending-pad-access"
+import { routePendingAccess } from "./route-pending-access"
+import {
+  RoutingMemoryBudgetExceeded,
+  PendingRoutingWorkBudgetExceeded,
+} from "./routing-memory-budget"
+import { PendingAccessSearchUnknownError } from "./pending-access-search-unknown"
+import { PendingPeerAccessUnknownError } from "./pending-peer-access"
+import { InvalidPendingRoutingAccess } from "./validate-pending-routing-access"
 import { nativeGroupsEligible, routeNativeGroups } from "./route-native-groups"
 import {
   pinnedNativeBusesEligible,
@@ -69,6 +78,7 @@ import {
 import { BusLanesSolver } from "./bus-lanes-solver"
 import type {
   Connection,
+  PendingRoutingAccessReport,
   SimpleRouteJson,
   SolverOptions,
   Terminal,
@@ -118,6 +128,18 @@ function canRouteOnPadLayers(input: SimpleRouteJson) {
   )
 }
 
+function pendingRoutingFailureCode(error: unknown): string | null {
+  if (error instanceof InvalidPendingRoutingAccess) return error.failureCode
+  if (
+    error instanceof RoutingMemoryBudgetExceeded ||
+    error instanceof PendingRoutingWorkBudgetExceeded ||
+    error instanceof PendingAccessSearchUnknownError ||
+    error instanceof PendingPeerAccessUnknownError
+  )
+    return error.code
+  return null
+}
+
 /** Board-world points in mm, +X right, +Y up. Adds owned terminal approaches;
  * the interconnect solver retains its strict fixed-layer contract. */
 export class BusLanesPipelineSolver extends BaseSolver {
@@ -132,6 +154,11 @@ export class BusLanesPipelineSolver extends BaseSolver {
   private routingDeadline = Infinity
   private nativeGroupsActive = false
   private acceptedTraces?: Trace[]
+  private pendingAccess: PendingPadAccess
+  private acceptedPendingReport?: PendingRoutingAccessReport
+  private pendingCompletion?: Generator<void, Trace[] | null>
+  private pendingCompletionMode: "generated" | "native" | "connectivity" =
+    "generated"
   private envelopeOptimization?: Generator<void, void>
   /** Runs only after a complete accepted route exists. A budget interrupt or
    * exception restores that private snapshot, never mutable work-in-progress. */
@@ -250,6 +277,11 @@ export class BusLanesPipelineSolver extends BaseSolver {
                 )
               )
                 continue
+              if (
+                (yield* this.pendingAccess.getBlockedObligations(complete))
+                  .length
+              )
+                continue
               branch = complete
               if (
                 after.areaMm2 <
@@ -350,6 +382,11 @@ export class BusLanesPipelineSolver extends BaseSolver {
                   if (!validator.solved && !validator.failed)
                     validator.tryFinalAcceptance()
                 }
+                if (
+                  (yield* this.pendingAccess.getBlockedObligations(complete))
+                    .length
+                )
+                  continue
                 this.acceptedTraces = structuredClone(complete)
                 this.stats = {
                   ...this.stats,
@@ -388,6 +425,9 @@ export class BusLanesPipelineSolver extends BaseSolver {
     } catch (error) {
       this.stats = { ...this.stats, optimizationCleanupError: String(error) }
     }
+    const pendingReport = this.acceptedTraces
+      ? this.assertPendingAccess(this.acceptedTraces)
+      : undefined
     if (
       !this.acceptedTraces ||
       this.acceptedTraces.some(
@@ -401,6 +441,7 @@ export class BusLanesPipelineSolver extends BaseSolver {
     )
       throw Error("Final pad-to-pad signal geometry is invalid")
     this.traces = structuredClone(this.acceptedTraces)
+    this.acceptedPendingReport = pendingReport
     this.solved = true
     this.failed = false
     this.error = null
@@ -464,6 +505,7 @@ export class BusLanesPipelineSolver extends BaseSolver {
     if (!usesNativeMatching)
       routingInput = withSkewRoundoffReserve(routingInput)
     this.routingInput = routingInput
+    this.pendingAccess = new PendingPadAccess(this.routingInput)
     this.options = { smoothTuning: true, denseSearch: true, ...options }
     this.stats = { carrierStrategy: this.carrierStrategy.name }
     // Surface routing negotiates carrier layers and owned approaches before
@@ -599,6 +641,12 @@ export class BusLanesPipelineSolver extends BaseSolver {
   getConstructorParams() {
     return [this.input, this.options]
   }
+  /** Accepted output evidence only; callers cannot observe a rejected or
+   * unfinished candidate as preserved future access. */
+  getPendingRoutingAccessReport(): PendingRoutingAccessReport | undefined {
+    if (!this.solved || !this.acceptedPendingReport) return undefined
+    return structuredClone(this.acceptedPendingReport)
+  }
   getOutput() {
     if (!this.solved)
       throw Error(this.error ?? "Bus lane pipeline is not solved")
@@ -613,6 +661,8 @@ export class BusLanesPipelineSolver extends BaseSolver {
       this.finishAccepted(true)
       return
     }
+    this.pendingCompletion?.return(null)
+    this.pendingCompletion = undefined
     this.surfaceFinishing?.return(null)
     this.surfaceFinishing = undefined
     this.nativeSingleCarrier?.return(null)
@@ -1327,12 +1377,42 @@ export class BusLanesPipelineSolver extends BaseSolver {
   }
   _step() {
     if (performance.now() >= this.routingDeadline) {
+      this.pendingCompletion?.return(null)
+      this.pendingCompletion = undefined
       this.nativeSingleCarrier?.return(null)
       this.nativeSingleCarrier = undefined
       this.failed = true
       this.error = "Routing exceeded its elapsed-time budget"
       this.failureCode = "routing_timeout"
       this.phase = "failed"
+      return
+    }
+    if (this.pendingCompletion) {
+      try {
+        const result = this.pendingCompletion.next()
+        this.phase = "preserve_pending_pad_access"
+        if (!result.done) return
+        this.pendingCompletion = undefined
+        if (!result.value)
+          throw Error(
+            "Native routing could not preserve declared future pad access",
+          )
+        if (this.pendingCompletionMode === "generated")
+          this.acceptGeneratedTraces(result.value, true)
+        else {
+          this.acceptedTraces = structuredClone(result.value)
+          this.finishAccepted(false)
+        }
+      } catch (error) {
+        this.pendingCompletion?.return(null)
+        this.pendingCompletion = undefined
+        this.failed = true
+        this.error = String(error)
+        this.failureCode =
+          pendingRoutingFailureCode(error) ?? "pending_pad_access_failed"
+        this.phase = "failed"
+        this.traces = []
+      }
       return
     }
     if (this.nativeSingleCarrier) {
@@ -1342,18 +1422,26 @@ export class BusLanesPipelineSolver extends BaseSolver {
           this.nativeSingleCarrier = undefined
           if (!result.value)
             throw Error("Native carrier matching exhausted its routing plans")
-          this.acceptedTraces = structuredClone(result.value)
-          this.finishAccepted(false)
+          if (this.routingInput.pendingRoutingAccess?.length)
+            this.startPendingCompletion(result.value, "native")
+          else {
+            this.acceptedTraces = structuredClone(result.value)
+            this.finishAccepted(false)
+          }
         }
       } catch (error) {
         this.nativeSingleCarrier?.return(null)
         this.nativeSingleCarrier = undefined
         this.failed = true
         this.error = String(error)
-        this.failureCode = this.nativeGroupsActive
-          ? "native_group_matching_failed"
-          : "native_single_carrier_matching_failed"
+        const terminalCode = pendingRoutingFailureCode(error)
+        this.failureCode =
+          terminalCode ??
+          (this.nativeGroupsActive
+            ? "native_group_matching_failed"
+            : "native_single_carrier_matching_failed")
         if (
+          !terminalCode &&
           this.routingInput.connections.some(
             (connection) => connection.pointsToConnect.length > 2,
           )
@@ -1375,8 +1463,12 @@ export class BusLanesPipelineSolver extends BaseSolver {
       this.failed = solver.failed
       this.error = solver.error
       if (solver.solved) {
-        this.traces = structuredClone(solver.traces)
-        this.solved = true
+        if (this.routingInput.pendingRoutingAccess?.length)
+          this.startPendingCompletion(solver.traces, "connectivity")
+        else {
+          this.traces = structuredClone(solver.traces)
+          this.solved = true
+        }
       }
       return
     }
@@ -1614,6 +1706,15 @@ export class BusLanesPipelineSolver extends BaseSolver {
       this.surfaceFinishing = undefined
       this.siteRematch?.return({ connections: [], escapes: [] })
       this.siteRematch = undefined
+      const terminalCode = pendingRoutingFailureCode(error)
+      if (terminalCode) {
+        this.failureCode = terminalCode
+        this.error = error instanceof Error ? error.message : String(error)
+        this.failed = true
+        this.phase = "failed"
+        this.traces = []
+        return
+      }
       this.attempt++
       if (
         this.options.fanout !== "none" &&
@@ -1644,7 +1745,33 @@ export class BusLanesPipelineSolver extends BaseSolver {
       this.traces = []
     }
   }
-  private acceptGeneratedTraces(traces: Trace[]): void {
+  private assertPendingAccess(
+    traces: Trace[],
+  ): PendingRoutingAccessReport | undefined {
+    const check = this.pendingAccess.getPreservedReport(traces)
+    let result = check.next()
+    while (!result.done) result = check.next()
+    return result.value
+  }
+  private startPendingCompletion(
+    traces: Trace[],
+    mode: "generated" | "native" | "connectivity",
+  ): void {
+    this.pendingCompletionMode = mode
+    this.pendingCompletion = routePendingAccess({
+      input: this.routingInput,
+      traces,
+      options: this.childOptions(),
+      maxSteps: Math.max(1, this.MAX_ITERATIONS - this.iterations),
+      access: this.pendingAccess,
+    })
+  }
+  private acceptGeneratedTraces(traces: Trace[], accessChecked = false): void {
+    if (this.routingInput.pendingRoutingAccess?.length && !accessChecked) {
+      this.startPendingCompletion(traces, "generated")
+      return
+    }
+    this.assertPendingAccess(traces)
     if (
       traces.some(
         (trace) =>

@@ -30,7 +30,7 @@ export interface Copper {
 }
 // Scene copper ownership is immutable; index large alias lists once per array.
 const ownerIndexes = new WeakMap<string[], Set<string>>()
-function sharesOwner(aliases: string[], owners: Set<string>): boolean {
+function sharesOwner(aliases: string[], owners: ReadonlySet<string>): boolean {
   if (aliases.length <= 16) return aliases.some((alias) => owners.has(alias))
   let index = ownerIndexes.get(aliases)
   if (!index) {
@@ -375,25 +375,53 @@ export class VectorScene {
   private visibleCalls = 0
   private copperIndex?: CopperIndex
   readonly copper: Copper[]
-  readonly owners: Set<string>
+  readonly owners: ReadonlySet<string>
   readonly margin: number
+  readonly clearanceOverrides?: ReadonlyMap<Copper, number>
+  private readonly maximumMargin: number
+  /** Supply an explicit electrical equivalence set atomically, before copper
+   * filtering or any visibility index is prepared. Legacy callers retain
+   * their original connection-only ownership semantics. The supplied set must
+   * remain immutable for the scene lifetime; pending geometry owns that set. */
+  static withOwnership(request: {
+    input: SimpleRouteJson
+    connection: Connection
+    width: number
+    copper: Copper[]
+    owners: ReadonlySet<string>
+    clearances?: ReadonlyMap<Copper, number>
+  }): VectorScene {
+    return new VectorScene(request.input, request.connection, request.width, {
+      copper: request.copper,
+      owners: request.owners,
+      clearances: request.clearances,
+    })
+  }
   constructor(
     readonly input: SimpleRouteJson,
     readonly connection: Connection,
     readonly width: number,
-    all: Copper[],
+    all:
+      | Copper[]
+      | {
+          copper: Copper[]
+          owners: ReadonlySet<string>
+          clearances?: ReadonlyMap<Copper, number>
+        },
   ) {
-    this.owners = new Set(
-      [
-        connection.name,
-        connection.source_trace_id,
-        ...connection.pointsToConnect.flatMap((p) => [
-          p.pointId,
-          p.pcb_port_id,
-        ]),
-      ].filter((s): s is string => !!s),
-    )
-    this.copper = all.filter(
+    this.owners = Array.isArray(all)
+      ? new Set(
+          [
+            connection.name,
+            connection.source_trace_id,
+            ...connection.pointsToConnect.flatMap((p) => [
+              p.pointId,
+              p.pcb_port_id,
+            ]),
+          ].filter((s): s is string => !!s),
+        )
+      : all.owners
+    this.copper = (Array.isArray(all) ? all : all.copper).filter(
       (c) =>
         c.layer === connection.pointsToConnect[0].layer &&
         !sharesOwner(c.owners, this.owners),
@@ -401,6 +429,19 @@ export class VectorScene {
     this.margin =
       width / 2 +
       (input.minTraceToPadEdgeClearance ?? input.defaultObstacleMargin ?? 0.075)
+    this.clearanceOverrides = Array.isArray(all) ? undefined : all.clearances
+    this.maximumMargin = this.clearanceOverrides
+      ? this.copper.reduce(
+          (maximum, copper) => Math.max(maximum, this.marginFor(copper)),
+          this.margin,
+        )
+      : this.margin
+  }
+  /** Explicit pending query policies only; ordinary scenes keep their original
+   * uniform margin. The immutable map is keyed by original copper objects. */
+  marginFor(copper: Copper): number {
+    const clearance = this.clearanceOverrides?.get(copper)
+    return clearance === undefined ? this.margin : this.width / 2 + clearance
   }
   visible(a: Point, b: Point) {
     const m = this.width / 2 + (this.input.minBoardEdgeClearance ?? 0),
@@ -416,15 +457,22 @@ export class VectorScene {
     )
       return false
     if (this.input.outline?.length && !this.boardEdgeIsClear(a, b)) return false
-    const minX = Math.min(a.x, b.x) - this.margin,
-      maxX = Math.max(a.x, b.x) + this.margin,
-      minY = Math.min(a.y, b.y) - this.margin,
-      maxY = Math.max(a.y, b.y) + this.margin
+    const minX = Math.min(a.x, b.x) - this.maximumMargin,
+      maxX = Math.max(a.x, b.x) + this.maximumMargin,
+      minY = Math.min(a.y, b.y) - this.maximumMargin,
+      maxY = Math.max(a.y, b.y) + this.maximumMargin
     if (++this.visibleCalls === 16)
       this.copperIndex = new CopperIndex(this.copper)
     if (this.copperIndex)
       return !this.copperIndex.some({ minX, maxX, minY, maxY }, (c) =>
-        copperTooClose(a, b, c, this.margin - 1e-8),
+        copperTooClose(
+          a,
+          b,
+          c,
+          this.clearanceOverrides
+            ? this.marginFor(c) - 1e-8
+            : this.margin - 1e-8,
+        ),
       )
     for (const c of this.copper) {
       const r = c.rect ?? {
@@ -435,7 +483,17 @@ export class VectorScene {
       }
       if (r.minX > maxX || r.maxX < minX || r.minY > maxY || r.maxY < minY)
         continue
-      if (copperTooClose(a, b, c, this.margin - 1e-8)) return false
+      if (
+        copperTooClose(
+          a,
+          b,
+          c,
+          this.clearanceOverrides
+            ? this.marginFor(c) - 1e-8
+            : this.margin - 1e-8,
+        )
+      )
+        return false
     }
     return true
   }
@@ -459,7 +517,9 @@ export class VectorScene {
     for (const c of this.copper) {
       if (c.rect) {
         const r = c.orientedRect?.rect ?? c.rect,
-          m = this.margin + epsilon
+          m =
+            (this.clearanceOverrides ? this.marginFor(c) : this.margin) +
+            epsilon
         const corners = [
           { x: r.minX - m, y: r.minY - m },
           { x: r.minX - m, y: r.maxY + m },
@@ -472,7 +532,10 @@ export class VectorScene {
           else result.push(corner)
         }
       } else {
-        const r = c.radius + this.margin + epsilon
+        const r =
+          c.radius +
+          (this.clearanceOverrides ? this.marginFor(c) : this.margin) +
+          epsilon
         for (const p of distance(c.a, c.b) < 1e-9 ? [c.a] : [c.a, c.b])
           for (const [x, y] of [
             [1, k],

@@ -1,4 +1,5 @@
 import { BusLanesSolver } from "./bus-lanes-solver"
+import { CandidateSearchOutcomes } from "./candidate-search-outcomes"
 import { chamferOrdinaryCorners } from "./chamfer-ordinary-corners"
 import { extendPackageCoupling } from "./extend-package-coupling"
 import { exteriorPairSpacingReports } from "./exterior-pair-spacing"
@@ -10,7 +11,16 @@ import { rebalancePairEscapes } from "./rebalance-pair-escapes"
 import { reduceOrdinaryTurns } from "./reduce-ordinary-turns"
 import { routeAnglesAreConventional } from "./route-angle-validation"
 import { busLengthReports, pairLengthReports } from "./route-lengths"
-import { runBoundedRouting } from "./run-bounded-routing"
+import {
+  exhaustedRoutingResult,
+  runBoundedRouting,
+  type RoutingStepLimit,
+} from "./run-bounded-routing"
+import {
+  PendingRoutingWorkBudgetExceeded,
+  RoutingMemoryBudgetExceeded,
+} from "./routing-memory-budget"
+import { PendingAccessSearchUnknownError } from "./pending-access-search-unknown"
 import { shortenPairApproaches } from "./shorten-pair-approaches"
 import { tuneGeneratedOrdinaryEscapes } from "./tune-generated-ordinary-escapes"
 import { tuneGeneratedPairEscapes } from "./tune-generated-pair-escapes"
@@ -59,6 +69,23 @@ export function* finishSurfaceTiming(
       previous.escapes,
     )
   const maxSteps = policy.maxSteps ?? 200000
+  const hasPending = Boolean(native.pendingRoutingAccess?.length)
+  const outcomes = new CandidateSearchOutcomes()
+  const limit: RoutingStepLimit = hasPending
+    ? {
+        maxSteps,
+        onExhausted: () =>
+          new PendingRoutingWorkBudgetExceeded(
+            "Pending routing finishing exhausted its cooperative step budget",
+          ),
+      }
+    : maxSteps
+  // An unfinished optional attempt must not suppress an existing alternative.
+  // Its UNKNOWN is retained only if none of those alternatives completes.
+  const attempt = <T>(search: Generator<void, T | null>) =>
+    hasPending ? outcomes.run(search) : search
+  const bounded = <T>(search: Generator<void, T | null>) =>
+    attempt(runBoundedRouting(search, limit))
   const geometryIsValid = (trace: Trace) => {
     const joined = joinSignalEscapes(
       trace,
@@ -164,84 +191,73 @@ export function* finishSurfaceTiming(
         prepared.traces,
       ).every((report) => report.applicable && report.matched)
     if (policy.preserveTiming && !accepted()) {
-      const tuned = yield* runBoundedRouting(
+      const tuned = yield* bounded(
         tuneGeneratedOrdinaryEscapes(
           prepared.input,
           prepared.traces,
           prepared.escapes,
           { maxCandidatesPerEscape: 4096 },
         ),
-        maxSteps,
       )
       if (tuned) prepared = tuned
     }
     if (!accepted()) {
-      const matched = yield* solveRefinement(
-        prepared.input,
-        prepared.traces,
-        options,
-        maxSteps,
+      const matched = yield* attempt(
+        solveRefinement(prepared.input, prepared.traces, options, limit),
       )
-      if (!matched) return null
+      if (!matched) return outcomes.noSolution()
       prepared.traces = matched
-      const extended = yield* runBoundedRouting(
+      const extended = yield* bounded(
         extendPackageCoupling(prepared.input, prepared.traces),
-        maxSteps,
       )
-      if (!extended) return null
+      if (!extended) return outcomes.noSolution()
       prepared.traces = extended
       if (
         exteriorPairSpacingReports(prepared.input, prepared.traces).some(
           (report) => !report.matched,
         )
       ) {
-        const repaired = yield* runBoundedRouting(
+        const repaired = yield* bounded(
           extendPackageCoupling(
             prepared.input,
             shortenPairApproaches(prepared.input, prepared.traces),
             { preserveMatching: false },
           ),
-          maxSteps,
         )
-        if (!repaired) return null
+        if (!repaired) return outcomes.noSolution()
         prepared.traces = repaired
       }
       if (!accepted()) {
-        const tuned = yield* runBoundedRouting(
+        const tuned = yield* bounded(
           tuneGeneratedPairEscapes(
             prepared.input,
             prepared.traces,
             prepared.escapes,
             options,
           ),
-          maxSteps,
         )
         if (tuned) prepared = tuned
         if (!accepted()) {
-          const balanced = yield* runBoundedRouting(
+          const balanced = yield* bounded(
             rebalancePairEscapes(
               prepared.input,
               prepared.traces,
               prepared.escapes,
               options,
             ),
-            maxSteps,
           )
           if (balanced) prepared = balanced
         }
         if (!accepted()) {
-          const rematched = yield* solveRefinement(
-            prepared.input,
-            prepared.traces,
-            options,
-            maxSteps,
+          const rematched = yield* attempt(
+            solveRefinement(prepared.input, prepared.traces, options, limit),
           )
-          if (!rematched) return null
+          if (!rematched) return outcomes.noSolution()
           prepared.traces = rematched
         }
       }
     }
-    if (!accepted()) return null
+    if (!accepted()) return outcomes.noSolution()
     const validator = BusLanesSolver.forValidation(
       prepared.input,
       prepared.traces,
@@ -253,7 +269,10 @@ export function* finishSurfaceTiming(
         validator.step()
         yield
       }
-      if (!validator.solved) return null
+      if (!validator.solved) {
+        if (!validator.failed) return exhaustedRoutingResult(limit)
+        return outcomes.noSolution()
+      }
     } finally {
       if (!validator.solved && !validator.failed) validator.tryFinalAcceptance()
     }
@@ -268,8 +287,15 @@ export function* finishSurfaceTiming(
         (trace) => !paired.has(trace.connection_name!),
       ),
     }
-  } catch {
-    return null
+  } catch (error) {
+    if (
+      hasPending &&
+      (error instanceof PendingRoutingWorkBudgetExceeded ||
+        error instanceof RoutingMemoryBudgetExceeded ||
+        error instanceof PendingAccessSearchUnknownError)
+    )
+      throw error
+    return outcomes.noSolution()
   }
 }
 
@@ -277,8 +303,9 @@ function* solveRefinement(
   input: SimpleRouteJson,
   traces: Trace[],
   options: SolverOptions,
-  maxSteps: number,
+  limit: RoutingStepLimit,
 ): Generator<void, Trace[] | null> {
+  const maxSteps = typeof limit === "number" ? limit : limit.maxSteps
   const solver = BusLanesSolver.forRefinement(input, traces, options)
   try {
     let steps = 0
@@ -286,6 +313,7 @@ function* solveRefinement(
       solver.step()
       yield
     }
+    if (!solver.solved && !solver.failed) return exhaustedRoutingResult(limit)
     return solver.solved ? solver.traces : null
   } finally {
     if (!solver.solved && !solver.failed) solver.tryFinalAcceptance()

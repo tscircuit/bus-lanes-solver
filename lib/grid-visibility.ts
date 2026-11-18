@@ -96,6 +96,7 @@ class CopperBuckets {
 }
 
 interface CopperEntry extends PreparedCopper {
+  margin?: number
   minX: number
   maxX: number
   minY: number
@@ -526,6 +527,9 @@ export class GridVisibilitySearch extends GridHistoryProjector {
         c.radius,
         c.rect,
         c.orientedRect,
+        ...(scene.clearanceOverrides?.has(c)
+          ? [scene.clearanceOverrides.get(c)]
+          : []),
       ]),
     ])
     let cachedGrid = grids.get(gridKey)
@@ -578,7 +582,7 @@ export class GridVisibilitySearch extends GridHistoryProjector {
         )
         const circle =
           !copper.rect && copper.a.x === copper.b.x && copper.a.y === copper.b.y
-        const threshold = scene.margin - 1e-8
+        const threshold = (entry.margin ?? scene.margin) - 1e-8
         for (let y = loY; y <= hiY; y++) {
           const py = this.ys[y],
             dy = py - copper.a.y
@@ -614,9 +618,13 @@ export class GridVisibilitySearch extends GridHistoryProjector {
       }
       for (const copper of scene.copper) {
         copperStamp++
-        const entry = copperEntry(copper, scene.margin)
-        const r = scene.margin + copper.radius
-        this.copperBuckets.addCopper(entry, scene.margin)
+        const margin = scene.clearanceOverrides
+          ? scene.marginFor(copper)
+          : scene.margin
+        const entry = copperEntry(copper, margin)
+        if (scene.clearanceOverrides?.has(copper)) entry.margin = margin
+        const r = margin + copper.radius
+        this.copperBuckets.addCopper(entry, margin)
         if (copper.rect) {
           const q = copper.rect
           markBox(q.minX - r, q.maxX + r, q.minY - r, q.maxY + r, entry)
@@ -1083,7 +1091,7 @@ export class GridVisibilitySearch extends GridHistoryProjector {
               dy,
               denominator,
               entry,
-              threshold,
+              entry.margin === undefined ? threshold : entry.margin - 1e-8,
             )
           )
             return false

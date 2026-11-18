@@ -8,6 +8,10 @@ export class MinHeap<T extends { f: number }> {
   values() {
     return this.entries.map((e) => e.value)
   }
+  clear() {
+    this.entries = []
+    this.sequence = 0
+  }
   private before(
     a: { value: T; sequence: number },
     b: { value: T; sequence: number },

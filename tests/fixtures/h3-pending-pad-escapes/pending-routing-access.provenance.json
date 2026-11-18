@@ -1,0 +1,32 @@
+{
+  "qualification": "Declared future intent reconstructed from the retained native remaining-phase capture. This is not a current Core callback capture. The full native Core integration verifies current producer-to-solver transport separately.",
+  "nativeCaptureRun": "https://github.com/AnasSarkiz/core-ddr-benchmark/actions/runs/43768711148",
+  "nativeCapturePhase": "remaining (phase-3-start.srj.json)",
+  "sourceCoreVersion": "0.0.2384",
+  "retainedSourceSha256": "a7be0cec855215659e0c4da85cc90d86db272d07361132239b9ab19110c0d3c3",
+  "projectionFields": [
+    "connections",
+    "buses",
+    "bounds",
+    "outline",
+    "allowedLayers",
+    "minTraceWidth",
+    "defaultObstacleMargin",
+    "minTraceToPadEdgeClearance",
+    "minTraceToHoleEdgeClearance",
+    "minViaEdgeToPadEdgeClearance",
+    "minViaPadDiameter",
+    "minViaHoleDiameter",
+    "minViaHoleEdgeToViaHoleEdgeClearance",
+    "minPlatedHoleDrillEdgeToDrillEdgeClearance",
+    "minPadEdgeToPadEdgeClearance",
+    "minBoardEdgeClearance",
+    "allowViaInPad",
+    "allowBlindAndBuriedVias"
+  ],
+  "metadataSha256": "2b0da246ac09528b8d67e6ab40fa6bcb93cd601de6c4e51135ea9c68ab1306b8",
+  "pendingConnections": 37,
+  "pendingTerminals": 76,
+  "originalFixtureGzipSha256": "ac881cbeabb33cc938dab83bd1a117dee149272d723869c4661639201e5e5d18",
+  "preservation": "Original compressed fixture and byte1 geometry, rules and eight supplied traces are unchanged. Future obstacles and traces are deliberately excluded; physical copper comes from the byte1 request plus each actual candidate union. The remaining capture has the identical original 445 obstacles plus historical route obstacles; none of that later copper is copied into intent."
+}

@@ -12,6 +12,9 @@ export interface Terminal extends Point {
 export interface Connection {
   name: string
   source_trace_id?: string
+  /** Explicit electrical net/root identities used by sectioned native nets. */
+  netConnectionName?: string
+  rootConnectionName?: string
   pointsToConnect: Terminal[]
   nominalTraceWidth?: number
   width?: number
@@ -56,6 +59,8 @@ export interface Trace {
 }
 export interface Obstacle {
   type?: string
+  /** Explicit physical NON-PLATED hole marker emitted by Core's SRJ producer. */
+  isNonPlatedHole?: boolean
   componentId?: string
   shape?: "circle"
   ccwRotationDegrees?: number
@@ -74,11 +79,17 @@ export interface SimpleRouteJson {
   minViaPadDiameter?: number
   minViaHoleDiameter?: number
   minViaHoleEdgeToViaHoleEdgeClearance?: number
+  minViaEdgeToPadEdgeClearance?: number
+  minTraceToHoleEdgeClearance?: number
+  minPlatedHoleDrillEdgeToDrillEdgeClearance?: number
+  minPadEdgeToPadEdgeClearance?: number
   /** Whether drilled holes may overlap SMT pads (requires suitable fabrication). */
   allowViaInPad?: boolean
   allowBlindAndBuriedVias?: boolean
   bounds: { minX: number; maxX: number; minY: number; maxY: number }
   connections: Connection[]
+  /** Declared later requests whose currently reachable pad exits must survive. */
+  pendingRoutingAccess?: PendingRoutingAccess[]
   obstacles: Obstacle[]
   traces?: Trace[]
   buses?: Bus[]
@@ -92,6 +103,53 @@ export interface SimpleRouteJson {
     traceGap?: number
     maxUncoupledLength?: number
   }>
+}
+/** Future routing intent only; obstacles and completed copper come from the
+ * current request, so future phases cannot carry a stale physical scene.
+ * Omitted future via dimensions use the native bridge defaults: a 0.3 mm
+ * copper land and a 0.15 mm drill; both effective dimensions must be valid. */
+export type PendingRoutingAccess = Pick<
+  SimpleRouteJson,
+  | "connections"
+  | "buses"
+  | "bounds"
+  | "outline"
+  | "allowedLayers"
+  | "minTraceWidth"
+  | "defaultObstacleMargin"
+  | "minTraceToPadEdgeClearance"
+  | "minTraceToHoleEdgeClearance"
+  | "minViaEdgeToPadEdgeClearance"
+  | "minViaPadDiameter"
+  | "minViaHoleDiameter"
+  | "minViaHoleEdgeToViaHoleEdgeClearance"
+  | "minPlatedHoleDrillEdgeToDrillEdgeClearance"
+  | "minPadEdgeToPadEdgeClearance"
+  | "minBoardEdgeClearance"
+  | "allowViaInPad"
+  | "allowBlindAndBuriedVias"
+>
+/** Evidence from the final accepted copper union. Framed terminal access and
+ * peer connectivity are necessary preservation conditions, not a proof that
+ * every future route or matching target can be completed. Counts describe
+ * declared phase requests; a terminal repeated in phases is counted per request.
+ */
+export interface PendingRoutingAccessReport {
+  readonly outcome: "preserved"
+  readonly declaredConnectionCount: number
+  readonly declaredTerminalCount: number
+  /** Terminals checked for package egress. Positively certified internal
+   * package connections instead contribute baseline peer obligations. */
+  readonly framedTerminalCount: number
+  readonly baselineAccessibleFramedTerminalCount: number
+  readonly baselineInaccessibleFramedTerminalCount: number
+  /** An original finite miss remains unresolved; accepted changed copper must
+   * nevertheless positively certify its access. Omitted when zero. */
+  readonly baselineUnresolvedFramedTerminalCount?: number
+  readonly peerConnectionCount: number
+  /** Final accepted output copper, including supplied traces exactly once. */
+  readonly validatedTraceCount: number
+  readonly newlyBlockedConnectionNames: readonly string[]
 }
 export interface SolverOptions {
   /** Reject paired tuning that folds back into a generated terminal via land. */
