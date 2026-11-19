@@ -1,0 +1,12 @@
+{
+  "nativeCircuit": "Allwinner H3 DDR3 16x1: Core's first data-byte request, which lists byte 1 and the remaining DDR connections as later phases",
+  "sourceRepository": "https://github.com/hvwyl/allwinner-h3-ddr3-16x1-kicad",
+  "sourceCommit": "02e365b21363a17710e0f96072c0844940495567",
+  "sourcePath": "project/allwinner-h3.kicad_pcb",
+  "coreRevision": "914daa787936f8a3a7b290de7a37ecc508479080 (tscircuit/core#5586, which adds pendingRoutingAccess)",
+  "capture": "Core's own native H3 test fixture (tests/fixtures/h3-routing-phase-intent) rendered on that revision; the first autorouting phase's SimpleRouteJson was captured from the algorithm callback before routing. Apart from pendingRoutingAccess it is identical to phase-1-start.srj.json of `bun run benchmark:ddr --circuit h3` on Core main 701339c.",
+  "circuit": "The board's circuit JSON without routed traces, notes, debug objects, warnings and errors, from the same benchmark capture as the H3 fixture of #203.",
+  "geometry": "Unchanged native component placements, pad centers and dimensions, two-layer stack and clearance rules.",
+  "solverCall": "new BusLanesPipelineSolver(request) with no options, as Core's BusLanesAutorouter calls it.",
+  "inputSha256": "099868d33741ae9caf94a72ec562d8a20407643e783d5eebb202b451d791f7a0"
+}
