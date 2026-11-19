@@ -1,13 +1,13 @@
 import { backwardFacingPackageTerminals } from "./backward-facing-package-terminals"
-import { repairGridJogs } from "./repair-grid-jogs"
 import {
   pairHasUnroutedNativePads,
   pairRouteKey,
   routeCoupledPair,
 } from "./coupled-pair-routing"
 import { negotiateLanes } from "./negotiate-lanes"
-import type { Copper } from "./vector-scene"
+import { repairGridJogs } from "./repair-grid-jogs"
 import type { SimpleRouteJson, Trace } from "./types"
+import { type Copper, routeCopper } from "./vector-scene"
 
 /** Independent signal layers can finish their bus before the next layer is
  * searched. Bound each fresh paired topology so a closed package approach
@@ -43,12 +43,32 @@ export function independentBusGroups(
     const differentialPairs = (input.differentialPairs ?? []).filter((p) =>
       p.connectionNames.some((n) => names.has(n)),
     )
+    const pairMemberNames = differentialPairs.flatMap((p) => p.connectionNames)
+    const singleLayerCohorts =
+      buses.length > 0 &&
+      buses.every(
+        (b) => b.allowedLayers?.length === 1 && b.allowedLayers[0] === layer,
+      )
     if (
       buses.some((b) => b.connectionNames.some((n) => !names.has(n))) ||
       differentialPairs.some((p) =>
         p.connectionNames.some((n) => !names.has(n)),
       ) ||
-      differentialPairs.length > 1
+      (differentialPairs.length > 1 && !singleLayerCohorts) ||
+      new Set(pairMemberNames).size !== pairMemberNames.length ||
+      buses.some(
+        (b) =>
+          differentialPairs.filter((p) =>
+            p.connectionNames.some((n) => b.connectionNames.includes(n)),
+          ).length > 1,
+      ) ||
+      differentialPairs.some((p) =>
+        buses.some(
+          (b) =>
+            b.connectionNames.some((n) => p.connectionNames.includes(n)) &&
+            !p.connectionNames.every((n) => b.connectionNames.includes(n)),
+        ),
+      )
     )
       return null
     return { ...input, connections, buses, differentialPairs }
@@ -64,12 +84,17 @@ export function* routeIndependentBuses(
 ): Generator<Trace[], Trace[] | null> {
   const completed: Trace[] = []
   for (const input of groups) {
-    const pair = input.differentialPairs?.[0]
+    const pairs = input.differentialPairs ?? []
+    const pairedConnectionNames = new Set(
+      pairs.flatMap((pair) => pair.connectionNames),
+    )
     const ordinary = input.connections.filter(
-      (c) => !pair?.connectionNames.includes(c.name),
+      (c) => !pairedConnectionNames.has(c.name),
     )
     let solved: Trace[] | null = null
     const attemptedPairRoutes = new Set<string>()
+    const attemptedSinglePairRoutes =
+      pairs.length === 1 ? attemptedPairRoutes : undefined
     // Alternate nearby and distant handoffs for backward-facing packages;
     // consecutive neighboring retries often repeat the same closed topology.
     const variants = backwardFacingPackageTerminals(input)
@@ -77,29 +102,41 @@ export function* routeIndependentBuses(
       : [0, 1, 2, 3, 4, 5]
     for (const variant of variants) {
       if (solved) break
-      let paired: Trace[] = []
-      if (pair) {
-        const search = routeCoupledPair(input, pair, fixed, {
-          copper: [],
-          penalty: 0,
-          variant,
-          excludedPairRoutes: attemptedPairRoutes,
-        })
+      const paired: Trace[] = []
+      let pairsRouted = true
+      for (const pair of pairs) {
+        const search = routeCoupledPair(
+          input,
+          pair,
+          paired.length ? [...fixed, ...paired.flatMap(routeCopper)] : fixed,
+          {
+            copper: [],
+            penalty: 0,
+            variant,
+            excludedPairRoutes: attemptedSinglePairRoutes,
+          },
+        )
         let state = search.next(),
           steps = 0
         try {
           while (!state.done && steps++ < 12000) {
-            yield completed
+            yield [...completed, ...paired]
             state = search.next()
           }
         } finally {
           if (!state.done) search.return(null)
         }
-        if (!state.done || !state.value) continue
-        const pairKey = pairRouteKey(state.value)
+        if (!state.done || !state.value) {
+          pairsRouted = false
+          break
+        }
+        paired.push(...state.value)
+      }
+      if (!pairsRouted) continue
+      if (pairs.length > 0) {
+        const pairKey = pairRouteKey(paired)
         if (attemptedPairRoutes.has(pairKey)) continue
         attemptedPairRoutes.add(pairKey)
-        paired = state.value
       }
       if (!ordinary.length) {
         solved = finish(input, paired)
@@ -115,7 +152,7 @@ export function* routeIndependentBuses(
         new Map(),
         () => false,
         false,
-        !!pair && pairHasUnroutedNativePads(input, pair),
+        pairs.some((pair) => pairHasUnroutedNativePads(input, pair)),
       )
       let state = search.next(),
         steps = 0
