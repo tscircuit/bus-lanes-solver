@@ -1,0 +1,21 @@
+{
+  "nativeCircuit": "Allwinner H3 DDR3 16x1: second CPU data byte beside the completed first byte, and the connections the following phase still has to route",
+  "sourceRepository": "https://github.com/hvwyl/allwinner-h3-ddr3-16x1-kicad",
+  "sourceCommit": "02e365b21363a17710e0f96072c0844940495567",
+  "sourcePath": "project/allwinner-h3.kicad_pcb",
+  "tsxSource": "https://github.com/ShiboSoftwareDev/core-ddr-benchmark/tree/24dc44c166d4258c3538f8b1f66953f1b6f58690/circuits",
+  "coreMain": "aeb7e465abc1680051e06f1c84ddc1e9166be07d",
+  "coreVersion": "0.0.2384",
+  "busBase": "22819feffa0af37a04b23fe89a3cabc90b1384b4",
+  "corePhases": [
+    "byte0",
+    "byte1",
+    "remaining"
+  ],
+  "inputSha256": "ac881cbeabb33cc938dab83bd1a117dee149272d723869c4661639201e5e5d18",
+  "capture": "`bun run benchmark:ddr --circuit h3 --timeout 600` on Core main with bus-lanes-solver main built in. byte1Request is phase-2-start.srj.json; its eight supplied traces are the byte0 routes. fixedConnections are the phase-1 connections. pendingConnections are the connections of phase-3-start.srj.json (the `remaining` phase). circuit is the run's circuit.json without routed traces, notes, debug objects, warnings and error elements.",
+  "captureRun": "https://github.com/AnasSarkiz/core-ddr-benchmark/actions/runs/43768711148",
+  "geometry": "Unchanged native component placements, pad centers and dimensions, two-layer stack and clearance rules.",
+  "solverCall": "new BusLanesPipelineSolver(input) with no options, as Core's BusLanesAutorouter calls it.",
+  "observed": "byte1 completes 8/8 and passes DRC, but routes five signals as long top-layer detours through the CPU ball field. Afterwards the `remaining` phase fails in Core with `No path for 10 (source_net_46)`: CPU ball J20 has no via site and no surface exit."
+}
