@@ -23,6 +23,8 @@ export interface NegotiatedLaneOptions {
   viaCost?: number
   /** Routing orders tried per stage before its stuck nets are promoted. */
   attemptsPerStage?: number
+  /** Routing order of the first attempt; later attempts take the next ones. */
+  firstSeed?: number
   /** Times a stage may hand its stuck nets to the stage before it. */
   maxPromotions?: number
   /** Passed to every stage of the router. */
@@ -134,7 +136,8 @@ export class NegotiatedLaneSolver extends BaseSolver {
     let result!: ReturnType<typeof routeNegotiatedLanes>
     const attempts = this.options.attemptsPerStage ?? 3
     // a stalled negotiation is retried in another (deterministic) routing order
-    for (let seed = 0; seed < attempts; seed++) {
+    const firstSeed = this.options.firstSeed ?? 0
+    for (let seed = firstSeed; seed < firstSeed + attempts; seed++) {
       result = routeNegotiatedLanes(this.working, {
         viaCost: this.options.viaCost ?? 1.2,
         viaCostByBus: this.viaCostByBus(),

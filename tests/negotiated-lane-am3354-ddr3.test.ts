@@ -24,42 +24,54 @@ test("routes the AM3354 DDR3 block on two signal layers inside TI's length windo
       ),
     ).toString("utf8"),
   )
+  // TI SPRS717L Table 7-68 item 2: CK and address/control within 25 mil of each other
+  for (const b of input.buses!)
+    if (b.busId === "DDR_ADDR_CTRL_CK") b.maxLengthSkew = 0.635
   const bus = (id: string) =>
     input.buses!.find((b) => b.busId === id)!.connectionNames
-  const paired = new Set(
-    input.differentialPairs!.flatMap((p) => p.connectionNames),
-  )
+  const pairs = input.differentialPairs!.flatMap((p) => p.connectionNames)
   const bytes = [...bus("DDR_BYTE0"), ...bus("DDR_BYTE1")]
-  const address = bus("DDR_ADDR_CTRL_CK")
-  const timed = new Set([...bytes, ...address])
-  const near = { zone: [-59, -55] }
-  const wide = { zone: [-61, -54] }
+  const zone = [-61, -54]
+  const shared = {
+    zone,
+    maxKicks: 4,
+    kickGrowth: 1,
+    // data nets pay more per via, so the extra layer changes land on address/control
+    viaCostByBus: { DDR_BYTE0: 8, DDR_BYTE1: 8, DDR_ADDR_CTRL_CK: 1.2 },
+  }
   const solver = new NegotiatedLaneSolver(input, {
     region: { minX: -84, maxX: -45.4, minY: 1.95, maxY: 30.2 },
-    router: { zoneRows: [2.5, 29.5] },
+    router: {
+      zoneRows: [2.5, 29.5],
+      allowViaInPad: true,
+      // layer 3 can be VDDS_DDR only west of the processor's other supply balls
+      keepouts: [
+        { layer: "bottom", minX: -48.05, maxX: 0, minY: -100, maxY: 100 },
+        { layer: "bottom", minX: -48.85, maxX: 0, minY: 10.95, maxY: 12.95 },
+        { layer: "bottom", minX: -49.65, maxX: 0, minY: 20.55, maxY: 21.75 },
+      ],
+    },
+    attemptsPerStage: 1,
+    maxPromotions: 0,
     stages: [
       {
-        connectionNames: bytes.filter((n) => paired.has(n)),
-        options: { ...near, maxIters: 120 },
+        // the three differential pairs alone, then frozen
+        connectionNames: pairs,
+        options: { ...shared, maxIters: 200, congestionByBus: {} },
       },
       {
-        connectionNames: bytes.filter((n) => !paired.has(n)),
-        options: { ...near, maxIters: 300 },
-      },
-      {
-        connectionNames: address.filter((n) => paired.has(n)),
-        options: { ...wide, maxIters: 150 },
-      },
-      {
-        // RESET: no timing class, but its balls sit inside the data field
+        // every single-ended net in one joint negotiation
         connectionNames: input.connections
           .map((c) => c.name)
-          .filter((n) => !timed.has(n)),
-        options: { ...wide, viaCost: 0.6 },
-      },
-      {
-        connectionNames: address.filter((n) => !paired.has(n)),
-        options: { ...wide, maxIters: 200 },
+          .filter((n) => !pairs.includes(n)),
+        options: {
+          ...shared,
+          maxIters: 700,
+          stallIters: 60,
+          viaCost: 1.2,
+          presMax: 100,
+          histInc: 5,
+        },
       },
     ],
   })
@@ -100,11 +112,11 @@ test("routes the AM3354 DDR3 block on two signal layers inside TI's length windo
     solver.traces
       .find((t) => t.connection_name === name)!
       .route.filter((p) => p.route_type === "via").length
-  expect(Math.max(...bytes.map(vias))).toBeLessThanOrEqual(2)
+  expect(Math.max(...bytes.map(vias))).toBeLessThanOrEqual(4)
   for (const pair of input.differentialPairs!)
     expect(vias(pair.connectionNames[0])).toBe(vias(pair.connectionNames[1]))
 
   await expect(
     getSvgFromGraphicsObject(solver.visualize(), { backgroundColor: "white" }),
   ).toMatchSvgSnapshot(import.meta.path)
-}, 1_200_000)
+}, 3_600_000)

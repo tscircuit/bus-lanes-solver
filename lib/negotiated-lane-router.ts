@@ -12,6 +12,7 @@ type Pt = { x: number; y: number }
 export type NegotiatedLaneResult = {
   solved: boolean
   traces: any[]
+  partial?: any[]
   stuck: string[]
   log: string[]
   iterations: number
@@ -44,9 +45,37 @@ export function routeNegotiatedLanes(
     presGrowth: 1.25,
     presMax: 30,
     ownCopperRadius: 0.9,
+    exitReserve: 1.0,
+    exitViaFree: 0.8,
+    exitPairGather: 1.0,
+    pairTwistCost: 6,
+    pairLead: 0.3,
+    laneConflictLen: null as number | null,
+    unknot: true,
+    joinStubs: true,
+    linkOnZoneEdge: false,
+    unloop: true,
+    cutNotches: true,
+    pairNoFold: false,
+    stubBoost: 1.6,
+    laneSpread: 1.8,
+    laneOrderCost: 3,
+    laneLayerCost: 2,
+    debugNoPath: false,
+    gap: 0.102,
+    viaGap: null as number | null,
+    exactPitch: false,
     incremental: true,
     lengthCap: true,
+    finishAt: 8,
+    finishAfter: 12,
+    finishRadius: 1.6,
+    finishMax: 14,
+    finishTries: 300,
     stallIters: 60,
+    maxKicks: 8,
+    kickRadius: 1.0,
+    kickGrowth: 0.25,
     stuckRounds: 1e9,
     stuckBoost: 1.6,
     capMargin: 1.5,
@@ -63,7 +92,12 @@ export function routeNegotiatedLanes(
     weightGrow: 1.1,
     skewMargin: 0.12,
     windowMargin: 0.08,
+    allowViaInPad: false,
+    congestionByBus: {} as Record<string, number>,
+    exactViasByBus: {} as Record<string, number>,
     preloadedTraces: [] as any[],
+    phases: null as string[][] | null,
+    keepouts: [] as any[],
     onlyNets: null as string[] | null,
     verbose: false,
     busWindow: null as Record<string, [number, number]> | null,
@@ -120,10 +154,15 @@ export function routeNegotiatedLanes(
   const nodeOf = (p: Pt) => gy(p.y) * NX + gx(p.x)
 
   // ---------- clearances (centre to centre, mm) ----------
-  const GAP = 0.102 // copper-to-copper spacing (TI minimum = one trace width)
+  const GAP = cfg.gap // copper-to-copper spacing (TI minimum = one trace width)
   const H = (cfg.w + cfg.pairGap) / 2 // pair member offset from the pair centreline
   const R_TT = 0.235 // thin trace centre to thin trace centre on the grid (>= w + GAP)
-  const R_TV = cfg.viaD / 2 + GAP + cfg.w / 2 + 0.02
+  // With trace + gap equal to a whole number of cells, two tracks fit side by side at exactly that
+  // pitch (e.g. two between adjacent 0.8 mm-pitch vias): see `exact` below.
+  const EXACT =
+    cfg.exactPitch &&
+    Math.abs((cfg.w + GAP) / P - Math.round((cfg.w + GAP) / P)) < 1e-6
+  const R_TV = cfg.viaD / 2 + GAP + cfg.w / 2 + (EXACT ? 0.0035 : 0.02)
   const R_VV =
     Math.max(
       cfg.viaD + GAP,
@@ -140,14 +179,37 @@ export function routeNegotiatedLanes(
     return o
   }
   // stamp radii: [into thin raster, into fat raster] for thin copper, fat copper and vias
+  // Exact thin-to-thin stamp. Node distances >= r guarantee copper distance >= sqrt(r^2 - (P/sqrt2)^2/... )
+  // only up to half a diagonal step, so r is the pitch plus that allowance; the four cells straight
+  // across at exactly one pitch are then let through. They are safe: a neighbour that close on a
+  // diagonal step has an adjacent node well inside r, which is still blocked.
+  const exact = (pitch: number) => {
+    const n = Math.round(pitch / P)
+    return disk(Math.hypot(pitch, P * Math.SQRT1_2) + 1e-4).filter(
+      (_, k, o) => {
+        const i = k - (k % 2),
+          dx = o[i],
+          dy = o[i + 1]
+        return !(
+          (Math.abs(dx) === n && dy === 0) ||
+          (Math.abs(dy) === n && dx === 0)
+        )
+      },
+    )
+  }
+  const VG = cfg.viaGap ?? GAP,
+    viaPitch = cfg.viaD / 2 + VG + cfg.w / 2
+  const EXACT_V =
+    EXACT && Math.abs(viaPitch / P - Math.round(viaPitch / P)) < 1e-6
+  const viaThin = EXACT_V ? exact(viaPitch) : disk(R_TV)
   const D = {
-    thinT: disk(R_TT),
+    thinT: EXACT ? exact(cfg.w + GAP) : disk(R_TT),
     thinF: disk(R_TT + H),
     fatT: disk(R_TT + H),
     fatF: disk(R_TT + 2 * H),
-    viaT: disk(R_TV),
+    viaT: viaThin,
     viaF: disk(R_TV + H),
-    trV: disk(R_TV),
+    trV: viaThin,
     fatV: disk(R_TV + H),
     viaV: disk(R_VV),
   }
@@ -189,9 +251,13 @@ export function routeNegotiatedLanes(
     const t = obstacleCells(o, C_TP),
       f = obstacleCells(o, C_TP + H),
       v = obstacleCells(o, C_VP)
+    // without via-in-pad a net's own pad keeps vias out like any other pad
+    // with via-in-pad a net's via may sit on the centre of its own pad, nowhere else inside the pad's clearance
     const st: PadStamp = {
       t: [new Int32Array(0), new Int32Array(0)],
-      v: new Int32Array(v),
+      v: new Int32Array(
+        cfg.allowViaInPad ? v.filter((q) => q === nodeOf(o.center)) : [],
+      ),
     }
     for (const l of ls) {
       st.t[l] = new Int32Array(t)
@@ -202,19 +268,20 @@ export function routeNegotiatedLanes(
     if (connPads.has(padKey(o.center)) && o.layers.includes("top"))
       padStamps.set(padKey(o.center), st)
   }
-  // keep a via site under every bus ball free of other nets' copper on the far layer
-  for (const c of origProblem.connections)
-    for (const p of c.pointsToConnect) {
-      const st = padStamps.get(padKey(p))
-      if (!st) continue
-      const cells = obstacleCells(
-        { shape: "circle", center: p, width: cfg.viaD, height: cfg.viaD },
-        GAP + cfg.w / 2 + 0.02,
-      )
-      const have = new Set(st.t[1])
-      for (const q of cells) if (!have.has(q)) staticT[1][q]++
-      st.t[1] = Int32Array.from(new Set([...st.t[1], ...cells]))
-    }
+  // via-in-pad only: keep a via site under every bus ball free of other nets' copper on the far layer
+  if (cfg.allowViaInPad)
+    for (const c of origProblem.connections)
+      for (const p of c.pointsToConnect) {
+        const st = padStamps.get(padKey(p))
+        if (!st) continue
+        const cells = obstacleCells(
+          { shape: "circle", center: p, width: cfg.viaD, height: cfg.viaD },
+          GAP + cfg.w / 2 + 0.02,
+        )
+        const have = new Set(st.t[1])
+        for (const q of cells) if (!have.has(q)) staticT[1][q]++
+        st.t[1] = Int32Array.from(new Set([...st.t[1], ...cells]))
+      }
   const applyPad = (st: PadStamp, s: number) => {
     for (let l = 0; l < 2; l++) {
       for (const c of st.t[l]) staticT[l][c] += s
@@ -225,6 +292,31 @@ export function routeNegotiatedLanes(
   // a terminal may be a pad or the end of supplied (fanout) copper on either signal layer
   const LOf = (p: any) => Math.max(0, LAYERS.indexOf(p.layer ?? "top"))
   const termNode = (p: any) => nodeOf(p) + LOf(p) * NN
+
+  // Areas a layer's signals must stay out of, e.g. where the adjacent plane is not their reference.
+  for (const k of cfg.keepouts as {
+    layer: string
+    minX: number
+    maxX: number
+    minY: number
+    maxY: number
+  }[]) {
+    const l = LAYERS.indexOf(k.layer)
+    if (l < 0) continue
+    for (
+      let j = Math.max(0, gy(k.minY));
+      j <= Math.min(NY - 1, gy(k.maxY));
+      j++
+    )
+      for (
+        let i = Math.max(0, gx(k.minX));
+        i <= Math.min(NX - 1, gx(k.maxX));
+        i++
+      ) {
+        staticT[l][j * NX + i]++
+        staticF[l][j * NX + i]++
+      }
+  }
 
   // ---------- zone / lanes ----------
   const zXL = gx(cfg.zone[0]),
@@ -261,10 +353,10 @@ export function routeNegotiatedLanes(
   const PW = 0.5,
     PG = 0.5,
     PCH = 0.13,
-    TRIM = 0.45,
+    TRIM = 0.62,
     TRIM_LEN = 1.9 // pair bump width / gap / chamfer, trim amplitude and length
   const kSingle = Math.max(1, Math.floor((laneLen - 0.5) / (BW + BG))),
-    kPair = Math.max(1, Math.floor((laneLen - TRIM_LEN - 0.4 + PG) / (PW + PG)))
+    kPair = Math.max(1, Math.floor((laneLen - TRIM_LEN - 0.9 + PG) / (PW + PG)))
   const bumpExtra = (a: number, ch = CH) => {
     const c = Math.min(ch, a / 2)
     return 2 * a - (8 - 4 * Math.SQRT2) * c
@@ -393,6 +485,62 @@ export function routeNegotiatedLanes(
       }
       ownCopper.set(c.name, [...(ownCopper.get(c.name) ?? []), st])
     }
+    // Keep a short straight corridor ahead of every supplied-copper terminal (a fanout exit) for its
+    // own net, as the via site under a ball is kept: otherwise an earlier net's via lands in front of it.
+    for (const c of origProblem.connections)
+      for (const q of c.pointsToConnect) {
+        const l = LOf(q)
+        if (padStamps.has(padKey(q))) continue // a ball has its via site instead
+        let prev: any = null,
+          touching = 0
+        for (const t of preTraces) {
+          if (t.connection_name !== c.name) continue
+          const r = t.route,
+            near = (p: any) =>
+              p.route_type === "wire" && Math.hypot(p.x - q.x, p.y - q.y) < 2e-3
+          if (near(r.at(-1))) {
+            prev = r.at(-2)
+            touching++
+          } else if (near(r[0])) {
+            prev = r[1]
+            touching++
+          }
+        }
+        if (
+          !prev ||
+          touching !== 1 ||
+          Math.hypot(q.x - prev.x, q.y - prev.y) < 1e-6
+        )
+          continue // already routed onward: nothing to keep
+        const d = Math.hypot(q.x - prev.x, q.y - prev.y),
+          ux = (q.x - prev.x) / d,
+          uy = (q.y - prev.y) / d,
+          ids: number[] = []
+        const vids: number[] = [] // vias stay clear a little further out, so a neighbour can still step aside where the corridors end
+        for (let sd = 0; sd <= cfg.exitReserve + cfg.exitViaFree; sd += 0.02) {
+          const x = q.x + ux * sd,
+            y = q.y + uy * sd
+          if (!inside(x, y)) continue
+          vids.push(nodeOf({ x, y }))
+          if (sd <= cfg.exitReserve) ids.push(nodeOf({ x, y }))
+        }
+        const pad = P * 0.71,
+          uniq = [...new Set(ids)],
+          e: Int32Array = new Int32Array(0)
+        const tC = Int32Array.from(collectCells(uniq, disk(0.225 + pad))),
+          fC = Int32Array.from(collectCells(uniq, disk(0.225 + H + pad))),
+          vC = Int32Array.from(
+            collectCells([...new Set(vids)], disk(R_TV + pad)),
+          )
+        const st: PadStamp = {
+          t: l === 0 ? [tC, e] : [e, tC],
+          f: l === 0 ? [fC, e] : [e, fC],
+          v: vC,
+        }
+        applyPad(st, +1)
+        if (routed.has(c.name))
+          ownCopper.set(c.name, [...(ownCopper.get(c.name) ?? []), st])
+      }
     const m = new Uint8Array(NN)
     const stampSet = (cells: number[], offs: number[], dst: Uint8Array) => {
       m.fill(0)
@@ -453,7 +601,11 @@ export function routeNegotiatedLanes(
     end?: 0 | 1
     exact?: Pt
     fatLayer?: number
+    active?: boolean
+    cong?: number
+    exactVias?: number
     stuckRounds?: number
+    ideal?: { y: number; layer: number } | null
   }
   type PairInfo = {
     conns: [any, any]
@@ -464,6 +616,8 @@ export function routeNegotiatedLanes(
     M: [[Pt, Pt], [Pt, Pt]]
     leftMember: number
     bus?: any
+    twisted: boolean
+    termLayer: number
   }
   const busOf = (n: string) =>
     (srj.buses ?? []).find((b: any) => b.connectionNames.includes(n))
@@ -511,7 +665,8 @@ export function routeNegotiatedLanes(
     const pads = conns.map(sortedPads) as [[Pt, Pt], [Pt, Pt]]
     const G: Pt[] = [],
       d: Pt[] = [],
-      M: [Pt, Pt][] = []
+      M: [Pt, Pt][] = [],
+      cands: { d: Pt; g: Pt; score: number; left: number }[][] = [[], []]
     for (const e of [0, 1]) {
       const a = pads[0][e],
         b = pads[1][e],
@@ -521,7 +676,6 @@ export function routeNegotiatedLanes(
           y: (pads[0][1 - e].y + pads[1][1 - e].y) / 2,
         }
       // leave the pads in the free direction that heads most toward the other chip
-      let best: { d: Pt; g: Pt; score: number } | null = null
       for (const dir of [
         { x: 1, y: 0 },
         { x: -1, y: 0 },
@@ -532,7 +686,9 @@ export function routeNegotiatedLanes(
           Math.max(
             (a.x - mid.x) * dir.x + (a.y - mid.y) * dir.y,
             (b.x - mid.x) * dir.x + (b.y - mid.y) * dir.y,
-          ) + 0.7
+          ) +
+          0.7 +
+          (padStamps.has(padKey(a)) ? 0 : cfg.exitReserve + cfg.exitPairGather)
         const g = { x: mid.x + dir.x * reach, y: mid.y + dir.y * reach }
         let blocked = false
         for (const o of allPads) {
@@ -549,33 +705,44 @@ export function routeNegotiatedLanes(
         }
         if (blocked) continue
         const score = (other.x - mid.x) * dir.x + (other.y - mid.y) * dir.y
-        if (!best || score > best.score) best = { d: dir, g, score }
+        // which member is on the left of the direction of travel (end 0 -> end 1) when leaving this way; -1: either
+        const t = e === 0 ? dir : { x: -dir.x, y: -dir.y },
+          cr = t.x * (a.y - mid.y) - t.y * (a.x - mid.x)
+        cands[e].push({
+          d: dir,
+          g,
+          score,
+          left: cr > 1e-9 ? 0 : cr < -1e-9 ? 1 : -1,
+        })
       }
-      if (!best)
+      if (!cands[e].length)
         throw Error(
           `pair ${label(conns[0].name)}: no free direction to leave its pads at end ${e}`,
         )
-      G.push({ x: wx(gx(best.g.x)), y: wy(gy(best.g.y)) })
-      d.push(best.d)
     }
-    // which member is on the left of the direction of travel (end 0 -> end 1)
-    const a0 = pads[0][0],
-      mid0 = {
-        x: (pads[0][0].x + pads[1][0].x) / 2,
-        y: (pads[0][0].y + pads[1][0].y) / 2,
+    // Leaving a ball pair the other way round swaps which member is on the left, so pick the two
+    // directions that agree: a pair whose ends disagree needs one member to cross the other on a via.
+    let pick: { c: [any, any]; score: number } | null = null
+    for (const c0 of cands[0])
+      for (const c1 of cands[1]) {
+        const twisted = c0.left >= 0 && c1.left >= 0 && c0.left !== c1.left
+        const score = c0.score + c1.score - (twisted ? cfg.pairTwistCost : 0)
+        if (!pick || score > pick.score) pick = { c: [c0, c1], score }
       }
-    const crossA = d[0].x * (a0.y - mid0.y) - d[0].y * (a0.x - mid0.x)
-    let leftMember = crossA > 1e-9 ? 0 : crossA < -1e-9 ? 1 : -1
-    if (leftMember < 0) {
-      // pads lie along the leaving direction at end 0: decide at end 1, else arbitrarily
-      const a1 = pads[0][1],
-        mid1 = {
-          x: (pads[0][1].x + pads[1][1].x) / 2,
-          y: (pads[0][1].y + pads[1][1].y) / 2,
-        }
-      const crossB = -d[1].x * (a1.y - mid1.y) + d[1].y * (a1.x - mid1.x)
-      leftMember = crossB > 1e-9 ? 0 : crossB < -1e-9 ? 1 : 0
+    for (const c of pick!.c) {
+      G.push({ x: wx(gx(c.g.x)), y: wy(gy(c.g.y)) })
+      d.push(c.d)
     }
+    // An unavoidable twist is undone at a ball end (it has via sites), never in front of fanout exits,
+    // where the crossing via would wall in the neighbouring exits.
+    const exitEnd = [0, 1].map((e) => !padStamps.has(padKey(pads[0][e])))
+    const lead = exitEnd[1] && !exitEnd[0] ? 1 : 0
+    const leftMember =
+      pick!.c[lead].left >= 0
+        ? pick!.c[lead].left
+        : pick!.c[1 - lead].left >= 0
+          ? pick!.c[1 - lead].left
+          : 0
     for (const e of [0, 1]) {
       const t = e === 0 ? d[0] : { x: -d[1].x, y: -d[1].y },
         left = { x: -t.y, y: t.x }
@@ -585,7 +752,10 @@ export function routeNegotiatedLanes(
     }
     const bus = busOf(conns[0].name)
     const inner = (e: number) =>
-      nodeOf({ x: G[e].x + d[e].x * 0.3, y: G[e].y + d[e].y * 0.3 })
+      nodeOf({
+        x: G[e].x + d[e].x * cfg.pairLead,
+        y: G[e].y + d[e].y * cfg.pairLead,
+      })
     const fat: Net = {
       id: `pair:${conns[0].name}`,
       kind: "fat",
@@ -601,6 +771,11 @@ export function routeNegotiatedLanes(
       below: 12,
     }
     const info: PairInfo = {
+      twisted:
+        pick!.c[0].left >= 0 &&
+        pick!.c[1].left >= 0 &&
+        pick!.c[0].left !== pick!.c[1].left,
+      termLayer: LOf(pads[0][0]),
       conns,
       fat,
       stubs: [],
@@ -643,6 +818,12 @@ export function routeNegotiatedLanes(
     nets.push(fat, ...info.stubs)
   }
   // length priority from slack: nets close to their maximum get the direct lanes
+  // Criticality: a timing-tight class feels congestion less, so it keeps its direct routes and the
+  // classes with slack are the ones that move out of a contested area.
+  for (const n of nets) {
+    n.cong = cfg.congestionByBus[n.bus?.busId] ?? 1
+    n.exactVias = cfg.exactViasByBus[n.bus?.busId]
+  }
   for (const n of nets) {
     if (n.kind === "stub") continue
     const ends: [Pt, Pt] =
@@ -733,12 +914,12 @@ export function routeNegotiatedLanes(
   }
 
   // ---------- A* ----------
-  const LEN = new Float32Array(2 * NN),
-    Gs = new Float32Array(2 * NN),
-    PAR = new Int32Array(2 * NN),
-    SEEN = new Uint32Array(2 * NN),
-    DONE = new Uint32Array(2 * NN),
-    LANE = new Uint8Array(2 * NN)
+  const LEN = new Float32Array(3 * NN),
+    Gs = new Float32Array(3 * NN),
+    PAR = new Int32Array(3 * NN),
+    SEEN = new Uint32Array(3 * NN),
+    DONE = new Uint32Array(3 * NN),
+    LANE = new Uint8Array(3 * NN)
   let gen = 0
   class Heap {
     k: number[] = []
@@ -799,7 +980,56 @@ export function routeNegotiatedLanes(
       if (occLane[l][j] > occ) occ = occLane[l][j]
       h += histLane[l][j]
     }
-    return laneLen * (n.lenWeight + h / (b - a + 5) + presFac * occ)
+    // an occupied lane is priced like a local crossing, not by its whole length: otherwise the lane
+    // order freezes early and two nets that cross near a package can never swap lanes to undo it
+    if (cfg.laneConflictLen === null)
+      return (
+        ((n.cong ?? 1) === 1
+          ? laneLen * (n.lenWeight + h / (b - a + 5) + presFac * occ)
+          : laneLen *
+            (n.lenWeight + n.cong! * (h / (b - a + 5) + presFac * occ))) +
+        laneOrderCost(n, l, row)
+      )
+    return (
+      laneLen * (n.lenWeight + h / (b - a + 5)) +
+      cfg.laneConflictLen * presFac * occ +
+      laneOrderCost(n, l, row)
+    )
+  }
+  // Fanout exits are a fixed, dense column in a fixed order. A net prefers the lane that lines up with
+  // its own exit (spread out by `laneSpread`) on the exit's layer, so the nets leave the zone already
+  // in exit order and the reordering happens on the open side, where vias are free.
+  const exitTerms = origProblem.connections.flatMap((c: any) =>
+    c.pointsToConnect.filter(
+      (q: any) => !padStamps.has(padKey(q)) && q.x > wx(zXR),
+    ),
+  )
+  const exitMidY = exitTerms.length
+    ? (Math.min(...exitTerms.map((q: any) => q.y)) +
+        Math.max(...exitTerms.map((q: any) => q.y))) /
+      2
+    : 0
+  function laneOrderCost(n: Net, l: number, row: number): number {
+    if (n.ideal === undefined) {
+      const ts = (n.kind === "single" ? [n.conn] : n.pair!.conns).flatMap(
+        (c: any) => c.pointsToConnect.filter((q: any) => exitTerms.includes(q)),
+      )
+      n.ideal = ts.length
+        ? {
+            y:
+              exitMidY +
+              (ts.reduce((s2: number, q: any) => s2 + q.y, 0) / ts.length -
+                exitMidY) *
+                cfg.laneSpread,
+            layer: n.kind === "single" ? LOf(ts[0]) : -1,
+          }
+        : null
+    }
+    if (!n.ideal) return 0
+    return (
+      cfg.laneOrderCost * Math.abs(wy(row) - n.ideal.y) +
+      (n.ideal.layer >= 0 && n.ideal.layer !== l ? cfg.laneLayerCost : 0)
+    )
   }
   /** A pair lives on one layer end to end; try both and keep the cheaper (the far layer costs its members a via each end). */
   /** Longest path the search may return for a net: the top of its bus window (members of a pair also carry their stubs). */
@@ -844,7 +1074,11 @@ export function routeNegotiatedLanes(
       laneAt?: number
       layer: number
     } | null = null
-    for (const L of [0, 1]) {
+    // a twisted pair runs on the layer its terminals are NOT on: then each member changes layer once at
+    // each end (equal via count) and the two members swap sides for free while one is above the other
+    for (const L of n.pair!.twisted || n.exactVias === 2
+      ? [1 - n.pair!.termLayer]
+      : [0, 1]) {
       n.fatLayer = L
       n.src = (n.src % NN) + L * NN
       n.dst = (n.dst % NN) + L * NN
@@ -866,13 +1100,20 @@ export function routeNegotiatedLanes(
     gen++
     const heap = new Heap(),
       fat = n.kind === "fat",
-      stub = n.kind === "stub"
+      stub = n.kind === "stub",
+      cong = n.cong ?? 1
     const sStat = fat ? staticF : staticT,
       sOcc = fat ? occF : occT
-    const ti = n.dst % NX,
-      tj = (n.dst / NX) | 0
+    // Exactly two layer changes (top -> bottom -> top): every net of a matched class then carries the
+    // same via barrels, so the class is matched through the board as well as on the surface. The search
+    // runs on three copies of the grid (before, between and after the two vias).
+    const X =
+      n.kind === "single" && n.exactVias === 2 && n.src < NN && n.dst < NN
+    const dstId = X ? 2 * NN + n.dst : n.dst
+    const ti = (n.dst % NN) % NX,
+      tj = ((n.dst % NN) / NX) | 0
     const oct2 = (id: number) => {
-      const c = id >= NN ? id - NN : id
+      const c = id % NN
       const dx = Math.abs((c % NX) - ti),
         dy = Math.abs(((c / NX) | 0) - tj)
       return (Math.max(dx, dy) + 0.4142 * Math.min(dx, dy)) * P
@@ -909,12 +1150,13 @@ export function routeNegotiatedLanes(
       const id = heap.pop()
       if (DONE[id] === gen) continue
       DONE[id] = gen
-      if (id === n.dst) {
+      if (id === dstId) {
         found = true
         break
       }
-      const l = id >= NN ? 1 : 0,
-        c = id - l * NN,
+      const st = (id / NN) | 0,
+        l = X ? (st === 1 ? 1 : 0) : st,
+        c = id - st * NN,
         i = c % NX,
         j = (c / NX) | 0,
         g = Gs[id]
@@ -927,10 +1169,36 @@ export function routeNegotiatedLanes(
         if (ni < 0 || nj < 0 || ni >= NX || nj >= NY || inZone(ni)) continue
         const q = nj * NX + ni
         if (sT[q] && q !== n.dst % NN) continue
+        // a pair centreline never doubles back where it leaves or joins its terminals: the offset
+        // members of a turn sharper than a right angle would fold into each other
+        // (a straight reversal has no offset at all and is never allowed; `pairNoFold` also bans the 135 degree turn)
+        if (fat && id === n.src) {
+          const dd = DIRS[d] * n.pair!.d[0].x + DIRS[d + 1] * n.pair!.d[0].y
+          if (
+            cfg.pairNoFold
+              ? dd < 0
+              : dd < 0 &&
+                DIRS[d] * n.pair!.d[0].y - DIRS[d + 1] * n.pair!.d[0].x === 0
+          )
+            continue
+        }
+        if (fat && q + l * NN === n.dst) {
+          const dd = DIRS[d] * n.pair!.d[1].x + DIRS[d + 1] * n.pair!.d[1].y
+          if (
+            cfg.pairNoFold
+              ? dd > 0
+              : dd > 0 &&
+                DIRS[d] * n.pair!.d[1].y - DIRS[d + 1] * n.pair!.d[1].x === 0
+          )
+            continue
+        }
         const len = DIRS[d] && DIRS[d + 1] ? P * Math.SQRT2 : P
         relax(
-          q + l * NN,
-          g + len * (n.lenWeight + hT[q] + presFac * oT[q]),
+          q + st * NN,
+          g +
+            (cong === 1
+              ? len * (n.lenWeight + hT[q] + presFac * oT[q])
+              : len * (n.lenWeight + cong * (hT[q] + presFac * oT[q]))),
           id,
           0,
           len,
@@ -942,11 +1210,12 @@ export function routeNegotiatedLanes(
         !staticT[1 - l][c] &&
         !inZone(i) &&
         i !== zXL &&
-        i !== zXR
+        i !== zXR &&
+        (!X || st < 2)
       )
         relax(
-          c + (1 - l) * NN,
-          g + n.viaCost + 0.5 * (histV[c] + presFac * occV[c]),
+          X ? c + (st + 1) * NN : c + (1 - l) * NN,
+          g + n.viaCost + 0.5 * cong * (histV[c] + presFac * occV[c]),
           id,
           0,
           0,
@@ -955,18 +1224,150 @@ export function routeNegotiatedLanes(
         const end = j * NX + zXR
         if (!sStat[l][end]) {
           const cst = laneCost(n, l, j)
-          if (cst < Infinity) relax(end + l * NN, g + cst, id, 1, laneLen)
+          if (cst < Infinity) relax(end + st * NN, g + cst, id, 1, laneLen)
         }
       }
     }
     if (!found) return false
     const path: number[] = []
     let laneTo = -1
-    for (let id = n.dst; id !== -1; id = PAR[id]) {
-      path.push(id)
-      if (LANE[id] && laneTo < 0) laneTo = id
+    const flat = (id: number) =>
+      X ? (id % NN) + (((id / NN) | 0) === 1 ? NN : 0) : id
+    for (let id = dstId; id !== -1; id = PAR[id]) {
+      path.push(flat(id))
+      if (LANE[id] && laneTo < 0) laneTo = flat(id)
     }
     path.reverse()
+    // A path that comes back to within less than one clearance of itself (the search exempts a net from
+    // its own copper) leaves a same-net sliver. The loop in between is pointless: join the two points
+    // directly; the tuning lane gives the length back.
+    if (!fat && cfg.unloop) {
+      const thin = cfg.w + GAP + 0.02,
+        nearVia = cfg.viaD / 2 + cfg.w / 2 + 0.11,
+        nearPad = 0.2 + cfg.w / 2 + 0.11
+      const Rmax = Math.ceil(Math.max(thin, nearVia, nearPad) / P)
+      for (let guard = 0; guard < 60; guard++) {
+        const at = new Map<number, number>()
+        let cut: [number, number, number[]] | null = null
+        const cum: number[] = [0],
+          isVia: boolean[] = []
+        for (let k = 0; k < path.length; k++) {
+          at.set(path[k], k)
+          if (k) {
+            const u = xy(path[k - 1]),
+              v2 = xy(path[k])
+            cum.push(cum[k - 1] + Math.hypot(u.x - v2.x, u.y - v2.y))
+          }
+          isVia.push(
+            (k > 0 && path[k - 1] >= NN !== path[k] >= NN) ||
+              (k + 1 < path.length && path[k + 1] >= NN !== path[k] >= NN),
+          )
+        }
+        const lane = laneTo >= 0 ? path.indexOf(laneTo) - 1 : -1,
+          last = path.length - 1
+        outer: for (let a = 0; a < path.length; a++) {
+          const ida = path[a],
+            la = ida >= NN ? 1 : 0,
+            ca = ida - la * NN,
+            ai = ca % NX,
+            aj = (ca / NX) | 0
+          for (let dj = -Rmax; dj <= Rmax; dj++)
+            for (let di = -Rmax; di <= Rmax; di++) {
+              const bi = ai + di,
+                bj = aj + dj
+              if (bi < 0 || bj < 0 || bi >= NX || bj >= NY) continue
+              const b = at.get(bj * NX + bi + la * NN)
+              if (b === undefined || b - a < 2) continue
+              const chord = Math.hypot(di, dj) * P,
+                thr =
+                  isVia[a] || isVia[b]
+                    ? nearVia
+                    : (a === 0 || b === last) && padStamps.size
+                      ? nearPad
+                      : thin
+              if (chord >= thr || cum[b] - cum[a] < 1.2 * chord + 0.015)
+                continue // only a real detour between two close points
+              if (lane >= a && lane < b) continue
+              const link: number[] = []
+              let i = ai,
+                j = aj,
+                ok = true
+              while (i !== bi || j !== bj) {
+                i += Math.sign(bi - i)
+                j += Math.sign(bj - j)
+                if (i === bi && j === bj) break
+                const q = j * NX + i
+                if (
+                  sStat[la][q] ||
+                  inZone(i) ||
+                  (!cfg.linkOnZoneEdge && (i === zXL || i === zXR))
+                ) {
+                  ok = false
+                  break
+                }
+                link.push(q + la * NN)
+              }
+              if (!ok) continue
+              cut = [a, b, link]
+              break outer
+            }
+        }
+        if (!cut) break
+        path.splice(cut[0] + 1, cut[1] - cut[0] - 1, ...cut[2])
+      }
+    }
+    // A trace leaves (and reaches) its own via or ball straight out: no curl inside the pad's clearance ring.
+    if (!fat && cfg.unloop) {
+      const ring = (pad: number) => pad + cfg.w / 2 + 0.1
+      const straight = (a: number, b: number): number[] | null => {
+        const la = path[a] >= NN ? 1 : 0,
+          ca = path[a] - la * NN,
+          cb = path[b] - la * NN
+        let i = ca % NX,
+          j = (ca / NX) | 0
+        const bi = cb % NX,
+          bj = (cb / NX) | 0,
+          link: number[] = []
+        while (i !== bi || j !== bj) {
+          i += Math.sign(bi - i)
+          j += Math.sign(bj - j)
+          if (i === bi && j === bj) break
+          const q = j * NX + i
+          if (
+            sStat[la][q] ||
+            inZone(i) ||
+            (!cfg.linkOnZoneEdge && (i === zXL || i === zXR))
+          )
+            return null
+          link.push(q + la * NN)
+        }
+        return link
+      }
+      for (let pass = 0; pass < 2; pass++) {
+        // forward: leaving; second pass on the reversed path: arriving
+        for (let a = 0; a < path.length - 2; a++) {
+          const la = path[a] >= NN ? 1 : 0
+          const isTerm = a === 0,
+            afterVia = a > 0 && (path[a - 1] >= NN ? 1 : 0) !== la
+          if (!isTerm && !afterVia) continue
+          const r = ring(isTerm ? 0.2 : cfg.viaD / 2),
+            pa = xy(path[a])
+          let b = a
+          for (let k = a + 1; k < Math.min(path.length, a + 16); k++) {
+            if ((path[k] >= NN ? 1 : 0) !== la) break
+            const q = xy(path[k])
+            if (Math.hypot(q.x - pa.x, q.y - pa.y) <= r + 1e-9) b = k
+          }
+          if (b - a < 2) continue
+          const lane = laneTo >= 0 ? path.indexOf(laneTo) - 1 : -1
+          if (lane >= a && lane < b) continue
+          const link = straight(a, b)
+          if (!link || link.length >= b - a - 1) continue
+          path.splice(a + 1, b - a - 1, ...link)
+        }
+        path.reverse()
+      }
+    }
     n.path = path
     if (laneTo >= 0) {
       n.laneAt = path.indexOf(laneTo) - 1
@@ -992,6 +1393,17 @@ export function routeNegotiatedLanes(
     for (const o of n.ignore) stampNet(o, -1)
     for (const st of n.ownPads) applyPad(st, -1)
     const ok = route(n)
+    if (!ok && cfg.debugNoPath) {
+      const d = (id: number) => {
+        const l = id >= NN ? 1 : 0,
+          c = id - l * NN,
+          q = xy(c)
+        return `${LAYERS[l][0]}(${q.x.toFixed(2)},${q.y.toFixed(2)}) T=${staticT[l][c]} F=${staticF[l][c]} V=${staticV[c]} occT=${occT[l][c]}`
+      }
+      log(
+        `NOPATH ${n.label} kind=${n.kind} src ${d(n.src)} dst ${d(n.dst)} own=${n.ownPads.length} viaCost=${n.viaCost}`,
+      )
+    }
     for (const st of n.ownPads) applyPad(st, +1)
     for (const o of n.ignore) stampNet(o, +1)
     if (ok) buildStamp(n)
@@ -1171,7 +1583,7 @@ export function routeNegotiatedLanes(
       }
       for (let b = 0; b < k; b++)
         laneBumps.push(
-          ...bump(xL + TRIM_LEN + 0.2 + b * (PW + PG), y, a, +1, PW, PCH),
+          ...bump(xL + TRIM_LEN + 0.4 + b * (PW + PG), y, a, +1, PW, PCH),
         )
     }
     return [
@@ -1182,6 +1594,23 @@ export function routeNegotiatedLanes(
       ...tail,
       pr.G[1],
     ]
+  }
+  function unknot(pts: Pt[], keepPt?: Pt): Pt[] {
+    if (!cfg.unknot) return pts
+    const out = [...pts]
+    for (let i = 0; i < out.length - 2; i++) {
+      let run = 0,
+        cut = -1
+      for (let j = i + 1; j < Math.min(out.length, i + 9); j++) {
+        run += Math.hypot(out[j].x - out[j - 1].x, out[j].y - out[j - 1].y)
+        if (out[j] === keepPt || (out[j - 1] === keepPt && j - 1 > i)) break
+        const chord = Math.hypot(out[j].x - out[i].x, out[j].y - out[i].y)
+        if (run > 0.8) break
+        if (j > i + 1 && chord < 0.3 && run > 1.5 * chord + 0.05) cut = j
+      }
+      if (cut > 0) out.splice(i + 1, cut - i - 1)
+    }
+    return out
   }
   function pairMembers(
     n: Net,
@@ -1217,18 +1646,23 @@ export function routeNegotiatedLanes(
     let ok = true
     const out = [0, 1].map((m) => {
       const side = m === pr.leftMember ? +1 : -1
-      let poly = offsetPolyline(c2, side * H)
+      const raw = offsetPolyline(c2, side * H),
+        anchor = raw[iTrim]
+      // On the inside of a sharp turn the offset folds into a tiny knot: take the chord instead (the
+      // length it saves is given back by the member's trim).
+      let poly = unknot(raw, anchor)
+      const iT = anchor ? poly.indexOf(anchor) : -1
       const e = trims[m]
       if (e > 1e-6) {
         let k = 1
         while (k < 3 && bumpAmp(e / k, 0.1) > 0.4) k++
         const a = bumpAmp(e / k, 0.1)
-        if (a > TRIM - 0.02 || iTrim < 0) ok = false
-        const y = poly[iTrim]?.y ?? 0,
+        if (a > TRIM - 0.02 || iT < 0) ok = false
+        const y = poly[iT]?.y ?? 0,
           ins: Pt[] = []
         for (let b = 0; b < k; b++)
           ins.push(...bump(xL + 0.5 + b * 0.5, y, a, side, 0.25, 0.1))
-        poly = [...poly.slice(0, iTrim + 1), ...ins, ...poly.slice(iTrim + 1)]
+        poly = [...poly.slice(0, iT + 1), ...ins, ...poly.slice(iT + 1)]
       }
       return poly
     }) as [Pt[], Pt[]]
@@ -1242,33 +1676,143 @@ export function routeNegotiatedLanes(
           xy(st.path.at(-1)!).y - st.exact!.y,
         )
       : Infinity
+  /** Where a member's stub meets its offset line the two can form a hairpin (the stub runs out to the
+   *  gather point and the member comes straight back). Drop the points of that hairpin so the stub runs
+   *  directly onto the member; lengths and emitted copper both use this joined form. */
+  function joinMember(
+    n: Net,
+    k: number,
+    memIn: Pt[],
+  ): { a: number[]; mem: Pt[]; b: number[]; len: number } {
+    const pr = n.pair!,
+      a = [...pr.stubs[k * 2].path!],
+      b = [...pr.stubs[k * 2 + 1].path!]
+    let mem = [...memIn]
+    // micro-segments at the ends (offset rounding) would hide the real turn
+    if (cfg.joinStubs) {
+      while (
+        mem.length > 6 &&
+        Math.hypot(mem[1].x - mem[0].x, mem[1].y - mem[0].y) < 0.05
+      )
+        mem.splice(1, 1)
+      while (
+        mem.length > 6 &&
+        Math.hypot(
+          mem.at(-2)!.x - mem.at(-1)!.x,
+          mem.at(-2)!.y - mem.at(-1)!.y,
+        ) < 0.05
+      )
+        mem.splice(-2, 1)
+    }
+    const ang = (p: Pt, j: Pt, q: Pt) => {
+      const u = [p.x - j.x, p.y - j.y],
+        v = [q.x - j.x, q.y - j.y],
+        lu = Math.hypot(u[0], u[1]),
+        lv = Math.hypot(v[0], v[1])
+      return lu < 1e-6 || lv < 1e-6
+        ? 180
+        : (Math.acos(
+            Math.max(-1, Math.min(1, (u[0] * v[0] + u[1] * v[1]) / (lu * lv))),
+          ) *
+            180) /
+            Math.PI
+    }
+    const sameLayer = (ids: number[]) =>
+      ids.length >= 2 && ids.at(-1)! >= NN === ids.at(-2)! >= NN
+    if (cfg.joinStubs)
+      for (const [ids, front] of [
+        [a, true],
+        [b, false],
+      ] as [number[], boolean][])
+        for (let g = 0; g < 6; g++) {
+          const m0 = front ? mem[0] : mem.at(-1)!,
+            m1 = front ? mem[1] : mem.at(-2)!,
+            e = xy(ids.at(-1)!)
+          if (mem.length < 6 || !m1) break
+          if (Math.hypot(e.x - m0.x, e.y - m0.y) < 0.08) {
+            // stub ends on the member's first point: is the turn there a hairpin?
+            if (!sameLayer(ids) || ang(xy(ids.at(-2)!), m0, m1) >= 100) break
+            ids.pop()
+            if (front) mem.shift()
+            else mem.pop()
+            continue
+          }
+          if (ang(e, m0, m1) < 100) {
+            if (front) mem.shift()
+            else mem.pop()
+            continue
+          }
+          if (sameLayer(ids) && ang(xy(ids.at(-2)!), e, m0) < 100) {
+            ids.pop()
+            continue
+          }
+          break
+        }
+    // the member must not come back past the via its stub arrived through: run straight from the via to
+    // the first member point that is outside the via's clearance ring
+    if (cfg.joinStubs)
+      for (const [ids, front] of [
+        [a, true],
+        [b, false],
+      ] as [number[], boolean][]) {
+        let vi = -1
+        for (let k = ids.length - 1; k > 0; k--)
+          if (ids[k] >= NN !== ids[k - 1] >= NN) {
+            vi = k
+            break
+          }
+        if (vi < 0) continue
+        const v = xy(ids[vi]),
+          ring = cfg.viaD / 2 + cfg.w / 2 + 0.1,
+          pts = front ? mem : [...mem].reverse()
+        const dseg = (p: Pt, q: Pt) => {
+          const vx = q.x - p.x,
+            vy = q.y - p.y,
+            L = vx * vx + vy * vy
+          let t = L ? ((v.x - p.x) * vx + (v.y - p.y) * vy) / L : 0
+          t = Math.max(0, Math.min(1, t))
+          return Math.hypot(v.x - p.x - t * vx, v.y - p.y - t * vy)
+        }
+        let keep = 0,
+          run = 0
+        for (let k = 1; k < Math.min(pts.length - 3, 10); k++) {
+          run += Math.hypot(pts[k].x - pts[k - 1].x, pts[k].y - pts[k - 1].y)
+          if (run > 1.6) break
+          if (
+            dseg(pts[k - 1], pts[k]) < ring &&
+            Math.hypot(pts[k].x - v.x, pts[k].y - v.y) >= ring
+          )
+            keep = k
+        }
+        if (!keep) continue
+        ids.length = vi + 1 // the stub ends at its via
+        if (front) mem = mem.slice(keep)
+        else mem = mem.slice(0, mem.length - keep)
+      }
+    const ea = xy(a.at(-1)!),
+      eb = xy(b.at(-1)!)
+    const len =
+      pathLen(a) +
+      Math.hypot(ea.x - mem[0].x, ea.y - mem[0].y) +
+      plen(mem) +
+      Math.hypot(eb.x - mem.at(-1)!.x, eb.y - mem.at(-1)!.y) +
+      pathLen(b) +
+      fixedOf(pr.conns[k].name)
+    return { a, mem, b, len }
+  }
   /** Lengths of the two members with no added tuning. */
   function pairBase(n: Net): [number, number] {
-    const pr = n.pair!,
-      m = pairMembers(n, 0, [0, 0]).pts
-    return [0, 1].map(
-      (k) =>
-        plen(m[k]) +
-        stubLen(pr.stubs[k * 2]) +
-        stubLen(pr.stubs[k * 2 + 1]) +
-        fixedOf(pr.conns[k].name),
-    ) as [number, number]
+    const m = pairMembers(n, 0, [0, 0]).pts
+    return [0, 1].map((k) => joinMember(n, k, m[k]).len) as [number, number]
   }
   /** Coupled extra plus per-member trims that bring both members to `target`. */
   function pairTune(
     n: Net,
     target: number,
   ): { ec: number; trims: [number, number]; amp: number; ok: boolean } {
-    const pr = n.pair!,
-      stubs = [0, 1].map(
-        (k) =>
-          stubLen(pr.stubs[k * 2]) +
-          stubLen(pr.stubs[k * 2 + 1]) +
-          fixedOf(pr.conns[k].name),
-      )
     const need = (ec: number) => {
       const m = pairMembers(n, ec, [0, 0]).pts
-      return [0, 1].map((k) => target - plen(m[k]) - stubs[k])
+      return [0, 1].map((k) => target - joinMember(n, k, m[k]).len)
     }
     let ec = 0
     const n0 = need(0),
@@ -1291,11 +1835,16 @@ export function routeNegotiatedLanes(
         ? Math.max(1, Math.min(kPair, Math.round(ec / bumpExtra(0.9, PCH))))
         : 0
     const amp = ec > 0 ? Math.max(PAIR_MIN_AMP, bumpAmp(ec / k, PCH)) : 0
+    const mem = pairMembers(n, ec, trims)
+    // a centreline that reverses on itself has no valid offset: such geometry never counts as tuned
+    const sane = mem.pts.every((pl) =>
+      pl.every((q) => Number.isFinite(q.x) && Number.isFinite(q.y)),
+    )
     return {
       ec,
       trims,
       amp,
-      ok: r[0] > -0.01 && r[1] > -0.01 && pairMembers(n, ec, trims).ok,
+      ok: sane && r[0] > -0.01 && r[1] > -0.01 && mem.ok,
     }
   }
 
@@ -1305,12 +1854,14 @@ export function routeNegotiatedLanes(
     msgs: string[]
     over: Net[]
     changed: Net[]
+    untunable: Net[]
   } {
     const msgs: string[] = [],
       over: Net[] = [],
-      changed: Net[] = []
+      changed: Net[] = [],
+      untunable: Net[] = []
     let ok = true
-    const routable = nets.filter((n) => n.kind !== "stub")
+    const routable = nets.filter((n) => n.kind !== "stub" && n.active)
     for (const n of routable) {
       if (
         !n.path ||
@@ -1328,6 +1879,13 @@ export function routeNegotiatedLanes(
             pathLen(singleParts(n).b) +
             fixedOf(n.conn.name)
           : Math.max(...pairBase(n))
+      // broken geometry (a pair centreline that reverses on itself) must never pass as routed
+      if (Number.isNaN(n.base)) {
+        n.base = Infinity
+        ok = false
+        msgs.push(`${n.label} has no valid geometry`)
+        if (n.kind === "fat") untunable.push(n)
+      }
     }
     for (const bus of srj.buses ?? []) {
       const ms = routable.filter((n) => n.bus === bus)
@@ -1335,8 +1893,11 @@ export function routeNegotiatedLanes(
       let top: number, lo: number
       if (cfg.busWindow?.[bus.busId]) [lo, top] = cfg.busWindow[bus.busId]
       else if (bus.minLength !== undefined) {
-        lo = bus.minLength + cfg.windowMargin
         top = bus.maxLength - 0.05
+        lo = Math.max(
+          bus.minLength + cfg.windowMargin,
+          top - (bus.maxLengthSkew ?? Infinity) + cfg.skewMargin,
+        )
       } else if (bus.maxLength !== undefined) {
         top = bus.maxLength - 0.02
         lo = top - (bus.maxLengthSkew ?? 0.635) + cfg.skewMargin
@@ -1382,6 +1943,8 @@ export function routeNegotiatedLanes(
           msgs.push(
             `${n.label} pair cannot be tuned (trims ${t.trims.map((x) => x.toFixed(2)).join("/")})`,
           )
+          // the members' stubs differ by more than a trim can absorb: the stubs take the short way with rising priority
+          untunable.push(n)
         }
         const side = Math.ceil((H + TRIM + 0.06) / P),
           up = Math.ceil((H + Math.max(t.amp, TRIM) + 0.06) / P)
@@ -1394,7 +1957,103 @@ export function routeNegotiatedLanes(
         }
       }
     }
-    return { ok, msgs, over, changed }
+    return { ok, msgs, over, changed, untunable }
+  }
+
+  // ---------- endgame ----------
+  // Negotiation cannot undo a deadlock that needs several nets to move together (two nets crossing
+  // under a package, one of them at its length cap). So when only a few nets are left in conflict, that
+  // small neighbourhood is ripped up and re-placed one net at a time with hard blocking, trying many
+  // orders (tightest first, then shuffles) until one order fits them all. Everything else stays put.
+  function finish(conflicted: Net[]): boolean {
+    const spots: Pt[] = []
+    for (const n of conflicted) {
+      if (!n.path) continue
+      withExemptions(n, () => {
+        const occ = n.kind === "fat" ? occF : occT
+        for (const id of n.path!) {
+          const l = id >= NN ? 1 : 0,
+            c = id - l * NN
+          if (occ[l][c]) spots.push(xy(c))
+        }
+      })
+    }
+    const R = cfg.finishRadius,
+      dist = (n: Net) => {
+        let best = Infinity
+        if (!n.path) return 0
+        for (let k = 0; k < n.path.length; k += 3) {
+          const p = xy(n.path[k])
+          for (const q of spots) {
+            const d = Math.max(Math.abs(p.x - q.x), Math.abs(p.y - q.y))
+            if (d < best) best = d
+          }
+        }
+        return best
+      }
+    const singles = nets.filter((n) => n.active && n.kind === "single")
+    if (conflicted.some((n) => n.kind !== "single")) return false
+    const near = singles
+      .filter((n) => !conflicted.includes(n))
+      .map((n) => ({ n, d: dist(n) }))
+      .filter((e) => e.d < R)
+      .sort((a, b) => a.d - b.d)
+      .slice(0, Math.max(0, cfg.finishMax - conflicted.length))
+      .map((e) => e.n)
+    const S = [...conflicted, ...near]
+    const saved = S.map((n) => ({
+      n,
+      path: n.path,
+      laneAt: n.laneAt,
+      laneLayer: n.laneLayer,
+      stamp: n.stamp,
+    }))
+    const slack = (n: Net) => capOf(n) - oct(...sortedPads(n.conn))
+    const oldPres = presFac
+    let bestPlaced = 0
+    for (let t = 0; t < cfg.finishTries; t++) {
+      for (const n of S) {
+        stampNet(n, -1)
+        n.stamp = undefined
+      }
+      const order =
+        t === 0
+          ? [...S].sort((a, b) => slack(a) - slack(b))
+          : t === 1
+            ? [...conflicted, ...near]
+            : S.map((n) => ({ n, k: rng() }))
+                .sort((a, b) => a.k - b.k)
+                .map((e) => e.n)
+      presFac = 1e5
+      let placed = 0
+      for (const n of order) {
+        if (!ripAndRoute(n) || conflictsOf(n, 0)) break
+        placed++
+      }
+      presFac = oldPres
+      if (placed > bestPlaced) bestPlaced = placed
+      if (placed === S.length) {
+        log(
+          `  endgame: ${S.length} nets (${conflicted.length} in conflict) re-placed in order ${t}`,
+        )
+        return true
+      }
+    }
+    for (const n of S) {
+      stampNet(n, -1)
+      n.stamp = undefined
+    }
+    for (const e of saved) {
+      e.n.path = e.path
+      e.n.laneAt = e.laneAt
+      e.n.laneLayer = e.laneLayer
+      e.n.stamp = e.stamp
+      stampNet(e.n, +1)
+    }
+    log(
+      `  endgame: no order fits ${S.length} nets (best ${bestPlaced}) in ${cfg.finishTries} tries`,
+    )
+    return false
   }
 
   // ---------- negotiation ----------
@@ -1421,16 +2080,30 @@ export function routeNegotiatedLanes(
     // nets every round makes crossing pairs swap places for ever instead of one of them taking a via.
     let dirty: Set<Net> | null = null,
       best = Infinity,
-      bestAt = 0
+      bestAt = 0,
+      kicks = 0,
+      phase = 0,
+      lastFinish = -1e9
+    const phases: string[][] = cfg.phases?.length
+      ? cfg.phases
+      : [srj.connections.map((c: any) => c.name)]
+    {
+      const first = new Set(phases[0])
+      for (const n of nets)
+        n.active = (
+          n.pair ? n.pair.conns.map((c: any) => c.name) : [n.conn.name]
+        ).some((x: string) => first.has(x))
+    }
     for (let it = 0; it < cfg.maxIters; it++) {
       iterations = it + 1
       for (const n of order)
-        if (!dirty || dirty.has(n))
+        if (n.active && (!dirty || dirty.has(n)))
           if (!ripAndRoute(n)) log(`  no path for ${n.label}`)
       let total = 0
       const bad: string[] = []
       dirty = new Set()
       for (const n of nets) {
+        if (!n.active) continue
         const c = conflictsOf(n, cfg.histInc)
         if (c) {
           total += c
@@ -1446,7 +2119,7 @@ export function routeNegotiatedLanes(
       // A net that stays in conflict while close to its length cap has no other way round: its
       // neighbours have to make room, so it gains priority and takes its direct route through them.
       for (const n of nets) {
-        if (n.kind === "stub") continue
+        if (n.kind === "stub" || !n.active) continue
         const hit = dirty ? dirty.has(n) : false
         n.stuckRounds = hit ? (n.stuckRounds ?? 0) + 1 : 0
         if (
@@ -1465,9 +2138,68 @@ export function routeNegotiatedLanes(
         best = total
         bestAt = it
       }
+      if (
+        total &&
+        bad.length <= cfg.finishAt &&
+        it - bestAt > cfg.finishAfter &&
+        it - lastFinish > cfg.finishAfter &&
+        dirty
+      ) {
+        lastFinish = it
+        if (finish([...dirty].filter((n) => n.kind !== "stub"))) {
+          dirty = new Set()
+          best = 0
+          bestAt = it
+          continue
+        }
+      }
       if (it - bestAt > cfg.stallIters && total) {
-        log(`  stalled at ${total} conflicts for ${cfg.stallIters} rounds`)
-        return false
+        if (kicks >= cfg.maxKicks) {
+          log(`  stalled at ${total} conflicts for ${cfg.stallIters} rounds`)
+          return false
+        }
+        // Stalled: the nets in conflict have no other way, and their settled neighbours are never asked
+        // to move. Rip up everything that passes near the conflicts and renegotiate that neighbourhood.
+        kicks++
+        const spots: Pt[] = []
+        for (const n of dirty ?? []) {
+          if (!n.path) continue
+          withExemptions(n, () => {
+            const occ = n.kind === "fat" ? occF : occT
+            for (const id of n.path!) {
+              const l = id >= NN ? 1 : 0,
+                c = id - l * NN
+              if (occ[l][c]) spots.push(xy(c))
+            }
+          })
+        }
+        const R = cfg.kickRadius * (1 + cfg.kickGrowth * (kicks - 1)),
+          near = (n: Net) =>
+            !!n.path &&
+            n.path.some(
+              (id, k) =>
+                k % 4 === 0 &&
+                spots.some((q) => {
+                  const p = xy(id)
+                  return Math.abs(p.x - q.x) < R && Math.abs(p.y - q.y) < R
+                }),
+            )
+        const before = dirty?.size ?? 0
+        for (const n of nets)
+          if (n.active && near(n)) {
+            dirty!.add(n)
+            if (n.pair) {
+              dirty!.add(n.pair.fat)
+              for (const st of n.pair.stubs) dirty!.add(st)
+            }
+          }
+        log(
+          `  stalled at ${total} conflicts: kick ${kicks}, ripping up ${dirty!.size} nets (was ${before}) within ${R.toFixed(1)} mm`,
+        )
+        presFac = cfg.presRestart
+        best = Infinity
+        bestAt = it
+        continue
       }
       const ev =
         it % cfg.evalEvery === cfg.evalEvery - 1 || !total ? evaluate() : null
@@ -1478,7 +2210,30 @@ export function routeNegotiatedLanes(
               ? ` | ok=${ev.ok} over=${ev.over.map((v) => `${v.label}:${v.base!.toFixed(2)}>${v.top!.toFixed(2)}`).join(",")} ${ev.msgs.slice(0, 3).join("; ")}`
               : ""),
         )
-      if (!total && ev?.ok) return true
+      if (!total && ev?.ok) {
+        if (phase >= phases.length - 1) return true
+        // Soft staging: the next, less important group joins. The nets already placed stay where they
+        // are but are not frozen: one that walls in a newcomer is ripped up like any net in conflict.
+        phase++
+        const add = new Set(phases[phase])
+        let cnt = 0
+        for (const n of nets) {
+          const names = n.pair
+            ? n.pair.conns.map((c: any) => c.name)
+            : [n.conn.name]
+          if (!n.active && names.some((x: string) => add.has(x))) {
+            n.active = true
+            dirty!.add(n)
+            cnt++
+          }
+        }
+        log(`  phase ${phase}: +${cnt} nets at iter ${it}`)
+        presFac = cfg.presRestart
+        best = Infinity
+        bestAt = it
+        kicks = 0
+        continue
+      }
       if (ev && dirty) {
         for (const n of ev.changed) dirty.add(n)
         if (!total)
@@ -1486,6 +2241,21 @@ export function routeNegotiatedLanes(
             dirty.add(n)
             if (n.pair) for (const st of n.pair.stubs) dirty.add(st)
           }
+      }
+      if (!total && ev && ev.untunable.length && dirty) {
+        // Conflict-free, but a pair's members differ by more than a trim can absorb: its stubs take the
+        // short way with rising priority and the nets in their way are renegotiated.
+        for (const n of ev.untunable) {
+          dirty.add(n)
+          for (const st of n.pair!.stubs) {
+            st.lenWeight = Math.min(
+              st.lenWeight * cfg.stubBoost,
+              cfg.overWeightMax,
+            )
+            dirty.add(st)
+          }
+        }
+        presFac = Math.max(cfg.presRestart, presFac / 4)
       }
       if (!total && ev && ev.over.length) {
         // Conflict-free but a net is longer than its window allows: the others have settled on its
@@ -1510,12 +2280,17 @@ export function routeNegotiatedLanes(
       layer: LAYERS[l],
       width: cfg.w,
     })
+    // a node that is a terminal's grid node is emitted at the terminal's exact centre, so a via-in-pad is centred
+    const exactAt = new Map<number, Pt>()
+    for (const c of origProblem.connections)
+      for (const q of c.pointsToConnect)
+        exactAt.set(nodeOf(q), { x: q.x, y: q.y })
     const fromIds = (ids: number[]): any[] => {
       const r: any[] = []
       for (let k = 0; k < ids.length; k++) {
         const id = ids[k],
           l = id >= NN ? 1 : 0,
-          p = xy(id)
+          p = exactAt.get(id % NN) ?? xy(id)
         if (k && (ids[k - 1] >= NN ? 1 : 0) !== l)
           r.push({
             route_type: "via",
@@ -1530,9 +2305,34 @@ export function routeNegotiatedLanes(
       }
       return r
     }
-    const tidy = (route: any[]) => {
+    // A V-notch: wire points A, B, C on one layer where A to C is at most about two grid steps
+    // and B sits off that line. The grid search leaves one where a lane joins a path; it adds
+    // nothing but a same-net sliver. Cut it while the net keeps `allowance` mm of length to give.
+    const cutNotches = (route: any[], allowance: number) => {
+      const r = [...route]
+      let left = allowance
+      for (let i = 1; i < r.length - 1; i++) {
+        const a = r[i - 1],
+          b = r[i],
+          c = r[i + 1]
+        if (
+          [a, b, c].some((p) => p.route_type !== "wire" || p.layer !== b.layer)
+        )
+          continue
+        const ac = Math.hypot(c.x - a.x, c.y - a.y),
+          abc =
+            Math.hypot(b.x - a.x, b.y - a.y) + Math.hypot(c.x - b.x, c.y - b.y)
+        if (ac <= 2.2 * P && abc > ac + 0.4 * P && abc - ac <= left) {
+          r.splice(i, 1)
+          left -= abc - ac
+          i = Math.max(0, i - 2)
+        }
+      }
+      return r
+    }
+    const tidy = (route: any[], notchAllowance = 0) => {
       const out: any[] = []
-      for (const r of route) {
+      for (const r of cutNotches(route, notchAllowance)) {
         const m = out.length
         if (
           r.route_type === "wire" &&
@@ -1565,14 +2365,21 @@ export function routeNegotiatedLanes(
       }
       return out
     }
-    const trace = (c: any, route: any[]) =>
+    const trace = (c: any, route: any[], notchAllowance = 0) =>
       traces.push({
         type: "pcb_trace",
         pcb_trace_id: `ddr_lane_${c.name}`,
         connection_name: c.name,
         source_trace_id: c.source_trace_id ?? c.name,
-        route: tidy(route),
+        route: tidy(route, notchAllowance),
       })
+    // a single may give up length down to the bottom of its window; pair members keep theirs (pair skew)
+    const allowanceOf = (n: Net) =>
+      !cfg.cutNotches
+        ? 0
+        : n.lo === undefined
+          ? Infinity
+          : Math.max(0, n.target! - n.lo - 1e-6)
     for (const n of nets) {
       if (n.kind === "single") {
         const { a, b } = singleParts(n),
@@ -1580,28 +2387,31 @@ export function routeNegotiatedLanes(
           u = xy(a.at(-1)!),
           v = xy(b[0]),
           l = n.laneLayer!
-        trace(n.conn, [
-          wire(pads[0], LOf(pads[0])),
-          ...fromIds(a),
-          ...singleLane(u.x, v.x, u.y, n.target! - n.base!)
-            .slice(1)
-            .map((q) => wire(q, l)),
-          ...fromIds(b).slice(1),
-          wire(pads[1], LOf(pads[1])),
-        ])
+        trace(
+          n.conn,
+          [
+            wire(pads[0], LOf(pads[0])),
+            ...fromIds(a),
+            ...singleLane(u.x, v.x, u.y, n.target! - n.base!)
+              .slice(1)
+              .map((q) => wire(q, l)),
+            ...fromIds(b).slice(1),
+            wire(pads[1], LOf(pads[1])),
+          ],
+          allowanceOf(n),
+        )
       } else if (n.kind === "fat") {
         const pr = n.pair!,
           t = pairTune(n, n.target!),
           mem = pairMembers(n, t.ec, t.trims).pts
         for (const m of [0, 1]) {
-          const sa = pr.stubs[m * 2],
-            sb = pr.stubs[m * 2 + 1],
-            pads = sortedPads(pr.conns[m])
+          const pads = sortedPads(pr.conns[m]),
+            j = joinMember(n, m, mem[m])
           trace(pr.conns[m], [
             wire(pads[0], LOf(pads[0])),
-            ...fromIds(sa.path!),
-            ...mem[m].map((q) => wire(q, n.fatLayer ?? 0)),
-            ...fromIds([...sb.path!].reverse()),
+            ...fromIds(j.a),
+            ...j.mem.map((q) => wire(q, n.fatLayer ?? 0)),
+            ...fromIds([...j.b].reverse()),
             wire(pads[1], LOf(pads[1])),
           ])
         }
@@ -1634,12 +2444,13 @@ export function routeNegotiatedLanes(
     n.pair ? n.pair.conns.map((c: any) => c.name) : [n.conn.name]
   const stuck = new Set<string>()
   for (const n of nets)
-    if (!n.path || conflictsOf(n, 0))
+    if (n.active && (!n.path || conflictsOf(n, 0)))
       for (const name of namesOf(n)) stuck.add(name)
   if (!stuck.size)
     for (const n of evaluate().over)
       for (const name of namesOf(n)) stuck.add(name)
   for (const n of nets) {
+    if (!n.active) continue
     if (!n.path) {
       log(`DIAG ${n.label}: no path`)
       continue
@@ -1671,18 +2482,26 @@ export function routeNegotiatedLanes(
       }
       if (tc.length || vc.length || lane)
         log(
-          `DIAG ${n.label} w=${n.lenWeight.toFixed(1)} len=${pathLen(path).toFixed(1)} cap=${capOf(n).toFixed(1)} trace[${tc.length}]: ${tc.slice(0, 4).join(" ")} .. ${tc.slice(-1).join(" ")} | via: ${vc.join(" ")} | lane:${lane.slice(0, 120)}`,
+          `DIAG ${n.label} fatLayer=${n.fatLayer} w=${n.lenWeight.toFixed(1)} len=${pathLen(path).toFixed(1)} cap=${capOf(n).toFixed(1)} trace[${tc.length}]: ${tc.slice(0, 4).join(" ")} .. ${tc.slice(-1).join(" ")} | via: ${vc.join(" ")} | lane:${lane.slice(0, 120)}`,
         )
     })
   }
   log(
     `FAILED after ${((performance.now() - t0) / 1e3).toFixed(0)}s, stuck: ${[...stuck].map(label).join(",")}`,
   )
+  let partial: any[] = []
+  try {
+    for (const n of nets)
+      if (n.kind !== "stub" && n.path && Number.isFinite(n.base ?? Infinity))
+        n.target = n.base
+    partial = emit()
+  } catch {}
   return {
     solved: false,
     traces: [],
+    partial,
     stuck: [...stuck],
     log: logLines,
     iterations,
-  }
+  } as NegotiatedLaneResult
 }
