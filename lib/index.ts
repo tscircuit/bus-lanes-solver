@@ -12,3 +12,4 @@ export {
   SingleLayerConnectivitySolver,
   type SingleLayerConnectivityOptions,
 } from "./single-layer-connectivity-solver"
+export { RoutedBusLengthSolver } from "./routed-bus-lengths/routed-bus-length-solver"
