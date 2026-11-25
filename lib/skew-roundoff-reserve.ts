@@ -6,9 +6,10 @@ function reserveSkewRoundoff(limit: number): number {
   return limit - margin
 }
 
-/** Private targets for clearance-limited paired polygons, in board-world mm. Polygon cleanup and envelope
- * optimization use small geometric epsilons; reserve at most 1 nm inside each
- * requested skew bound so final copper also satisfies strict downstream checks.
+/** Private targets in board-world mm. Length tuning and envelope cleanup use
+ * small geometric epsilons; reserve at most 1 nm inside every bus skew bound
+ * so final copper also satisfies strict downstream checks. Clearance-limited
+ * coupled pairs retain the same reserve for their individual pair tolerance.
  * Public input, output constraints and physical clearances remain unchanged. */
 export function withSkewRoundoffReserve(
   input: SimpleRouteJson,
@@ -38,16 +39,11 @@ export function withSkewRoundoffReserve(
       })
     }),
   )
-  if (!affectedPairs.size) return input
-  const affectedNames = new Set(
-    [...affectedPairs].flatMap((pair) => pair.connectionNames),
-  )
+  const hasBusSkew = input.buses?.some((bus) => bus.maxLengthSkew !== undefined)
+  if (!affectedPairs.size && !hasBusSkew) return input
   const buses = input.buses?.map((bus) => {
     if (bus.maxLengthSkew === undefined) return bus
-    const includesAffectedPair = bus.connectionNames.some((name) =>
-      affectedNames.has(name),
-    )
-    if (!includesAffectedPair) return bus
+
     const maxLengthSkew = reserveSkewRoundoff(bus.maxLengthSkew)
     return { ...bus, maxLengthSkew }
   })
