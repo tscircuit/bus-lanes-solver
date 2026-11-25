@@ -139,7 +139,7 @@ export function routeNegotiatedLanes(
     LAYERS: string[] = cfg.layers?.length ? cfg.layers : ["top", "bottom"],
     NL = LAYERS.length
   const layerOf = (id: number) => (id / NN) | 0
-  const perLayer = <T,>(f: (l: number) => T): T[] => LAYERS.map((_, l) => f(l))
+  const perLayer = <T>(f: (l: number) => T): T[] => LAYERS.map((_, l) => f(l))
   const allPts = [
     ...srj.obstacles.map((o: any) => o.center),
     ...origProblem.connections.flatMap((c: any) => c.pointsToConnect),
@@ -606,10 +606,17 @@ export function routeNegotiatedLanes(
       for (let i = 0; i + 1 < t.route.length; i++) {
         const a = t.route[i],
           b = t.route[i + 1]
-        if (a.route_type === "wire" && b.route_type === "wire" && a.layer === b.layer)
+        if (
+          a.route_type === "wire" &&
+          b.route_type === "wire" &&
+          a.layer === b.layer
+        )
           len += Math.hypot(b.x - a.x, b.y - a.y)
       }
-      frozenLen.set(t.connection_name, (frozenLen.get(t.connection_name) ?? 0) + len)
+      frozenLen.set(
+        t.connection_name,
+        (frozenLen.get(t.connection_name) ?? 0) + len,
+      )
     }
     // Keep a short straight corridor ahead of every supplied-copper terminal (a fanout exit) for its
     // own net, as the via site under a ball is kept: otherwise an earlier net's via lands in front of it.
@@ -839,9 +846,7 @@ export function routeNegotiatedLanes(
   const allPads = srj.obstacles.filter((o: any) => o.layers.includes("top"))
   const partnerReservation = (pad: Pt): PadStamp[] => {
     const res = padStamps.get(padKey(pad))?.res
-    return res?.some((r) => r.length)
-      ? [{ t: res, v: new Int32Array(0) }]
-      : []
+    return res?.some((r) => r.length) ? [{ t: res, v: new Int32Array(0) }] : []
   }
   // Gather points already given to pairs. Two pairs must not share one: pairs leaving the same ball
   // row through the far layer would otherwise both gather on the same spot past the ball field.
@@ -852,8 +857,7 @@ export function routeNegotiatedLanes(
   const gOnPad = (g: Pt) =>
     allPads.some(
       (o: any) =>
-        Math.hypot(o.center.x - g.x, o.center.y - g.y) <
-        o.width / 2 + C_TP + H,
+        Math.hypot(o.center.x - g.x, o.center.y - g.y) < o.width / 2 + C_TP + H,
     )
   /** Slide a gather point sideways (across its leaving direction) to the nearest free slot. */
   const freeG = (g: Pt, dir: Pt): Pt => {
@@ -1159,9 +1163,7 @@ export function routeNegotiatedLanes(
     )
     const v = union(
       ...perLayer((l) =>
-        collect(tr[l], fat ? D.fatV : D.trV).filter(
-          (c) => inPadSite[c] !== l,
-        ),
+        collect(tr[l], fat ? D.fatV : D.trV).filter((c) => inPadSite[c] !== l),
       ),
       collect(vias, D.viaV),
     )
@@ -1946,8 +1948,10 @@ export function routeNegotiatedLanes(
     const sharp: [string, Pt][][] = [[], []]
     const out = [0, 1].map((m) => {
       const side = m === pr.leftMember ? +1 : -1
-      const raw = offsetPolyline(c2, side * H, (i) =>
-        !!n.bevel?.[m].has(vkey(c2[i])),
+      const raw = offsetPolyline(
+        c2,
+        side * H,
+        (i) => !!n.bevel?.[m].has(vkey(c2[i])),
       )
       for (const [i, q] of raw.sharp)
         if (!n.bevel?.[m].has(vkey(c2[i]))) sharp[m].push([vkey(c2[i]), q])
@@ -2235,7 +2239,9 @@ export function routeNegotiatedLanes(
           fMin = Math.min(...frozen) + skew - cfg.skewMargin - 0.04,
           fMax = Math.max(...frozen),
           clamp = (t: number) =>
-            frozen.length && fMax <= fMin ? Math.min(Math.max(t, fMax), fMin) : t
+            frozen.length && fMax <= fMin
+              ? Math.min(Math.max(t, fMax), fMin)
+              : t
         let best = clamp(Math.max(...bases))
         for (const b of bases)
           for (const t of [b, b + skew].map(clamp))
@@ -2372,7 +2378,10 @@ export function routeNegotiatedLanes(
           if (segD(p, g[0], g[1], g[2], g[3]) < cfg.w / 2 + g[4] + GAP - 1e-6)
             return true
         for (const g of frozenVias)
-          if (Math.hypot(p.x - g[0], p.y - g[1]) < cfg.w / 2 + g[2] + GAP - 1e-6)
+          if (
+            Math.hypot(p.x - g[0], p.y - g[1]) <
+            cfg.w / 2 + g[2] + GAP - 1e-6
+          )
             return true
         for (const o of srj.obstacles) {
           if (
@@ -2650,7 +2659,9 @@ export function routeNegotiatedLanes(
         continue
       }
       const ev =
-        it % cfg.evalEvery === cfg.evalEvery - 1 || !total ? evaluate(!total) : null
+        it % cfg.evalEvery === cfg.evalEvery - 1 || !total
+          ? evaluate(!total)
+          : null
       if (it % 5 === 4 || !total)
         log(
           `  iter ${it} [${((performance.now() - t0) / 1e3).toFixed(0)}s] pres=${presFac.toFixed(1)} conflicts=${total} nets=${bad.length} ${bad.slice(0, 8).join(",")} vias=${nets.reduce((s, n) => s + viaCount(n), 0)}` +
