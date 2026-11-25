@@ -43,8 +43,8 @@ type Point = { x: number; y: number }
  * holds its meander, a differential pair is one coupled centreline on one layer,
  * and the search never returns a path longer than its bus window.
  *
- * Stages run in priority order and freeze their copper: pairs before singles,
- * tight buses before loose ones. Vias are priced per stage, so the timing
+ * By default the pairs route first and freeze their copper, then every other
+ * net is negotiated jointly; explicit stages can impose a finer priority order. Vias are priced per stage, so the timing
  * critical nets keep them to a minimum and the later stages absorb the rest. A
  * net that a stage cannot place is promoted into the previous stage.
  *
@@ -98,6 +98,38 @@ export class NegotiatedLaneSolver extends BaseSolver {
     if (gapEnd - gapStart < 3)
       throw Error("Negotiated lanes need a clear band between the packages")
     const gap = gapEnd - gapStart
+    // Each end of the tuning zone keeps room past the package's nearest ball for a pair to leave
+    // the ball field and gather: the ball, its clearance, a pair width, the gather run and the lead
+    // into the zone. A fixed share of the gap is less than that between small, close packages.
+    const ro = (options.router ?? {}) as {
+      w?: number
+      pairGap?: number
+      pairLead?: number
+    }
+    const balls = this.working.obstacles.filter(
+      (o) => !(o as { isCopperPour?: boolean }).isCopperPour,
+    )
+    const mid = (gapStart + gapEnd) / 2
+    const rim = (o: (typeof balls)[number], side: 1 | -1) =>
+      o.center.x + (side * Math.abs(o.width)) / 2
+    const padStart = Math.max(
+      gapStart,
+      ...balls.filter((o) => o.center.x < mid).map((o) => rim(o, 1)),
+    )
+    const padEnd = Math.min(
+      gapEnd,
+      ...balls.filter((o) => o.center.x >= mid).map((o) => rim(o, -1)),
+    )
+    const escape =
+      (input.minTraceToPadEdgeClearance ?? 0.12) +
+      2 * (ro.w ?? input.minTraceWidth) +
+      (ro.pairGap ?? 0.18) +
+      0.7 +
+      (ro.pairLead ?? 0.3)
+    const zoneStart = Math.max(gapStart + 0.3 * gap, padStart + escape),
+      zoneEnd = Math.min(gapEnd - 0.2 * gap, padEnd - escape)
+    if (zoneEnd - zoneStart < 1.5)
+      throw Error("Negotiated lanes need a clear band between the packages")
     const margin = options.margin ?? 9
     const pick = (o: unknown) =>
       this.transposed && o ? transposeBox(o as Box) : (o as Box | undefined)
@@ -108,7 +140,7 @@ export class NegotiatedLaneSolver extends BaseSolver {
         minY: Math.min(...points.map((p) => p.y)) - margin,
         maxY: Math.max(...points.map((p) => p.y)) + margin,
       },
-      zone: options.zone ?? [gapStart + 0.3 * gap, gapEnd - 0.2 * gap],
+      zone: options.zone ?? [zoneStart, zoneEnd],
       w: Math.max(
         input.minTraceWidth,
         ...input.connections.map((c) => c.nominalTraceWidth ?? c.width ?? 0),
@@ -249,38 +281,24 @@ export class NegotiatedLaneSolver extends BaseSolver {
   }
 }
 
-/** Pairs before singles, tight buses before loose ones, un-bussed nets last. */
+/** All differential pairs first, then every other net in one joint negotiation.
+ *
+ * Pairs are the least flexible copper (two coupled members, equal vias, a common
+ * gather point at each end), so they claim their corridors while the board is
+ * empty. Single-ended nets are then negotiated together: freezing a tight class
+ * before a looser one lets the first class wall the second in around the ball
+ * fields (address/command wrapped round the memory before the data bytes could
+ * leave), whereas a joint negotiation lets slack-rich nets give way. Bus windows
+ * and via prices per bus still rank the singles inside that negotiation. */
 function defaultStages(input: SimpleRouteJson): NegotiatedLaneStage[] {
-  const buses = [...(input.buses ?? [])].sort(
-    (a, b) => (a.maxLengthSkew ?? Infinity) - (b.maxLengthSkew ?? Infinity),
-  )
   const paired = new Set(
     (input.differentialPairs ?? []).flatMap((p) => p.connectionNames),
   )
-  const ranks: string[][] = []
-  let last: number | undefined
-  for (const bus of buses) {
-    const skew = bus.maxLengthSkew ?? Infinity
-    if (skew !== last) ranks.push([])
-    ranks.at(-1)!.push(...bus.connectionNames)
-    last = skew
-  }
-  const known = new Set(input.connections.map((c) => c.name))
-  const bussed = new Set(ranks.flat())
-  const loose = input.connections
-    .map((c) => c.name)
-    .filter((n) => !bussed.has(n))
-  const stages = ranks.flatMap((names) => {
-    const present = names.filter((n) => known.has(n))
-    return [
-      { connectionNames: present.filter((n) => paired.has(n)) },
-      { connectionNames: present.filter((n) => !paired.has(n)) },
-    ]
-  })
-  // Nets without a timing class take no part in the matching, but their balls sit among the
-  // others: placed last they are walled in, so they go just before the largest, loosest group.
-  stages.splice(Math.max(0, stages.length - 1), 0, { connectionNames: loose })
-  return stages.filter((stage) => stage.connectionNames.length)
+  const names = input.connections.map((c) => c.name)
+  return [
+    { connectionNames: names.filter((n) => paired.has(n)) },
+    { connectionNames: names.filter((n) => !paired.has(n)) },
+  ].filter((stage) => stage.connectionNames.length)
 }
 
 type Box = { minX: number; maxX: number; minY: number; maxY: number }

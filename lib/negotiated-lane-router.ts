@@ -274,6 +274,20 @@ export function routeNegotiatedLanes(
     if (connPads.has(padKey(o.center)) && o.layers.includes("top"))
       padStamps.set(padKey(o.center), st)
   }
+  // A via on the centre of a ball pad it fits inside lies within the pad, so on the pad's own layer
+  // any copper that clears the pad clears the via too: there the pad's clearance is the via's, and
+  // copper on that layer passing the ball must not also block its via site. Value: the pad's layer.
+  const inPadSite = new Int8Array(NN).fill(-1)
+  if (cfg.allowViaInPad)
+    for (const o of srj.obstacles) {
+      if (!padStamps.has(padKey(o.center))) continue
+      if (Math.min(Math.abs(o.width), Math.abs(o.height)) < cfg.viaD - 1e-9)
+        continue
+      const ls = o.layers
+        .map((l: string) => LAYERS.indexOf(l))
+        .filter((l: number) => l >= 0)
+      if (ls.length === 1) inPadSite[nodeOf(o.center)] = ls[0]
+    }
   // via-in-pad only: keep a via site under every bus ball free of other nets' copper on the far layer
   if (cfg.allowViaInPad)
     for (const c of origProblem.connections)
@@ -397,6 +411,9 @@ export function routeNegotiatedLanes(
   {
     const pts: number[][] = [[], []],
       vias: number[] = []
+    // exact frozen geometry: [ax, ay, bx, by, halfWidth] per layer, and [x, y, radius] for vias
+    const segs: number[][][] = [[], []],
+      viaGeo: number[][] = []
     const blockRows = (l: number, x: number, y: number, r: number) => {
       if (x < wx(zXL) - 0.3 || x > wx(zXR) + 0.3) return
       for (
@@ -417,6 +434,7 @@ export function routeNegotiatedLanes(
         if (a.route_type === "via") {
           if (inside(a.x, a.y)) {
             vias.push(nodeOf(a))
+            viaGeo.push([a.x, a.y, (a.via_diameter ?? cfg.viaD) / 2])
             for (let l = 0; l < 2; l++) blockRows(l, a.x, a.y, R_TV)
           }
           continue
@@ -424,10 +442,15 @@ export function routeNegotiatedLanes(
         const b = t.route[i + 1],
           l = LAYERS.indexOf(a.layer)
         if (l < 0) continue
+        const hw = (a.width ?? cfg.w) / 2
         if (!b || b.route_type !== "wire" || b.layer !== a.layer) {
-          if (inside(a.x, a.y)) pts[l].push(nodeOf(a))
+          if (inside(a.x, a.y)) {
+            pts[l].push(nodeOf(a))
+            segs[l].push([a.x, a.y, a.x, a.y, hw])
+          }
           continue
         }
+        segs[l].push([a.x, a.y, b.x, b.y, hw])
         const n = Math.max(
           1,
           Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) / 0.02),
@@ -550,7 +573,12 @@ export function routeNegotiatedLanes(
           ownCopper.set(c.name, [...(ownCopper.get(c.name) ?? []), st])
       }
     const m = new Uint8Array(NN)
-    const stampSet = (cells: number[], offs: number[], dst: Uint8Array) => {
+    const stampSet = (
+      cells: number[],
+      offs: number[],
+      dst: Uint8Array,
+      skip?: (c: number) => boolean,
+    ) => {
       m.fill(0)
       for (const c of new Set(cells)) {
         const ci = c % NX,
@@ -561,17 +589,63 @@ export function routeNegotiatedLanes(
           if (i >= 0 && j >= 0 && i < NX && j < NY) m[j * NX + i] = 1
         }
       }
-      for (let c = 0; c < NN; c++) if (m[c]) dst[c]++
+      for (let c = 0; c < NN; c++) if (m[c] && !skip?.(c)) dst[c]++
     }
-    const pad = P * 0.71
+    // Frozen copper is stamped from its exact geometry, as pads are: a cell is blocked when a trace
+    // (or via) centred on it would come closer than the clearance to the frozen copper. Snapping the
+    // copper to cells first and padding for the snap error closed every channel whose clearance is
+    // exact on the grid, such as one trace between two 0.65 mm-pitch plane vias.
+    const EPS = 0.006
+    const raster = (
+      shapes: number[][],
+      reach: (s: number[]) => number,
+      dst: Uint8Array,
+      skip?: (c: number) => boolean,
+    ) => {
+      m.fill(0)
+      for (const g of shapes) {
+        const seg = g.length === 5,
+          [ax, ay] = g,
+          bx = seg ? g[2] : ax,
+          by = seg ? g[3] : ay,
+          r = reach(g)
+        const i0 = Math.max(0, Math.floor((Math.min(ax, bx) - r - X0) / P)),
+          i1 = Math.min(NX - 1, Math.ceil((Math.max(ax, bx) + r - X0) / P)),
+          j0 = Math.max(0, Math.floor((Math.min(ay, by) - r - Y0) / P)),
+          j1 = Math.min(NY - 1, Math.ceil((Math.max(ay, by) + r - Y0) / P))
+        const dx = bx - ax,
+          dy = by - ay,
+          L2 = dx * dx + dy * dy
+        for (let j = j0; j <= j1; j++)
+          for (let i = i0; i <= i1; i++) {
+            const x = wx(i),
+              y = wy(j)
+            const t = L2
+              ? Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / L2))
+              : 0
+            if (Math.hypot(x - ax - t * dx, y - ay - t * dy) < r)
+              m[j * NX + i] = 1
+          }
+      }
+      for (let c = 0; c < NN; c++) if (m[c] && !skip?.(c)) dst[c]++
+    }
+    const trTr = (g: number[]) => g[4] + cfg.w / 2 + GAP + EPS,
+      viaTr = (g: number[]) => g[2] + cfg.w / 2 + GAP + EPS,
+      trVia = (g: number[]) => g[4] + cfg.viaD / 2 + GAP + EPS,
+      viaVia = (g: number[]) =>
+        Math.max(
+          g[2] + cfg.viaD / 2 + GAP,
+          // hole to hole: frozen holes are taken as this router's
+          cfg.viaHole + (srj.minViaHoleEdgeToViaHoleEdgeClearance ?? 0.24),
+        ) + EPS
     for (let l = 0; l < 2; l++) {
-      stampSet(pts[l], disk(0.225 + pad), staticT[l])
-      stampSet(vias, disk(R_TV + pad), staticT[l])
-      stampSet(pts[l], disk(0.225 + H + pad), staticF[l])
-      stampSet(vias, disk(R_TV + H + pad), staticF[l])
+      raster(segs[l], trTr, staticT[l])
+      raster(viaGeo, viaTr, staticT[l])
+      raster(segs[l], (g) => trTr(g) + H, staticF[l])
+      raster(viaGeo, (g) => viaTr(g) + H, staticF[l])
+      raster(segs[l], trVia, staticV, (c) => inPadSite[c] === l)
     }
-    stampSet([...pts[0], ...pts[1]], disk(R_TV + pad), staticV)
-    stampSet(vias, disk(R_VV + pad), staticV)
+    raster(viaGeo, viaVia, staticV)
     if (preTraces.length) log(`preloaded ${preTraces.length} frozen traces`)
   }
 
@@ -671,6 +745,32 @@ export function routeNegotiatedLanes(
     return res?.length
       ? [{ t: [new Int32Array(0), res], v: new Int32Array(0) }]
       : []
+  }
+  // Gather points already given to pairs. Two pairs must not share one: pairs leaving the same ball
+  // row through the far layer would otherwise both gather on the same spot past the ball field.
+  const claimedG: Pt[] = [],
+    gSlot = 2 * H + cfg.w + 3 * cfg.w // one pair width plus 3W to the next pair
+  const gClash = (g: Pt) =>
+    claimedG.some((q) => Math.hypot(q.x - g.x, q.y - g.y) < gSlot - 1e-9)
+  const gOnPad = (g: Pt) =>
+    allPads.some(
+      (o: any) =>
+        Math.hypot(o.center.x - g.x, o.center.y - g.y) <
+        o.width / 2 + C_TP + H,
+    )
+  /** Slide a gather point sideways (across its leaving direction) to the nearest free slot. */
+  const freeG = (g: Pt, dir: Pt): Pt => {
+    if (!gClash(g)) return g
+    const side = { x: -dir.y, y: dir.x }
+    for (let k = 1; k <= 12; k++)
+      for (const sg of [1, -1]) {
+        const q = {
+          x: g.x + side.x * sg * k * gSlot,
+          y: g.y + side.y * sg * k * gSlot,
+        }
+        if (!gClash(q) && !gOnPad(q)) return q
+      }
+    return g
   }
   for (const pr of srj.differentialPairs ?? []) {
     const conns = pr.connectionNames.map((n: string) =>
@@ -773,11 +873,18 @@ export function routeNegotiatedLanes(
     for (const c0 of cands[0])
       for (const c1 of cands[1]) {
         const twisted = c0.left >= 0 && c1.left >= 0 && c0.left !== c1.left
-        const score = c0.score + c1.score - (twisted ? cfg.pairTwistCost : 0)
+        const clashes = (gClash(c0.g) ? 1 : 0) + (gClash(c1.g) ? 1 : 0)
+        const score =
+          c0.score +
+          c1.score -
+          (twisted ? cfg.pairTwistCost : 0) -
+          clashes * cfg.pairTwistCost
         if (!pick || score > pick.score) pick = { c: [c0, c1], score }
       }
     for (const c of pick!.c) {
-      G.push({ x: wx(gx(c.g.x)), y: wy(gy(c.g.y)) })
+      const g = freeG(c.g, c.d)
+      claimedG.push(g)
+      G.push({ x: wx(gx(g.x)), y: wy(gy(g.y)) })
       d.push(c.d)
     }
     // An unavoidable twist is undone at a ball end (it has via sites), never in front of fanout exits,
@@ -954,7 +1061,11 @@ export function routeNegotiatedLanes(
       union(collect(tr[l], fat ? D.fatF : D.thinF), collect(vias, D.viaF)),
     )
     const v = union(
-      collect([...tr[0], ...tr[1]], fat ? D.fatV : D.trV),
+      ...[0, 1].map((l) =>
+        collect(tr[l], fat ? D.fatV : D.trV).filter(
+          (c) => inPadSite[c] !== l,
+        ),
+      ),
       collect(vias, D.viaV),
     )
     n.stamp = { t, f, v }
