@@ -1,0 +1,29 @@
+{
+  "source": {
+    "repository": "Modos-Labs/Glider",
+    "commit": "ed94ef7fd95a42cfdcdaf5e5da1dcdd709122763",
+    "path": "pcb/mainboard/pcb.kicad_pcb",
+    "sha256": "aea9094b681b96d6548beff89ca7a6c10484c7a95a29a6819fa34010b17513d3"
+  },
+  "capture": {
+    "core": "edeffbb875104176630ddcbab37022e1a092bbae",
+    "benchmark": "16b6352dc25e951192d88cb99a7cfe96abf62285",
+    "run": "https://github.com/tscircuit/core/actions/runs/45653352989",
+    "job": 139343421426,
+    "inputPath": "results/head/glider/attempts/matching/phase-2-start.srj.json",
+    "inputSha256": "1049059bf08e82683071d2465ab1cc2f419b78399c9d3a13ec645f0130a9defe",
+    "fixedConnectionsInputSha256": "efb98e5621aac256185a3131b34c343dcef904b1afc3de385e97d4b59476c1be"
+  },
+  "scope": "The unchanged second byte emitted by normal native TSX through Core. Eleven pending signals, eleven already completed fixed signals, all360 native pad obstacles. Complete49-net board benchmarking is separate. No coordinates, copper, layers, numeric timing constraints or widths changed.",
+  "expected": {
+    "pendingConnections": 11,
+    "fixedConnections": 11,
+    "minimumFullLengthMm": 27.842655,
+    "dataSkewMm": 0.7970430000000012,
+    "dqsSkewMm": 0.254,
+    "budgetSeconds": 120
+  },
+  "baselineBus": "66d2968d906ad6e1cdd9057e9d1303b197d235a6",
+  "verifiedBaselineRun": 45675406920,
+  "captureSource": "Fresh native Core Glider matching phase2; input SHA2561049059bf08e82683071d2465ab1cc2f419b78399c9d3a13ec645f0130a9defe"
+}
