@@ -4,6 +4,7 @@ import { getSvgFromGraphicsObject } from "graphics-debug"
 import {
   BusLanesPipelineSolver,
   BusLanesSolver,
+  RoutedBusLengthSolver,
   busLengthReports,
   type SimpleRouteJson,
 } from "../lib"
@@ -62,7 +63,13 @@ test("a completed data lane matches a strobe with an absolute length window", as
       },
     ],
   }
-  const traces = router.traces
+  const matcher = new RoutedBusLengthSolver({
+    input,
+    routedTraces: router.traces,
+  })
+  matcher.solve()
+  expect(matcher.solved).toBe(true)
+  const { traces } = matcher.getOutput()
   const inputSrj = nativeValidationSrj(board)
   const routedSrj = nativeValidationSrj({ ...board, traces })
   expect(
@@ -73,8 +80,9 @@ test("a completed data lane matches a strobe with an absolute length window", as
     validateRoutedCopperDrc({ inputSrj, routedSrj, clearance: 0.1 }).valid,
   ).toBe(true)
   const [strobe, data] = busLengthReports(input, traces)
-  expect(strobe.aboveMinimumLength).toBe(false)
-  expect(data.matched).toBe(false)
+  expect(strobe.aboveMinimumLength).toBe(true)
+  expect(strobe.withinLengthLimit).toBe(true)
+  expect(data.matched).toBe(true)
   const graphics = new BusLanesSolver({ ...board, traces }).visualize()
   graphics.texts = [
     {
