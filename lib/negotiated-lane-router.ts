@@ -238,7 +238,13 @@ export function routeNegotiatedLanes(
       }
     return cells
   }
-  type PadStamp = { t: Int32Array[]; v: Int32Array; f?: Int32Array[] }
+  // res: the far-layer via-site reservation under a bus ball (via-in-pad only)
+  type PadStamp = {
+    t: Int32Array[]
+    v: Int32Array
+    f?: Int32Array[]
+    res?: Int32Array
+  }
   const padKey = (p: Pt) => `${p.x.toFixed(3)},${p.y.toFixed(3)}`
   const padStamps = new Map<string, PadStamp>()
   const connPads = new Set<string>(
@@ -278,9 +284,11 @@ export function routeNegotiatedLanes(
           { shape: "circle", center: p, width: cfg.viaD, height: cfg.viaD },
           GAP + cfg.w / 2 + 0.02,
         )
-        const have = new Set(st.t[1])
-        for (const q of cells) if (!have.has(q)) staticT[1][q]++
+        const have = new Set(st.t[1]),
+          added = cells.filter((q) => !have.has(q))
+        for (const q of added) staticT[1][q]++
         st.t[1] = Int32Array.from(new Set([...st.t[1], ...cells]))
+        st.res = Int32Array.from(new Set([...(st.res ?? []), ...added]))
       }
   const applyPad = (st: PadStamp, s: number) => {
     for (let l = 0; l < 2; l++) {
@@ -658,6 +666,12 @@ export function routeNegotiatedLanes(
     })
   }
   const allPads = srj.obstacles.filter((o: any) => o.layers.includes("top"))
+  const partnerReservation = (pad: Pt): PadStamp[] => {
+    const res = padStamps.get(padKey(pad))?.res
+    return res?.length
+      ? [{ t: [new Int32Array(0), res], v: new Int32Array(0) }]
+      : []
+  }
   for (const pr of srj.differentialPairs ?? []) {
     const conns = pr.connectionNames.map((n: string) =>
       srj.connections.find((c: any) => c.name === n),
@@ -666,7 +680,8 @@ export function routeNegotiatedLanes(
     const G: Pt[] = [],
       d: Pt[] = [],
       M: [Pt, Pt][] = [],
-      cands: { d: Pt; g: Pt; score: number; left: number }[][] = [[], []]
+      cands: { d: Pt; g: Pt; score: number; left: number }[][] = [[], []],
+      interior: { d: Pt; g: Pt; score: number; left: number }[][] = [[], []]
     for (const e of [0, 1]) {
       const a = pads[0][e],
         b = pads[1][e],
@@ -703,8 +718,39 @@ export function routeNegotiatedLanes(
               blocked = true
           }
         }
-        if (blocked) continue
-        const score = (other.x - mid.x) * dir.x + (other.y - mid.y) * dir.y
+        let score = (other.x - mid.x) * dir.x + (other.y - mid.y) * dir.y
+        if (blocked) {
+          // An interior ball pair has no free way out on the pad layer. With via-in-pad its stubs drop
+          // under their balls and leave on the far layer, so gather the pair just outside the ball
+          // field in this direction instead; used only when no direction is free (below).
+          if (!cfg.allowViaInPad) continue
+          const near = allPads.filter(
+            (o: any) =>
+              padKey(o.center) !== padKey(a) &&
+              padKey(o.center) !== padKey(b) &&
+              Math.abs(
+                (o.center.x - mid.x) * -dir.y + (o.center.y - mid.y) * dir.x,
+              ) <
+                o.width / 2 + C_TP + H,
+          )
+          let last = 0
+          for (const o of near) {
+            const along =
+              (o.center.x - mid.x) * dir.x + (o.center.y - mid.y) * dir.y
+            if (along > 0) last = Math.max(last, along + o.width / 2 + C_TP + H)
+          }
+          const out = last + 0.7
+          const gOut = { x: mid.x + dir.x * out, y: mid.y + dir.y * out }
+          const t = e === 0 ? dir : { x: -dir.x, y: -dir.y },
+            cr = t.x * (a.y - mid.y) - t.y * (a.x - mid.x)
+          interior[e].push({
+            d: dir,
+            g: gOut,
+            score: score - out,
+            left: cr > 1e-9 ? 0 : cr < -1e-9 ? 1 : -1,
+          })
+          continue
+        }
         // which member is on the left of the direction of travel (end 0 -> end 1) when leaving this way; -1: either
         const t = e === 0 ? dir : { x: -dir.x, y: -dir.y },
           cr = t.x * (a.y - mid.y) - t.y * (a.x - mid.x)
@@ -715,6 +761,7 @@ export function routeNegotiatedLanes(
           left: cr > 1e-9 ? 0 : cr < -1e-9 ? 1 : -1,
         })
       }
+      if (!cands[e].length) cands[e] = interior[e]
       if (!cands[e].length)
         throw Error(
           `pair ${label(conns[0].name)}: no free direction to leave its pads at end ${e}`,
@@ -800,6 +847,10 @@ export function routeNegotiatedLanes(
           ownPads: [
             ...[padStamps.get(padKey(pad))!].filter(Boolean),
             ...(ownCopper.get(conns[m].name) ?? []),
+            // The partner's far-layer via-site reservation guards that ball against other nets.
+            // A pair shares one via budget, so a member may pass under its partner's ball: where
+            // the two balls stand one behind the other this is the rear member's only straight way out.
+            ...partnerReservation(pads[1 - m][e]),
           ],
           ignore: [fat],
           viaCost: cfg.stubViaCost,
