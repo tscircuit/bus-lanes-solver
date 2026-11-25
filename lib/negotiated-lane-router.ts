@@ -476,6 +476,8 @@ export function routeNegotiatedLanes(
   const fixedLen = new Map<string, number>(),
     ownCopper = new Map<string, PadStamp[]>()
   const fixedOf = (name: string) => fixedLen.get(name) ?? 0
+  const frozenLen = new Map<string, number>()
+  const routedNames = new Set<string>(srj.connections.map((c: any) => c.name))
   function collectCells(cells: number[], offs: number[]): number[] {
     const seen = new Set<number>()
     for (const c of cells) {
@@ -593,6 +595,19 @@ export function routeNegotiatedLanes(
         v: cells(own.flat(), disk(R_TV + pad)),
       }
       ownCopper.set(c.name, [...(ownCopper.get(c.name) ?? []), st])
+    }
+    // Bus members already routed in an earlier stage (frozen copper of a net not routed here): the
+    // window of their bus must still take in their lengths, since the bus's skew is measured against them.
+    for (const t of preTraces) {
+      if (routed.has(t.connection_name)) continue
+      let len = 0
+      for (let i = 0; i + 1 < t.route.length; i++) {
+        const a = t.route[i],
+          b = t.route[i + 1]
+        if (a.route_type === "wire" && b.route_type === "wire" && a.layer === b.layer)
+          len += Math.hypot(b.x - a.x, b.y - a.y)
+      }
+      frozenLen.set(t.connection_name, (frozenLen.get(t.connection_name) ?? 0) + len)
     }
     // Keep a short straight corridor ahead of every supplied-copper terminal (a fanout exit) for its
     // own net, as the via site under a ball is kept: otherwise an earlier net's via lands in front of it.
@@ -1750,26 +1765,35 @@ export function routeNegotiatedLanes(
     }
     return out
   }
-  function offsetPolyline(pts: Pt[], d: number): Pt[] {
-    const out: Pt[] = []
+  /** Offset of a polyline by d (left of travel for d > 0). Outer corners sharper than 45 degrees are
+   *  bevelled, so no point of the offset lies farther than |d| from the centreline (a mitre would
+   *  reach |d| / cos(turn / 2) out, into copper the centreline's clearance never reserved).
+   *  `from[i]` is the index in the result of the (first) point offset from pts[i]. */
+  function offsetPolyline(pts: Pt[], d: number): Pt[] & { from: number[] } {
+    const out = [] as unknown as Pt[] & { from: number[] }
+    out.from = []
     const nrm = (a: Pt, b: Pt) => {
       const L = Math.hypot(b.x - a.x, b.y - a.y)
       return { x: -(b.y - a.y) / L, y: (b.x - a.x) / L }
     }
     for (let i = 0; i < pts.length; i++) {
-      if (i === 0) {
-        const n = nrm(pts[0], pts[1])
-        out.push({ x: pts[0].x + n.x * d, y: pts[0].y + n.y * d })
-        continue
-      }
-      if (i === pts.length - 1) {
-        const n = nrm(pts[i - 1], pts[i])
+      out.from.push(out.length)
+      if (i === 0 || i === pts.length - 1) {
+        const n = i === 0 ? nrm(pts[0], pts[1]) : nrm(pts[i - 1], pts[i])
         out.push({ x: pts[i].x + n.x * d, y: pts[i].y + n.y * d })
         continue
       }
       const n1 = nrm(pts[i - 1], pts[i]),
         n2 = nrm(pts[i], pts[i + 1]),
-        k = d / (1 + n1.x * n2.x + n1.y * n2.y)
+        cos = n1.x * n2.x + n1.y * n2.y,
+        // left turn: n1 x n2 > 0; the offset is on the outside when it lies right of a left turn
+        turn = n1.x * n2.y - n1.y * n2.x
+      if (cos < Math.SQRT1_2 - 1e-6 && turn * d < 0) {
+        out.push({ x: pts[i].x + n1.x * d, y: pts[i].y + n1.y * d })
+        out.push({ x: pts[i].x + n2.x * d, y: pts[i].y + n2.y * d })
+        continue
+      }
+      const k = d / (1 + cos)
       out.push({
         x: pts[i].x + (n1.x + n2.x) * k,
         y: pts[i].y + (n1.y + n2.y) * k,
@@ -1892,21 +1916,34 @@ export function routeNegotiatedLanes(
         Math.abs(q.x - (xL + 0.3)) < 1e-9 &&
         Math.abs(q.y - xy(n.path![n.laneAt!]).y) < 1e-9,
     )
+    // straight centreline after the lane start, measured along +x from xL to the next turn
+    const runAfterTrim =
+      iTrim >= 0 &&
+      iTrim + 1 < c2.length &&
+      Math.abs(c2[iTrim + 1].y - c2[iTrim].y) < 1e-9 &&
+      c2[iTrim + 1].x > c2[iTrim].x
+        ? c2[iTrim + 1].x - xL
+        : 0
     let ok = true
     const out = [0, 1].map((m) => {
       const side = m === pr.leftMember ? +1 : -1
       const raw = offsetPolyline(c2, side * H),
-        anchor = raw[iTrim]
+        anchor = iTrim >= 0 ? raw[raw.from[iTrim]] : undefined
       // On the inside of a sharp turn the offset folds into a tiny knot: take the chord instead (the
       // length it saves is given back by the member's trim).
       let poly = unknot(raw, anchor)
       const iT = anchor ? poly.indexOf(anchor) : -1
       const e = trims[m]
       if (e > 1e-6) {
+        // the bumps must end before the centreline's next turn, clear of both members' corners there
+        const kFit = Math.min(
+          3,
+          Math.floor((runAfterTrim - 0.35 - cfg.w / 2 - GAP - H) / 0.5 + 1e-9),
+        )
         let k = 1
-        while (k < 3 && bumpAmp(e / k, 0.1) > 0.4) k++
+        while (k < kFit && bumpAmp(e / k, 0.1) > 0.4) k++
         const a = bumpAmp(e / k, 0.1)
-        if (a > TRIM - 0.02 || iT < 0) ok = false
+        if (a > TRIM - 0.02 || iT < 0 || kFit < 1) ok = false
         const y = poly[iT]?.y ?? 0,
           ins: Pt[] = []
         for (let b = 0; b < k; b++)
@@ -2165,9 +2202,18 @@ export function routeNegotiatedLanes(
               cfg.overLengthWeight * Math.max(0, b - t),
             0,
           )
-        let best = Math.max(...bases)
+        // frozen members bound the window: top >= the longest, top - skew <= the shortest
+        const frozen = (bus.connectionNames as string[])
+            .filter((name) => !routedNames.has(name))
+            .map((name) => frozenLen.get(name))
+            .filter((v): v is number => v !== undefined && v > 0),
+          fMin = Math.min(...frozen) + skew - cfg.skewMargin - 0.04,
+          fMax = Math.max(...frozen),
+          clamp = (t: number) =>
+            frozen.length && fMax <= fMin ? Math.min(Math.max(t, fMax), fMin) : t
+        let best = clamp(Math.max(...bases))
         for (const b of bases)
-          for (const t of [b, b + skew])
+          for (const t of [b, b + skew].map(clamp))
             if (cost(t) < cost(best) - 1e-9) best = t
         top = best + 0.02
         lo = top - skew + cfg.skewMargin
