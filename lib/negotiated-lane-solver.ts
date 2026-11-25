@@ -161,9 +161,11 @@ export class NegotiatedLaneSolver extends BaseSolver {
       this.done[this.stageIndex++] = []
       return
     }
+    // supplied copper is already in the working frame; finished stages are kept in the input frame
+    const earlier = this.done.slice(0, this.stageIndex).flat()
     const frozen = [
       ...(this.working.traces ?? []),
-      ...this.done.slice(0, this.stageIndex).flat(),
+      ...(this.transposed ? earlier.map(transposeTrace) : earlier),
     ]
     let result!: ReturnType<typeof routeNegotiatedLanes>
     const attempts = this.options.attemptsPerStage ?? 3
@@ -176,7 +178,7 @@ export class NegotiatedLaneSolver extends BaseSolver {
         ...this.routerOptions,
         ...(stage.options ?? {}),
         seed,
-        preloadedTraces: this.transposed ? frozen.map(transposeTrace) : frozen,
+        preloadedTraces: frozen,
         onlyNets: stage.connectionNames,
       })
       this.log.push(

@@ -33,6 +33,7 @@ export function routeNegotiatedLanes(
     },
     zone: [0, 0] as [number, number],
     zoneRows: null as null | [number, number],
+    layers: null as null | string[],
     w: 0.102,
     pairGap: 0.18,
     viaD: 0.3,
@@ -94,6 +95,9 @@ export function routeNegotiatedLanes(
     skewMargin: 0.12,
     windowMargin: 0.08,
     allowViaInPad: false,
+    // A via may still sit in a ball pad too crowded for via-in-pad everywhere (see inPadOk) when
+    // nothing else gets the ball out; each such via costs this much on top of the net's via cost.
+    crowdedViaInPadCost: 4,
     congestionByBus: {} as Record<string, number>,
     exactViasByBus: {} as Record<string, number>,
     preloadedTraces: [] as any[],
@@ -130,8 +134,12 @@ export function routeNegotiatedLanes(
   const t0 = performance.now()
 
   // ---------- grid ----------
+  // Signal layers, top first. Vias are through vias: a via blocks every layer at its site.
   const P = cfg.p,
-    LAYERS = ["top", "bottom"]
+    LAYERS: string[] = cfg.layers?.length ? cfg.layers : ["top", "bottom"],
+    NL = LAYERS.length
+  const layerOf = (id: number) => (id / NN) | 0
+  const perLayer = <T,>(f: (l: number) => T): T[] => LAYERS.map((_, l) => f(l))
   const allPts = [
     ...srj.obstacles.map((o: any) => o.center),
     ...origProblem.connections.flatMap((c: any) => c.pointsToConnect),
@@ -218,7 +226,9 @@ export function routeNegotiatedLanes(
   // ---------- static rasters ----------
   const staticT = LAYERS.map(() => new Uint8Array(NN)),
     staticF = LAYERS.map(() => new Uint8Array(NN)),
-    staticV = new Uint8Array(NN)
+    staticV = new Uint8Array(NN),
+    // the part of staticV stamped by solid (non-pour) pads with their via-to-pad clearance
+    padV = new Uint8Array(NN)
   function obstacleCells(o: any, clear: number): number[] {
     const cells: number[] = [],
       hx = o.width / 2,
@@ -244,7 +254,8 @@ export function routeNegotiatedLanes(
     t: Int32Array[]
     v: Int32Array
     f?: Int32Array[]
-    res?: Int32Array
+    res?: Int32Array[]
+    cv?: number
   }
   const padKey = (p: Pt) => `${p.x.toFixed(3)},${p.y.toFixed(3)}`
   const padStamps = new Map<string, PadStamp>()
@@ -283,6 +294,27 @@ export function routeNegotiatedLanes(
       if (!crowded) inPadOk.add(padKey(o.center))
     }
   }
+  // Centre cells of crowded ball pads (see inPadOk) where the pad's own net may still drop a costed via.
+  // Such a via is checked exactly against the solid pads around it at the copper gap rather than the
+  // wider via-to-pad stamp; anything else stamped there (frozen copper, pours, keepouts) still blocks it.
+  // crowdOpen is raised while the owning net's pads are lifted.
+  const crowdedV = new Uint8Array(NN),
+    crowdOpen = new Uint8Array(NN)
+  const solidPads = srj.obstacles.filter((o: any) => !o.isCopperPour)
+  const viaClearsPads = (o: any) =>
+    solidPads.every((q: any) => {
+      if (q === o) return true
+      const dx = Math.abs(q.center.x - o.center.x),
+        dy = Math.abs(q.center.y - o.center.y),
+        hx = Math.abs(q.width) / 2,
+        hy = Math.abs(q.height) / 2
+      if (dx > hx + 2 || dy > hy + 2) return true
+      const d =
+        q.shape === "circle"
+          ? Math.hypot(dx, dy) - hx
+          : Math.hypot(Math.max(0, dx - hx), Math.max(0, dy - hy))
+      return d >= GAP + cfg.viaD / 2 + 0.006
+    })
   for (const o of srj.obstacles) {
     const ls = o.layers
       .map((l: string) => LAYERS.indexOf(l))
@@ -292,13 +324,21 @@ export function routeNegotiatedLanes(
       v = obstacleCells(o, C_VP)
     // without via-in-pad a net's own pad keeps vias out like any other pad
     // with via-in-pad a net's via may sit on the centre of its own pad, nowhere else inside the pad's clearance
+    const k = padKey(o.center)
+    const crowdedSite =
+      cfg.allowViaInPad &&
+      !inPadOk.has(k) &&
+      connPads.has(k) &&
+      ls.length === 1 &&
+      Math.min(Math.abs(o.width), Math.abs(o.height)) >= cfg.viaD - 1e-9 &&
+      viaClearsPads(o)
+    if (crowdedSite) crowdedV[nodeOf(o.center)] = 1
     const st: PadStamp = {
-      t: [new Int32Array(0), new Int32Array(0)],
+      t: perLayer(() => new Int32Array(0)),
       v: new Int32Array(
-        inPadOk.has(padKey(o.center))
-          ? v.filter((q) => q === nodeOf(o.center))
-          : [],
+        inPadOk.has(k) ? v.filter((q) => q === nodeOf(o.center)) : [],
       ),
+      ...(crowdedSite ? { cv: nodeOf(o.center) } : {}),
     }
     for (const l of ls) {
       st.t[l] = new Int32Array(t)
@@ -306,6 +346,7 @@ export function routeNegotiatedLanes(
       for (const c of f) staticF[l][c]++
     }
     for (const c of v) staticV[c]++
+    if (!o.isCopperPour) for (const c of v) padV[c]++
     if (connPads.has(padKey(o.center)) && o.layers.includes("top"))
       padStamps.set(padKey(o.center), st)
   }
@@ -334,18 +375,22 @@ export function routeNegotiatedLanes(
           { shape: "circle", center: p, width: cfg.viaD, height: cfg.viaD },
           GAP + cfg.w / 2 + 0.02,
         )
-        const have = new Set(st.t[1]),
-          added = cells.filter((q) => !have.has(q))
-        for (const q of added) staticT[1][q]++
-        st.t[1] = Int32Array.from(new Set([...st.t[1], ...cells]))
-        st.res = Int32Array.from(new Set([...(st.res ?? []), ...added]))
+        st.res ??= perLayer(() => new Int32Array(0))
+        for (let l = 1; l < NL; l++) {
+          const have = new Set(st.t[l]),
+            added = cells.filter((q) => !have.has(q))
+          for (const q of added) staticT[l][q]++
+          st.t[l] = Int32Array.from(new Set([...st.t[l], ...cells]))
+          st.res[l] = Int32Array.from(new Set([...st.res[l], ...added]))
+        }
       }
   const applyPad = (st: PadStamp, s: number) => {
-    for (let l = 0; l < 2; l++) {
+    for (let l = 0; l < NL; l++) {
       for (const c of st.t[l]) staticT[l][c] += s
       if (st.f) for (const c of st.f[l]) staticF[l][c] += s
     }
     for (const c of st.v) staticV[c] += s
+    if (st.cv !== undefined) crowdOpen[st.cv] -= s
   }
   // a terminal may be a pad or the end of supplied (fanout) copper on either signal layer
   const LOf = (p: any) => Math.max(0, LAYERS.indexOf(p.layer ?? "top"))
@@ -445,10 +490,10 @@ export function routeNegotiatedLanes(
     return [...seen]
   }
   {
-    const pts: number[][] = [[], []],
+    const pts: number[][] = perLayer(() => []),
       vias: number[] = []
     // exact frozen geometry: [ax, ay, bx, by, halfWidth] per layer, and [x, y, radius] for vias
-    const segs: number[][][] = [[], []],
+    const segs: number[][][] = perLayer(() => []),
       viaGeo: number[][] = []
     const blockRows = (l: number, x: number, y: number, r: number) => {
       if (x < wx(zXL) - 0.3 || x > wx(zXR) + 0.3) return
@@ -471,7 +516,7 @@ export function routeNegotiatedLanes(
           if (inside(a.x, a.y)) {
             vias.push(nodeOf(a))
             viaGeo.push([a.x, a.y, (a.via_diameter ?? cfg.viaD) / 2])
-            for (let l = 0; l < 2; l++) blockRows(l, a.x, a.y, R_TV)
+            for (let l = 0; l < NL; l++) blockRows(l, a.x, a.y, R_TV)
           }
           continue
         }
@@ -507,7 +552,7 @@ export function routeNegotiatedLanes(
     for (const t of preTraces) {
       const c = routed.get(t.connection_name)
       if (!c) continue
-      const own: number[][] = [[], []]
+      const own: number[][] = perLayer(() => [])
       let len = 0
       for (let i = 0; i + 1 < t.route.length; i++) {
         const a = t.route[i],
@@ -538,17 +583,14 @@ export function routeNegotiatedLanes(
         }
       }
       fixedLen.set(c.name, (fixedLen.get(c.name) ?? 0) + len)
-      if (!own[0].length && !own[1].length) continue
+      if (own.every((o) => !o.length)) continue
       const pad = P * 0.71,
         cells = (ids: number[], offs: number[]) =>
           Int32Array.from(collectCells([...new Set(ids)], offs))
       const st: PadStamp = {
-        t: [cells(own[0], disk(0.225 + pad)), cells(own[1], disk(0.225 + pad))],
-        f: [
-          cells(own[0], disk(0.225 + H + pad)),
-          cells(own[1], disk(0.225 + H + pad)),
-        ],
-        v: cells([...own[0], ...own[1]], disk(R_TV + pad)),
+        t: own.map((o) => cells(o, disk(0.225 + pad))),
+        f: own.map((o) => cells(o, disk(0.225 + H + pad))),
+        v: cells(own.flat(), disk(R_TV + pad)),
       }
       ownCopper.set(c.name, [...(ownCopper.get(c.name) ?? []), st])
     }
@@ -674,7 +716,7 @@ export function routeNegotiatedLanes(
           // hole to hole: frozen holes are taken as this router's
           cfg.viaHole + (srj.minViaHoleEdgeToViaHoleEdgeClearance ?? 0.24),
         ) + EPS
-    for (let l = 0; l < 2; l++) {
+    for (let l = 0; l < NL; l++) {
       raster(segs[l], trTr, staticT[l])
       raster(viaGeo, viaTr, staticT[l])
       raster(segs[l], (g) => trTr(g) + H, staticF[l])
@@ -778,8 +820,8 @@ export function routeNegotiatedLanes(
   const allPads = srj.obstacles.filter((o: any) => o.layers.includes("top"))
   const partnerReservation = (pad: Pt): PadStamp[] => {
     const res = padStamps.get(padKey(pad))?.res
-    return res?.length
-      ? [{ t: [new Int32Array(0), res], v: new Int32Array(0) }]
+    return res?.some((r) => r.length)
+      ? [{ t: res, v: new Int32Array(0) }]
       : []
   }
   // Gather points already given to pairs. Two pairs must not share one: pairs leaving the same ball
@@ -1067,7 +1109,7 @@ export function routeNegotiatedLanes(
   const union = (...lists: number[][]) => Int32Array.from(new Set(lists.flat()))
   function stampNet(n: Net, s: number) {
     if (!n.stamp) return
-    for (let l = 0; l < 2; l++) {
+    for (let l = 0; l < NL; l++) {
       for (const c of n.stamp.t[l]) occT[l][c] += s
       for (const c of n.stamp.f[l]) occF[l][c] += s
     }
@@ -1079,25 +1121,25 @@ export function routeNegotiatedLanes(
     }
   }
   function buildStamp(n: Net) {
-    const tr: number[][] = [[], []],
+    const tr: number[][] = perLayer(() => []),
       vias: number[] = [],
       path = n.path!
     for (let k = 0; k < path.length; k++) {
       const id = path[k],
-        l = id >= NN ? 1 : 0,
+        l = layerOf(id),
         c = id - l * NN
       tr[l].push(c)
-      if (k && (path[k - 1] >= NN ? 1 : 0) !== l) vias.push(c)
+      if (k && layerOf(path[k - 1]) !== l) vias.push(c)
     }
     const fat = n.kind === "fat"
-    const t = [0, 1].map((l) =>
+    const t = perLayer((l) =>
       union(collect(tr[l], fat ? D.fatT : D.thinT), collect(vias, D.viaT)),
     )
-    const f = [0, 1].map((l) =>
+    const f = perLayer((l) =>
       union(collect(tr[l], fat ? D.fatF : D.thinF), collect(vias, D.viaF)),
     )
     const v = union(
-      ...[0, 1].map((l) =>
+      ...perLayer((l) =>
         collect(tr[l], fat ? D.fatV : D.trV).filter(
           (c) => inPadSite[c] !== l,
         ),
@@ -1112,12 +1154,12 @@ export function routeNegotiatedLanes(
   }
 
   // ---------- A* ----------
-  const LEN = new Float32Array(3 * NN),
-    Gs = new Float32Array(3 * NN),
-    PAR = new Int32Array(3 * NN),
-    SEEN = new Uint32Array(3 * NN),
-    DONE = new Uint32Array(3 * NN),
-    LANE = new Uint8Array(3 * NN)
+  const LEN = new Float32Array(Math.max(3, NL) * NN),
+    Gs = new Float32Array(Math.max(3, NL) * NN),
+    PAR = new Int32Array(Math.max(3, NL) * NN),
+    SEEN = new Uint32Array(Math.max(3, NL) * NN),
+    DONE = new Uint32Array(Math.max(3, NL) * NN),
+    LANE = new Uint8Array(Math.max(3, NL) * NN)
   let gen = 0
   class Heap {
     k: number[] = []
@@ -1274,14 +1316,16 @@ export function routeNegotiatedLanes(
     } | null = null
     // a twisted pair runs on the layer its terminals are NOT on: then each member changes layer once at
     // each end (equal via count) and the two members swap sides for free while one is above the other
+    const term = n.pair!.termLayer
     for (const L of n.pair!.twisted || n.exactVias === 2
-      ? [1 - n.pair!.termLayer]
-      : [0, 1]) {
+      ? perLayer((l) => l).filter((l) => l !== term)
+      : perLayer((l) => l)) {
       n.fatLayer = L
       n.src = (n.src % NN) + L * NN
       n.dst = (n.dst % NN) + L * NN
       if (!routeCapped(n)) continue
-      const cost = Gs[n.dst] + (L ? cfg.pairFarLayerCost * n.lenWeight : 0)
+      const cost =
+        Gs[n.dst] + (L !== 0 ? cfg.pairFarLayerCost * n.lenWeight : 0)
       if (!best || cost < best.cost)
         best = { cost, path: n.path!, laneAt: n.laneAt, layer: L }
     }
@@ -1306,7 +1350,11 @@ export function routeNegotiatedLanes(
     // same via barrels, so the class is matched through the board as well as on the surface. The search
     // runs on three copies of the grid (before, between and after the two vias).
     const X =
-      n.kind === "single" && n.exactVias === 2 && n.src < NN && n.dst < NN
+      n.kind === "single" &&
+      n.exactVias === 2 &&
+      NL === 2 &&
+      n.src < NN &&
+      n.dst < NN
     const dstId = X ? 2 * NN + n.dst : n.dst
     const ti = (n.dst % NN) % NX,
       tj = ((n.dst % NN) / NX) | 0
@@ -1404,20 +1452,23 @@ export function routeNegotiatedLanes(
       }
       if (
         n.viaCost < Infinity &&
-        !staticV[c] &&
-        !staticT[1 - l][c] &&
+        (!staticV[c] || (crowdOpen[c] && staticV[c] === padV[c])) &&
         !inZone(i) &&
         i !== zXL &&
         i !== zXR &&
         (!X || st < 2)
-      )
-        relax(
-          X ? c + (st + 1) * NN : c + (1 - l) * NN,
-          g + n.viaCost + 0.5 * cong * (histV[c] + presFac * occV[c]),
-          id,
-          0,
-          0,
-        )
+      ) {
+        const vc =
+          g +
+          n.viaCost +
+          (crowdedV[c] ? cfg.crowdedViaInPadCost : 0) +
+          0.5 * cong * (histV[c] + presFac * occV[c])
+        if (X) {
+          if (!staticT[1 - l][c]) relax(c + (st + 1) * NN, vc, id, 0, 0)
+        } else
+          for (let l2 = 0; l2 < NL; l2++)
+            if (l2 !== l && !staticT[l2][c]) relax(c + l2 * NN, vc, id, 0, 0)
+      }
       if (!stub && i === zXL && !laneBlocked[l][j]) {
         const end = j * NX + zXR
         if (!sStat[l][end]) {
@@ -1465,7 +1516,7 @@ export function routeNegotiatedLanes(
           last = path.length - 1
         outer: for (let a = 0; a < path.length; a++) {
           const ida = path[a],
-            la = ida >= NN ? 1 : 0,
+            la = layerOf(ida),
             ca = ida - la * NN,
             ai = ca % NX,
             aj = (ca / NX) | 0
@@ -1518,7 +1569,7 @@ export function routeNegotiatedLanes(
     if (!fat && cfg.unloop) {
       const ring = (pad: number) => pad + cfg.w / 2 + 0.1
       const straight = (a: number, b: number): number[] | null => {
-        const la = path[a] >= NN ? 1 : 0,
+        const la = layerOf(path[a]),
           ca = path[a] - la * NN,
           cb = path[b] - la * NN
         let i = ca % NX,
@@ -1544,15 +1595,15 @@ export function routeNegotiatedLanes(
       for (let pass = 0; pass < 2; pass++) {
         // forward: leaving; second pass on the reversed path: arriving
         for (let a = 0; a < path.length - 2; a++) {
-          const la = path[a] >= NN ? 1 : 0
+          const la = layerOf(path[a])
           const isTerm = a === 0,
-            afterVia = a > 0 && (path[a - 1] >= NN ? 1 : 0) !== la
+            afterVia = a > 0 && layerOf(path[a - 1]) !== la
           if (!isTerm && !afterVia) continue
           const r = ring(isTerm ? 0.2 : cfg.viaD / 2),
             pa = xy(path[a])
           let b = a
           for (let k = a + 1; k < Math.min(path.length, a + 16); k++) {
-            if ((path[k] >= NN ? 1 : 0) !== la) break
+            if (layerOf(path[k]) !== la) break
             const q = xy(path[k])
             if (Math.hypot(q.x - pa.x, q.y - pa.y) <= r + 1e-9) b = k
           }
@@ -1569,7 +1620,7 @@ export function routeNegotiatedLanes(
     n.path = path
     if (laneTo >= 0) {
       n.laneAt = path.indexOf(laneTo) - 1
-      n.laneLayer = laneTo >= NN ? 1 : 0
+      n.laneLayer = layerOf(laneTo)
     } else {
       n.laneAt = undefined
       n.laneLayer = undefined
@@ -1593,7 +1644,7 @@ export function routeNegotiatedLanes(
     const ok = route(n)
     if (!ok && cfg.debugNoPath) {
       const d = (id: number) => {
-        const l = id >= NN ? 1 : 0,
+        const l = layerOf(id),
           c = id - l * NN,
           q = xy(c)
         return `${LAYERS[l][0]}(${q.x.toFixed(2)},${q.y.toFixed(2)}) T=${staticT[l][c]} F=${staticF[l][c]} V=${staticV[c]} occT=${occT[l][c]}`
@@ -1617,13 +1668,13 @@ export function routeNegotiatedLanes(
         occ = n.kind === "fat" ? occF : occT
       for (let k = 0; k < path.length; k++) {
         const id = path[k],
-          l = id >= NN ? 1 : 0,
+          l = layerOf(id),
           c = id - l * NN
         if (occ[l][c]) {
           cnt++
           histT[l][c] += bumpHist
         }
-        if (k && (path[k - 1] >= NN ? 1 : 0) !== l && occV[c]) {
+        if (k && layerOf(path[k - 1]) !== l && occV[c]) {
           cnt++
           histV[c] += bumpHist
         }
@@ -2188,7 +2239,7 @@ export function routeNegotiatedLanes(
       withExemptions(n, () => {
         const occ = n.kind === "fat" ? occF : occT
         for (const id of n.path!) {
-          const l = id >= NN ? 1 : 0,
+          const l = layerOf(id),
             c = id - l * NN
           if (occ[l][c]) spots.push(xy(c))
         }
@@ -2383,7 +2434,7 @@ export function routeNegotiatedLanes(
           withExemptions(n, () => {
             const occ = n.kind === "fat" ? occF : occT
             for (const id of n.path!) {
-              const l = id >= NN ? 1 : 0,
+              const l = layerOf(id),
                 c = id - l * NN
               if (occ[l][c]) spots.push(xy(c))
             }
@@ -2505,14 +2556,14 @@ export function routeNegotiatedLanes(
       const r: any[] = []
       for (let k = 0; k < ids.length; k++) {
         const id = ids[k],
-          l = id >= NN ? 1 : 0,
+          l = layerOf(id),
           p = exactAt.get(id % NN) ?? xy(id)
-        if (k && (ids[k - 1] >= NN ? 1 : 0) !== l)
+        if (k && layerOf(ids[k - 1]) !== l)
           r.push({
             route_type: "via",
             x: +p.x.toFixed(5),
             y: +p.y.toFixed(5),
-            from_layer: LAYERS[1 - l],
+            from_layer: LAYERS[layerOf(ids[k - 1])],
             to_layer: LAYERS[l],
             via_diameter: cfg.viaD,
             via_hole_diameter: cfg.viaHole,
@@ -2678,14 +2729,14 @@ export function routeNegotiatedLanes(
         vc: string[] = []
       for (let k = 0; k < path.length; k++) {
         const id = path[k],
-          l = id >= NN ? 1 : 0,
+          l = layerOf(id),
           c = id - l * NN,
           q = xy(c)
         if (occ[l][c])
           tc.push(
             `${LAYERS[l][0]}(${q.x.toFixed(2)},${q.y.toFixed(2)})h${histT[l][c].toFixed(0)}`,
           )
-        if (k && (path[k - 1] >= NN ? 1 : 0) !== l && occV[c])
+        if (k && layerOf(path[k - 1]) !== l && occV[c])
           vc.push(
             `(${q.x.toFixed(2)},${q.y.toFixed(2)})h${histV[c].toFixed(0)}`,
           )
