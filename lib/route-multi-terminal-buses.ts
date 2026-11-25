@@ -11,6 +11,8 @@ import { busLengthReports } from "./route-lengths"
 import { getSignalPathEndpoints } from "./measure-signal-path"
 import { effectiveCarrierLayers } from "./effective-carrier-layers"
 import { selectBranchAttachment } from "./select-branch-attachment"
+import { joinMultiTerminalEscapes } from "./join-multi-terminal-escapes"
+import { prepareMultiTerminalFanouts } from "./prepare-multi-terminal-fanouts"
 import type {
   Connection,
   Obstacle,
@@ -22,9 +24,9 @@ import type {
 type ComponentId = NonNullable<Obstacle["componentId"]>
 type CopperLayer = Terminal["layer"]
 
-/** Board-world points in mm, +X right and +Y up. Route the main packages first,
- * then attach each extra terminal through existing same-net copper.
- * Timing-constrained trees need path-length semantics rather than lane skew. */
+/** Board-world points in mm, +X right and +Y up. Reserve fresh local
+ * terminations before routing the primary package paths. Existing copper
+ * keeps the original main-first branch attachment behavior. */
 export function* routeMultiTerminalBuses(
   input: SimpleRouteJson,
   options: BusLanesPipelineOptions,
@@ -66,7 +68,7 @@ export function* routeMultiTerminalBuses(
       (padCounts.get(obstacle.componentId) ?? 0) + 1,
     )
   }
-  const connections = input.connections.map((connection) => ({
+  let connections = input.connections.map((connection) => ({
     ...connection,
     pointsToConnect: connection.pointsToConnect
       .map((terminal) => {
@@ -126,7 +128,13 @@ export function* routeMultiTerminalBuses(
       ),
     ]
   }
-  const completed: Trace[] = []
+  const prepared = yield* prepareMultiTerminalFanouts({
+    input,
+    connections,
+    options,
+  })
+  connections = prepared.connections
+  const completed: Trace[] = [...prepared.traces]
   const physicalLayers = getCopperLayerNames(input.layerCount)
   let groups: Connection[][] = [
     connections.map((connection) => ({
@@ -178,12 +186,12 @@ export function* routeMultiTerminalBuses(
       }
       if (!solver.solved)
         throw Error(solver.error ?? "Multi-terminal routing failed")
-      completed.push(
-        ...solver.traces.map((trace) => ({
+      for (const trace of solver.traces) {
+        completed.push({
           ...trace,
           pcb_trace_id: `multi_terminal_${terminalIndex}_${trace.pcb_trace_id}`,
-        })),
-      )
+        })
+      }
     }
     const branches = new Map<CopperLayer, Connection[]>()
     for (const connection of connections) {
@@ -247,8 +255,12 @@ export function* routeMultiTerminalBuses(
     }
     groups = [...branches.values()]
   }
+  const traces = joinMultiTerminalEscapes({
+    traces: completed,
+    escapes: prepared.escapes,
+  })
   if (
-    busLengthReports(input, completed).some(
+    busLengthReports(input, traces).some(
       (report) =>
         !report.aboveMinimumLength ||
         !report.withinLengthLimit ||
@@ -257,5 +269,5 @@ export function* routeMultiTerminalBuses(
   ) {
     throw Error("Completed branch paths do not meet their length constraints")
   }
-  return completed
+  return traces
 }

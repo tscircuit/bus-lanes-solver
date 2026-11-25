@@ -13,7 +13,7 @@ import {
   type H616Fixture,
 } from "./fixtures/expect-h616-routing"
 
-test.failing("Core's unchanged H616 TSX input solves in one phase with default options", async () => {
+test("Core's unchanged H616 TSX input solves in one phase with default options", async () => {
   const input: SimpleRouteJson = JSON.parse(
     gunzipSync(
       readFileSync(
