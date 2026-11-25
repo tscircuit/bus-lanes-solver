@@ -52,7 +52,11 @@ import { routeBackwardPackageBuses } from "./route-backward-package-buses"
 import type { RepairedBusDogbones } from "./repair-bus-dogbones"
 import { exteriorPairSpacingReports } from "./exterior-pair-spacing"
 import { shortenPairApproaches } from "./shorten-pair-approaches"
-import { busLengthReports, pairLengthReports } from "./route-lengths"
+import {
+  busLengthReports,
+  pairLengthReports,
+  hasLengthConstraints,
+} from "./route-lengths"
 import { extendPackageCoupling } from "./extend-package-coupling"
 import { routeAlternateSignalDogbones } from "./alternate-signal-dogbones"
 import { backwardFacingPackageTerminals } from "./backward-facing-package-terminals"
@@ -658,9 +662,7 @@ export class BusLanesPipelineSolver extends BaseSolver {
       analyticFallback:
         this.options.analyticFallback ||
         (this.carrierStrategy.name === "native_fallback" &&
-          this.routingInput.buses?.some(
-            (bus) => bus.skewReference !== undefined,
-          )),
+          hasLengthConstraints(this.routingInput)),
       // Keep the aggregate pipeline budget. Restarting a dense bus at the
       // old per-layer cutoff discards compatible computed alternatives just
       // before they converge. Unconstrained controls retain a work reserve.

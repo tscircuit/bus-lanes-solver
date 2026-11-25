@@ -77,6 +77,7 @@ export function tuneSmoothLengths(
 ) {
   let attempted = 0
   let allowFolded = false
+  let allowClearanceBends = false
   const fixed = fixedCopper(input)
   function* candidates(
     t: Trace,
@@ -116,7 +117,13 @@ export function tuneSmoothLengths(
           )
         : []
     const returnSpacing = width + clearance
-    const pitch = 4 * Math.max(width * 1.2, clearance)
+    // Opposing return arms need one trace width plus the requested clearance.
+    // Keep the established bend size first; a blocked ordinary bank can retry
+    // at this physical minimum without relaxing its copper validators.
+    const minRadius = allowClearanceBends
+      ? returnSpacing / 2
+      : Math.max(width * 1.2, clearance)
+    const pitch = 4 * minRadius
     // Tune the long interior runs before considering short terminal approaches.
     const segments = t.route
       .slice(1)
@@ -128,7 +135,7 @@ export function tuneSmoothLengths(
           span > 1e-8
             ? { x: -(p.y - a.y) / span, y: (p.x - a.x) / span }
             : { x: 0, y: 0 }
-        const height = 2 * Math.max(width * 1.2, clearance)
+        const height = 2 * minRadius
         const openSides = [-1, 1].filter((side) =>
           scene.visible(midpoint, {
             x: midpoint.x + side * normal.x * height,
@@ -259,7 +266,7 @@ export function tuneSmoothLengths(
                 delta,
                 teeth,
                 side,
-                Math.max(width * 1.2, clearance),
+                minRadius,
               )
               if (
                 !lobes ||
@@ -332,6 +339,7 @@ export function tuneSmoothLengths(
       }),
   )
   const partialBanks = new Map<number, number>()
+  const tuningOrder = [...pending]
   let allowPartial = false
   let changed = true
   while (pending.size && changed) {
@@ -396,6 +404,26 @@ export function tuneSmoothLengths(
       // can make a previously solved small deficit impossible to fold.
       for (const index of pending) result[index] = traces[index]
       partialBanks.clear()
+      changed = true
+    } else if (
+      !changed &&
+      !allowClearanceBends &&
+      !input.differentialPairs?.length &&
+      !input.traces?.some((trace) => trace.coupledSection) &&
+      !traces.some((trace) => trace.coupledSection)
+    ) {
+      // Larger bends in a completed neighboring bank may occupy the space a
+      // blocked lane needs. Rebuild the ordinary banks from their original
+      // carriers, retaining the successful first-pass behavior above.
+      allowClearanceBends = true
+      allowFolded = allowPartial = false
+      attempted = 0
+      partialBanks.clear()
+      pending.clear()
+      for (const index of tuningOrder) {
+        result[index] = traces[index]
+        pending.add(index)
+      }
       changed = true
     }
   }
