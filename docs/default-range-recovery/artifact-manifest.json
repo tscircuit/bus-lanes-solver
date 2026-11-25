@@ -1,0 +1,86 @@
+{
+  "sourceRevision": "749ce91ea5b22fb0da583b54336804a5494f0ee9",
+  "baseRevision": "78113d216f4264abcdc05f3d9fedaf556047e280",
+  "pairedWorkflow": 45629866162,
+  "runtime": "Bun 1.4.2, local macOS arm64; paired measurements use Blacksmith CI",
+  "exporter": "scripts/snapshot-routed-am3352.ts, unchanged",
+  "images": [
+    {
+      "name": "right",
+      "code": 0,
+      "seconds": 17.04,
+      "routeSaved": true,
+      "sha256": "f3722abc3b2f9f1b68650d5185f938436147ab304656a932156579afdef658a2"
+    },
+    {
+      "name": "control",
+      "code": 0,
+      "seconds": 19.654,
+      "routeSaved": true,
+      "sha256": "f27cc655e833f287c05b3da989932db9620693d01015ce5f353d225102c9563a"
+    },
+    {
+      "name": "left",
+      "code": 0,
+      "seconds": 21.803,
+      "routeSaved": true,
+      "sha256": "42cebd55f4a15fb4db1c5b3c0e95b803a728fe7b39b89751e9f9c570e3c21777"
+    },
+    {
+      "name": "above",
+      "code": 0,
+      "seconds": 23.859,
+      "routeSaved": true,
+      "sha256": "b5f785f1b1ecb3115dc6cac59c94f1cc55c8aa60a6a62dd463c49097b1e712c5"
+    },
+    {
+      "name": "inner-layers",
+      "code": 0,
+      "seconds": 29.605,
+      "routeSaved": true,
+      "sha256": "69377065f2c849a08976dad9588dd6ed682b6af65eba4ec3505f5d367d2437a3"
+    },
+    {
+      "name": "inner-layers-right",
+      "code": 0,
+      "seconds": 40.663,
+      "routeSaved": true,
+      "sha256": "9f14118c44621cded9aa6bb8730d33fe918be854eadb7c4c8662f0a46aeefdda"
+    },
+    {
+      "name": "inner-layers-left",
+      "code": 0,
+      "seconds": 104.01,
+      "routeSaved": true,
+      "sha256": "4da375717ef4c8fececf38fbc3bcfbe6d8bf8f7bb8896a8551ccba6cbac9a7d8"
+    },
+    {
+      "name": "inner-layers-above",
+      "code": 0,
+      "seconds": 124.013,
+      "routeSaved": true,
+      "sha256": "0a950394805bfad9114507d81c32103e77b346e07c4d06e5e1195080a1acbf08"
+    },
+    {
+      "name": "inner-layers-complete-ca",
+      "code": 0,
+      "seconds": 125.029,
+      "routeSaved": true,
+      "sha256": "f476c031b29d47dafa7d17332f389680544bc4454447995f47403d6fdd18ba27"
+    },
+    {
+      "name": "control-inner1",
+      "code": 0,
+      "seconds": 441.362,
+      "routeSaved": true,
+      "sha256": "4f71f56ef7a05a6f3cc8ab14e7d75f43352a83c01e58a9a8e18e66d583bf87bc"
+    },
+    {
+      "name": "outer-layers",
+      "code": 0,
+      "seconds": 413.918,
+      "routeSaved": true,
+      "sha256": "716ab2b56349756cbe6b1d49bcc53cdbc762d3044bb7a412cd87214d208f7722"
+    }
+  ]
+}
