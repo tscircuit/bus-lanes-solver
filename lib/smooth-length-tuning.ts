@@ -409,6 +409,7 @@ export function tuneSmoothLengths(
       !changed &&
       !allowClearanceBends &&
       !input.differentialPairs?.length &&
+      !input.traces?.some((trace) => trace.coupledSection) &&
       !traces.some((trace) => trace.coupledSection)
     ) {
       // Larger bends in a completed neighboring bank may occupy the space a
