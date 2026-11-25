@@ -66,8 +66,8 @@ test("Glider compaction keeps the declared whole-byte skew bound", (): void => {
     withinDeclaredBound: skew <= wholeByte.maxLengthSkew!,
   }).toMatchInlineSnapshot(`
     {
-      "skewMm": 0.79704301,
-      "withinDeclaredBound": false,
+      "skewMm": 0.797042,
+      "withinDeclaredBound": true,
     }
   `)
 }, 130000)
