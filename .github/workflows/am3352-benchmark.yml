@@ -6,10 +6,15 @@ on:
         description: Exact bus solver source commit
         required: true
         type: string
+      timing_control:
+        description: Run balanced timing controls instead of the gallery
+        type: boolean
+        default: false
 permissions:
   contents: read
 jobs:
   route:
+    if: inputs.timing_control != true
     runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 75
     strategy:
@@ -35,6 +40,7 @@ jobs:
             completed/
             solve.log
   gallery:
+    if: inputs.timing_control != true
     needs: route
     runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:
@@ -69,3 +75,58 @@ jobs:
         with:
           name: validated-gallery
           path: gallery/
+  timing:
+    if: inputs.timing_control == true
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    timeout-minutes: 150
+    env:
+      BUN_JSC_forceRAMSize: "2147483648"
+      BUN_JSC_miniVMHeapGrowthFactor: "1.05"
+    strategy:
+      fail-fast: false
+      matrix:
+        sample: [inner-layers, inner-layers-complete-ca]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 617ac78ef4baa6140ca8b66647df40c57b5b044e
+          path: base
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.source_ref }}
+          path: head
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.4.0'
+      - name: Install independent files before timing
+        run: |
+          for revision in base head; do
+            (cd "$revision" && bun install --ignore-scripts --backend=copyfile)
+          done
+      - name: Balanced fresh head-base-base-head controls
+        run: |
+          mkdir -p timing
+          index=0
+          for revision in head base base head; do
+            bun base/scripts/benchmark.ts --worker '${{ matrix.sample }}' --timeout-seconds 3600 --solver "$GITHUB_WORKSPACE/$revision/lib/index.ts" > "timing/$index-$revision.log"
+            index=$((index + 1))
+          done
+          python3 - <<'PY_TIMING'
+          import json
+          from pathlib import Path
+          reports=[]
+          for path in sorted(Path('timing').glob('*.log')):
+              line=next(line for line in path.read_text().splitlines() if line.startswith('REPORT '))
+              report=json.loads(line[7:])
+              assert report['solved'] and report['validation']['valid']
+              reports.append({'file':path.name,'report':report})
+          Path('timing/reports.json').write_text(json.dumps(reports,indent=2))
+          print('TIMING_CONTROL='+json.dumps([{'file':r['file'],'seconds':r['report']['solveMilliseconds']/1000,'iterations':r['report']['iterations']} for r in reports]))
+          PY_TIMING
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: timing-${{ matrix.sample }}
+          path: timing/
