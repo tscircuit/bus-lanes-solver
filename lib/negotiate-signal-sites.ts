@@ -21,11 +21,7 @@ import {
 } from "./repair-bus-dogbones"
 import { retargetGeneratedEscape } from "./retarget-generated-escape"
 import { RouteConflictIndex } from "./route-conflict-index"
-import {
-  hasLengthConstraints,
-  maximumCarrierLength,
-  minimumLengthTargets,
-} from "./route-lengths"
+import { maximumCarrierLength, minimumLengthTargets } from "./route-lengths"
 import { solveSignalCandidatePool } from "./solve-signal-candidate-pool"
 import type {
   Connection,
@@ -321,7 +317,9 @@ export function* negotiateSignalSites(
   // Preserve the local fallback's established carrier-routing objective.
   const compareFullCopperLength = options.expandEmptyDomainsOnly === false
   const { native } = state
-  const matchesCopperLengths = hasLengthConstraints(native)
+  // Absolute length floors can make a short carrier cost as much as a longer
+  // one after matching. Keep the established objective for range-only buses.
+  const hasMinimumLength = native.buses?.some((bus) => (bus.minLength ?? 0) > 0)
   const all = [...state.retained, ...state.traces]
   const stable = all.filter((trace) => !remove.has(trace.connection_name!))
   const fixedEscapes = state.escapes.filter(
@@ -774,7 +772,7 @@ export function* negotiateSignalSites(
             hits,
             score: length(trace.route) + escapeLength + hits.length * 100,
           }
-          if (matchesCopperLengths) {
+          if (hasMinimumLength) {
             candidate.score =
               getMinimumMatchedCopperLength({
                 input: { ...native, traces: base.traces },
