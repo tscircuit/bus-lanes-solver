@@ -21,9 +21,19 @@ import {
 } from "./repair-bus-dogbones"
 import { retargetGeneratedEscape } from "./retarget-generated-escape"
 import { RouteConflictIndex } from "./route-conflict-index"
-import { maximumCarrierLength } from "./route-lengths"
+import {
+  hasLengthConstraints,
+  maximumCarrierLength,
+  minimumLengthTargets,
+} from "./route-lengths"
 import { solveSignalCandidatePool } from "./solve-signal-candidate-pool"
-import type { Connection, Terminal, Trace, Wire } from "./types"
+import type {
+  Connection,
+  SimpleRouteJson,
+  Terminal,
+  Trace,
+  Wire,
+} from "./types"
 import {
   type Copper,
   fixedCopper,
@@ -56,6 +66,26 @@ interface Candidate extends SiteOption {
   copper: Copper[]
   hits: Candidate[]
   score: number
+}
+
+/** Score the copper matching will require, rather than favoring a short
+ * carrier that forces every neighboring signal to become longer. */
+function getMinimumMatchedCopperLength({
+  input,
+  traces,
+  escapes,
+}: {
+  input: SimpleRouteJson
+  traces: Trace[]
+  escapes: Trace[]
+}): number {
+  const targets = minimumLengthTargets(
+    { ...input, traces: [...(input.traces ?? []), ...escapes] },
+    traces,
+  )
+  let totalLength = 0
+  for (const target of targets.values()) totalLength += target
+  return totalLength
 }
 
 /** Owned escapes declare their manufactured barrel and both layer handoffs.
@@ -281,6 +311,7 @@ export function* negotiateSignalSites(
   // Preserve the local fallback's established carrier-routing objective.
   const compareFullCopperLength = options.expandEmptyDomainsOnly === false
   const { native } = state
+  const matchesCopperLengths = hasLengthConstraints(native)
   const all = [...state.retained, ...state.traces]
   const stable = all.filter((trace) => !remove.has(trace.connection_name!))
   const fixedEscapes = state.escapes.filter(
@@ -717,15 +748,26 @@ export function* negotiateSignalSites(
           const trace = signalTrace(native, connection, search.result, layer),
             copper = [...option.escapeCopper, ...routeCopper(trace)]
           const hits = others.filter(
-              (other) =>
-                overlap(copper, other.copper) ||
-                generatedEscapeHolesConflict(
-                  native,
-                  option.escapes,
-                  other.escapes,
-                ),
-            ),
-            score = length(trace.route) + escapeLength + hits.length * 100
+            (other) =>
+              overlap(copper, other.copper) ||
+              generatedEscapeHolesConflict(
+                native,
+                option.escapes,
+                other.escapes,
+              ),
+          )
+          let requiredCopperLength = length(trace.route) + escapeLength
+          if (matchesCopperLengths) {
+            requiredCopperLength = getMinimumMatchedCopperLength({
+              input: { ...native, traces: base.traces },
+              traces: [...others.map((other) => other.trace), trace],
+              escapes: [
+                ...others.flatMap((other) => other.escapes),
+                ...option.escapes,
+              ],
+            })
+          }
+          const score = requiredCopperLength + hits.length * 100
           const candidate = {
             ...option,
             id: candidateId++,

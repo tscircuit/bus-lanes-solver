@@ -81,8 +81,8 @@ test("Glider's second byte accounts for the copper required by matching", async 
     preservesOriginalByteSkew: byte1SkewMm <= 0.797043,
   }).toMatchInlineSnapshot(`
     {
-      "byte1SkewMm": 2.152454,
-      "preservesOriginalByteSkew": false,
+      "byte1SkewMm": 0,
+      "preservesOriginalByteSkew": true,
     }
   `)
 
