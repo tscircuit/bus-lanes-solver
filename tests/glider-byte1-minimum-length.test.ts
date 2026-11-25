@@ -60,7 +60,8 @@ test("Glider byte1 reaches its full length beside completed byte0", (): void => 
           report.withinLengthLimit,
       ),
     ).toBe(true)
-    expect(routed.traces?.slice(0, input.traces!.length)).toEqual(input.traces)
+    const supplied = input.traces ?? []
+    expect(solver.getOutput().traces.slice(0, supplied.length)).toEqual(supplied)
   }
   expect(solver.solved).toMatchInlineSnapshot(`false`)
 }, 130000)
