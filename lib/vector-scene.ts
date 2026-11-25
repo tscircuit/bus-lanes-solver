@@ -374,7 +374,7 @@ export function copperTooClosePrepared(
 export class VectorScene {
   private visibleCalls = 0
   private copperIndex?: CopperIndex
-  private preparedCopper: Map<Copper, PreparedCopper>
+  private preparedCopper?: Map<Copper, PreparedCopper>
   readonly copper: Copper[]
   readonly owners: Set<string>
   readonly margin: number
@@ -398,9 +398,6 @@ export class VectorScene {
       (c) =>
         c.layer === connection.pointsToConnect[0].layer &&
         !sharesOwner(c.owners, this.owners),
-    )
-    this.preparedCopper = new Map(
-      this.copper.map((copper) => [copper, prepareCopper(copper)]),
     )
     this.margin =
       width / 2 +
@@ -427,8 +424,12 @@ export class VectorScene {
     const dx = b.x - a.x,
       dy = b.y - a.y,
       denominator = dx * dx + dy * dy
-    if (++this.visibleCalls === 16)
+    if (++this.visibleCalls === 16) {
       this.copperIndex = new CopperIndex(this.copper)
+      this.preparedCopper = new Map(
+        this.copper.map((copper) => [copper, prepareCopper(copper)]),
+      )
+    }
     if (this.copperIndex)
       return !this.copperIndex.some({ minX, maxX, minY, maxY }, (c) =>
         copperTooClosePrepared(
@@ -439,7 +440,7 @@ export class VectorScene {
           dx,
           dy,
           denominator,
-          this.preparedCopper.get(c)!,
+          this.preparedCopper!.get(c)!,
           this.margin - 1e-8,
         ),
       )
@@ -452,20 +453,7 @@ export class VectorScene {
       }
       if (r.minX > maxX || r.maxX < minX || r.minY > maxY || r.maxY < minY)
         continue
-      if (
-        copperTooClosePrepared(
-          a.x,
-          a.y,
-          b.x,
-          b.y,
-          dx,
-          dy,
-          denominator,
-          this.preparedCopper.get(c)!,
-          this.margin - 1e-8,
-        )
-      )
-        return false
+      if (copperTooClose(a, b, c, this.margin - 1e-8)) return false
     }
     return true
   }
