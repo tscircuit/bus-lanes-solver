@@ -105,12 +105,18 @@ jobs:
           for revision in base head; do
             (cd "$revision" && bun install --ignore-scripts --backend=copyfile)
           done
-      - name: Balanced fresh head-base-base-head controls
+      - name: Verify identical harness source
+        run: |
+          cmp base/scripts/benchmark.ts head/scripts/benchmark.ts
+          cmp base/scripts/am3352-samples.ts head/scripts/am3352-samples.ts
+          cmp base/scripts/validate-am3352-sample.ts head/scripts/validate-am3352-sample.ts
+          sha256sum base/scripts/benchmark.ts head/scripts/benchmark.ts
+      - name: Balanced isolated head-base-base-head controls
         run: |
           mkdir -p timing
           index=0
           for revision in head base base head; do
-            bun base/scripts/benchmark.ts --worker '${{ matrix.sample }}' --timeout-seconds 3600 --solver "$GITHUB_WORKSPACE/$revision/lib/index.ts" > "timing/$index-$revision.log"
+            bun "$revision/scripts/benchmark.ts" --worker '${{ matrix.sample }}' --timeout-seconds 3600 --solver "$GITHUB_WORKSPACE/$revision/lib/index.ts" > "timing/$index-$revision.log"
             index=$((index + 1))
           done
           python3 - <<'PY_TIMING'
