@@ -21,9 +21,9 @@ import {
 } from "./repair-bus-dogbones"
 import { retargetGeneratedEscape } from "./retarget-generated-escape"
 import { RouteConflictIndex } from "./route-conflict-index"
-import { maximumCarrierLength } from "./route-lengths"
+import { fixedRouteLength, maximumCarrierLength } from "./route-lengths"
 import { solveSignalCandidatePool } from "./solve-signal-candidate-pool"
-import type { Connection, Terminal, Trace, Wire } from "./types"
+import type { Connection, ConnectionName, Terminal, Trace, Wire } from "./types"
 import {
   type Copper,
   fixedCopper,
@@ -277,10 +277,34 @@ export function* negotiateSignalSites(
   options: SignalSiteOptions = {},
 ): Generator<void, FlexibleSignalState | null> {
   if (!remove.size) return null
-  // Widening all site domains compares complete pad-to-pad copper lengths.
-  // Preserve the local fallback's established carrier-routing objective.
-  const compareFullCopperLength = options.expandEmptyDomainsOnly === false
   const { native } = state
+  // Tuning must add this copper regardless of how short the initial carrier is.
+  // Score the required final length, including generated approaches, so a short
+  // untuned path does not displace an equally short feasible timing route.
+  const minimumRoutedLengthsMm = new Map<ConnectionName, number>()
+  for (const bus of native.buses ?? []) {
+    if (bus.minLength === undefined) continue
+    for (const connectionName of bus.connectionNames) {
+      minimumRoutedLengthsMm.set(
+        connectionName,
+        Math.max(
+          minimumRoutedLengthsMm.get(connectionName) ?? 0,
+          bus.minLength,
+        ),
+      )
+    }
+  }
+  for (const [connectionName, minimumLengthMm] of minimumRoutedLengthsMm) {
+    const remainingLengthMm =
+      minimumLengthMm - fixedRouteLength(native, connectionName)
+    if (remainingLengthMm <= 0) {
+      minimumRoutedLengthsMm.delete(connectionName)
+      continue
+    }
+    minimumRoutedLengthsMm.set(connectionName, remainingLengthMm)
+  }
+  const compareFullCopperLength =
+    options.expandEmptyDomainsOnly === false || minimumRoutedLengthsMm.size > 0
   const all = [...state.retained, ...state.traces]
   const stable = all.filter((trace) => !remove.has(trace.connection_name!))
   const fixedEscapes = state.escapes.filter(
@@ -471,7 +495,10 @@ export function* negotiateSignalSites(
                 escapeCopper,
                 scene,
                 layer,
-                length: length(search.result) + escapeLength,
+                length: Math.max(
+                  length(search.result) + escapeLength,
+                  minimumRoutedLengthsMm.get(connection.name) ?? 0,
+                ),
                 maxLength,
               })
             }
@@ -520,7 +547,10 @@ export function* negotiateSignalSites(
             hard,
           ),
           layer,
-          length: routeLength,
+          length: Math.max(
+            routeLength,
+            minimumRoutedLengthsMm.get(connection.name) ?? 0,
+          ),
           maxLength,
         })
       }
@@ -621,7 +651,10 @@ export function* negotiateSignalSites(
       trace: previous.trace,
       copper: [...previous.option.escapeCopper, ...routeCopper(previous.trace)],
       hits: [],
-      score: length(previous.trace.route) + escapeLength,
+      score: Math.max(
+        length(previous.trace.route) + escapeLength,
+        minimumRoutedLengthsMm.get(connection.name) ?? 0,
+      ),
     }
     addCandidate(candidate)
     if ([...routed.values()].every((other) => compatible(candidate, other)))
@@ -725,7 +758,12 @@ export function* negotiateSignalSites(
                   other.escapes,
                 ),
             ),
-            score = length(trace.route) + escapeLength + hits.length * 100
+            score =
+              Math.max(
+                length(trace.route) + escapeLength,
+                minimumRoutedLengthsMm.get(connection.name) ?? 0,
+              ) +
+              hits.length * 100
           const candidate = {
             ...option,
             id: candidateId++,

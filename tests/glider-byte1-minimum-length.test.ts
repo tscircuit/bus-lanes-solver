@@ -65,5 +65,5 @@ test("Glider byte1 reaches its full length beside completed byte0", (): void => 
       supplied,
     )
   }
-  expect(solver.solved).toMatchInlineSnapshot(`false`)
+  expect(solver.solved).toMatchInlineSnapshot(`true`)
 }, 130000)
