@@ -49,6 +49,7 @@ export function routeNegotiatedLanes(
     exitViaFree: 0.8,
     exitPairGather: 1.0,
     pairTwistCost: 6,
+    overLengthWeight: 3,
     pairLead: 0.3,
     laneConflictLen: null as number | null,
     unknot: true,
@@ -250,6 +251,38 @@ export function routeNegotiatedLanes(
   const connPads = new Set<string>(
     origProblem.connections.flatMap((c: any) => c.pointsToConnect.map(padKey)),
   )
+  // Via-in-pad is used only where it leaves the ball field passable: two neighbouring balls with
+  // vias in their pads must still let a trace through between the vias. In a finer-pitch field (e.g. a
+  // 0.4 mm perimeter band) a via in every pad walls off every layer under it, so those balls leave on
+  // their pad layer or step out to a via beside the field instead.
+  const inPadPitch = cfg.viaD + cfg.w + 2 * GAP - 1e-6
+  const inPadOk = new Set<string>()
+  if (cfg.allowViaInPad) {
+    const cellOf = (x: number) => Math.floor(x / inPadPitch)
+    const hash = new Map<string, any[]>()
+    const pads = srj.obstacles.filter(
+      (o: any) => !o.isCopperPour && o.layers.length === 1,
+    )
+    for (const o of pads) {
+      const k = `${o.layers[0]}|${cellOf(o.center.x)},${cellOf(o.center.y)}`
+      ;(hash.get(k) ?? hash.set(k, []).get(k)!).push(o)
+    }
+    for (const o of pads) {
+      let crowded = false
+      for (let dx = -1; dx <= 1 && !crowded; dx++)
+        for (let dy = -1; dy <= 1 && !crowded; dy++)
+          for (const q of hash.get(
+            `${o.layers[0]}|${cellOf(o.center.x) + dx},${cellOf(o.center.y) + dy}`,
+          ) ?? [])
+            if (
+              q !== o &&
+              Math.hypot(q.center.x - o.center.x, q.center.y - o.center.y) <
+                inPadPitch
+            )
+              crowded = true
+      if (!crowded) inPadOk.add(padKey(o.center))
+    }
+  }
   for (const o of srj.obstacles) {
     const ls = o.layers
       .map((l: string) => LAYERS.indexOf(l))
@@ -262,7 +295,9 @@ export function routeNegotiatedLanes(
     const st: PadStamp = {
       t: [new Int32Array(0), new Int32Array(0)],
       v: new Int32Array(
-        cfg.allowViaInPad ? v.filter((q) => q === nodeOf(o.center)) : [],
+        inPadOk.has(padKey(o.center))
+          ? v.filter((q) => q === nodeOf(o.center))
+          : [],
       ),
     }
     for (const l of ls) {
@@ -280,7 +315,8 @@ export function routeNegotiatedLanes(
   const inPadSite = new Int8Array(NN).fill(-1)
   if (cfg.allowViaInPad)
     for (const o of srj.obstacles) {
-      if (!padStamps.has(padKey(o.center))) continue
+      if (!padStamps.has(padKey(o.center)) || !inPadOk.has(padKey(o.center)))
+        continue
       if (Math.min(Math.abs(o.width), Math.abs(o.height)) < cfg.viaD - 1e-9)
         continue
       const ls = o.layers
@@ -293,7 +329,7 @@ export function routeNegotiatedLanes(
     for (const c of origProblem.connections)
       for (const p of c.pointsToConnect) {
         const st = padStamps.get(padKey(p))
-        if (!st) continue
+        if (!st || !inPadOk.has(padKey(p))) continue
         const cells = obstacleCells(
           { shape: "circle", center: p, width: cfg.viaD, height: cfg.viaD },
           GAP + cfg.w / 2 + 0.02,
@@ -820,10 +856,10 @@ export function routeNegotiatedLanes(
         }
         let score = (other.x - mid.x) * dir.x + (other.y - mid.y) * dir.y
         if (blocked) {
-          // An interior ball pair has no free way out on the pad layer. With via-in-pad its stubs drop
-          // under their balls and leave on the far layer, so gather the pair just outside the ball
-          // field in this direction instead; used only when no direction is free (below).
-          if (!cfg.allowViaInPad) continue
+          // An interior ball pair has no free way out as a pair on the pad layer. Its members leave
+          // one by one (on the pad layer between balls, or down a via in or beside their pads), so
+          // gather the pair just outside the ball field in this direction; used only when no
+          // direction is free (below).
           const near = allPads.filter(
             (o: any) =>
               padKey(o.center) !== padKey(a) &&
@@ -2064,8 +2100,26 @@ export function routeNegotiatedLanes(
         top = bus.maxLength - 0.02
         lo = top - (bus.maxLengthSkew ?? 0.635) + cfg.skewMargin
       } else {
-        top = Math.max(...ms.map((n) => n.base!).filter(Number.isFinite)) + 0.02
-        lo = top - (bus.maxLengthSkew ?? 0.635) + cfg.skewMargin
+        const skew = bus.maxLengthSkew ?? 0.635,
+          bases = ms.map((n) => n.base!).filter(Number.isFinite)
+        // The window sits where the members need the least work: length added to the short ones
+        // plus, weighted heavier, length the long ones must lose. Pinning it to the longest member
+        // makes one detour lengthen every other member of the bus, and the taller tuning strips
+        // that takes push more members onto detours.
+        const cost = (t: number) =>
+          bases.reduce(
+            (s2, b) =>
+              s2 +
+              Math.max(0, t - skew - b) +
+              cfg.overLengthWeight * Math.max(0, b - t),
+            0,
+          )
+        let best = Math.max(...bases)
+        for (const b of bases)
+          for (const t of [b, b + skew])
+            if (cost(t) < cost(best) - 1e-9) best = t
+        top = best + 0.02
+        lo = top - skew + cfg.skewMargin
       }
       for (const n of ms) {
         n.top = top
