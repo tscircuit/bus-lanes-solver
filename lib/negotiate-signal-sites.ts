@@ -72,16 +72,26 @@ interface Candidate extends SiteOption {
  * carrier that forces every neighboring signal to become longer. */
 function getMinimumMatchedCopperLength({
   input,
-  traces,
-  escapes,
+  candidates,
 }: {
   input: SimpleRouteJson
-  traces: Trace[]
-  escapes: Trace[]
+  candidates: Candidate[]
 }): number {
   const targets = minimumLengthTargets(
-    { ...input, traces: [...(input.traces ?? []), ...escapes] },
-    traces,
+    {
+      ...input,
+      connections: input.connections.map(
+        (connection) =>
+          candidates.find(
+            (candidate) => candidate.connection.name === connection.name,
+          )?.connection ?? connection,
+      ),
+      traces: [
+        ...(input.traces ?? []),
+        ...candidates.flatMap((candidate) => candidate.escapes),
+      ],
+    },
+    candidates.map((candidate) => candidate.trace),
   )
   let totalLength = 0
   for (const target of targets.values()) totalLength += target
@@ -756,28 +766,24 @@ export function* negotiateSignalSites(
                 other.escapes,
               ),
           )
-          let requiredCopperLength = length(trace.route) + escapeLength
-          if (matchesCopperLengths) {
-            requiredCopperLength = getMinimumMatchedCopperLength({
-              input: { ...native, traces: base.traces },
-              traces: [...others.map((other) => other.trace), trace],
-              escapes: [
-                ...others.flatMap((other) => other.escapes),
-                ...option.escapes,
-              ],
-            })
-          }
-          const score = requiredCopperLength + hits.length * 100
-          const candidate = {
+          const candidate: Candidate = {
             ...option,
             id: candidateId++,
             trace,
             copper,
             hits,
-            score,
+            score: length(trace.route) + escapeLength + hits.length * 100,
+          }
+          if (matchesCopperLengths) {
+            candidate.score =
+              getMinimumMatchedCopperLength({
+                input: { ...native, traces: base.traces },
+                candidates: [...others, candidate],
+              }) +
+              hits.length * 100
           }
           if (!stopWithOneRemaining) addCandidate(candidate)
-          if (!best || score < best.score) best = candidate
+          if (!best || candidate.score < best.score) best = candidate
         }
       } finally {
         search.cancel()
