@@ -45,7 +45,8 @@ test("Glider's second byte accounts for the copper required by matching", async 
   expect(solver.solved).toBe(true)
   expect(input).toEqual(original)
   const output = solver.getOutput()
-  expect(output.traces.slice(0, input.traces!.length)).toEqual(input.traces)
+  const supplied = input.traces ?? []
+  expect(output.traces.slice(0, supplied.length)).toEqual(supplied)
   const inputSrj = nativeValidationSrj({
     ...input,
     connections: [...input.connections, ...fixedConnections],
