@@ -4,12 +4,6 @@ import { RoutedBusLengthSolver } from "../lib/routed-bus-lengths/routed-bus-leng
 import { busLengthReports } from "../lib/route-lengths"
 import type { SimpleRouteJson, Trace } from "../lib/types"
 
-const terminal = (x: number, y: number, id: string) => ({
-  x,
-  y,
-  layer: "top",
-  pcb_port_id: id,
-})
 const wire = (x: number, y: number) => ({
   route_type: "wire" as const,
   x,
@@ -17,11 +11,11 @@ const wire = (x: number, y: number) => ({
   layer: "top",
   width: 0.15,
 })
-const lane = (name: string, y: number): Trace => ({
+const straightTrace = (connectionName: string): Trace => ({
   type: "pcb_trace",
-  pcb_trace_id: name,
-  connection_name: name,
-  route: [wire(0, y), wire(10, y)],
+  pcb_trace_id: connectionName,
+  connection_name: connectionName,
+  route: [wire(0, 0), wire(10, 0)],
 })
 const board: SimpleRouteJson = {
   layerCount: 2,
@@ -31,29 +25,35 @@ const board: SimpleRouteJson = {
   minViaHoleDiameter: 0.2,
   bounds: { minX: -2, maxX: 12, minY: -5, maxY: 8 },
   obstacles: [],
-  connections: ["DQ", "DQS"].map((name, i) => ({
-    name,
-    nominalTraceWidth: 0.15,
-    pointsToConnect: [
-      terminal(0, i * 4, name + "1"),
-      terminal(10, i * 4, name + "2"),
-    ],
-  })),
+  connections: [
+    {
+      name: "DQ",
+      nominalTraceWidth: 0.15,
+      pointsToConnect: [
+        { x: 0, y: 0, layer: "top", pcb_port_id: "cpu" },
+        { x: 10, y: 0, layer: "top", pcb_port_id: "ram" },
+      ],
+    },
+  ],
 }
 
 test("holds a clock termination fixed and measures the two named pads", () => {
-  const clock = lane("CK", 0),
-    branch = {
-      ...clock,
-      pcb_trace_id: "termination",
-      route: [wire(10, 0), wire(11, 2)],
-    }
-  const from = terminal(0, 0, "cpu"),
-    to = terminal(10, 0, "ram")
+  const clock = straightTrace("CK")
+  const branch = {
+    ...clock,
+    pcb_trace_id: "termination",
+    route: [wire(10, 0), wire(11, 2)],
+  }
   const input: SimpleRouteJson = {
     ...board,
     connections: [
-      { name: "CK", pointsToConnect: [terminal(11, 2, "resistor"), from, to] },
+      {
+        name: "CK",
+        pointsToConnect: [
+          { x: 11, y: 2, layer: "top", pcb_port_id: "resistor" },
+          ...board.connections[0].pointsToConnect,
+        ],
+      },
     ],
     traces: [branch],
     buses: [
@@ -93,7 +93,7 @@ test("rejects inconsistent absolute limits without returning partial geometry", 
   }
   const solver = new RoutedBusLengthSolver({
     input,
-    routedTraces: [lane("DQ", 0)],
+    routedTraces: [straightTrace("DQ")],
   })
   expect(() => {
     solver.solve()
@@ -103,7 +103,7 @@ test("rejects inconsistent absolute limits without returning partial geometry", 
 })
 
 test("replans a pad approach that only fits at the narrower initial trace width", () => {
-  const original = lane("DQ", 0)
+  const original = straightTrace("DQ")
   const input: SimpleRouteJson = {
     ...board,
     connections: [{ ...board.connections[0], nominalTraceWidth: 0.3 }],
