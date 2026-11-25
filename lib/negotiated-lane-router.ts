@@ -491,12 +491,14 @@ export function routeNegotiatedLanes(
     }
     return [...seen]
   }
+  // exact frozen geometry: [ax, ay, bx, by, halfWidth] per layer, and [x, y, radius] for vias
+  const frozenSegs: number[][][] = perLayer(() => []),
+    frozenVias: number[][] = []
   {
     const pts: number[][] = perLayer(() => []),
       vias: number[] = []
-    // exact frozen geometry: [ax, ay, bx, by, halfWidth] per layer, and [x, y, radius] for vias
-    const segs: number[][][] = perLayer(() => []),
-      viaGeo: number[][] = []
+    const segs = frozenSegs,
+      viaGeo = frozenVias
     const blockRows = (l: number, x: number, y: number, r: number) => {
       if (x < wx(zXL) - 0.3 || x > wx(zXR) + 0.3) return
       for (
@@ -776,6 +778,8 @@ export function routeNegotiatedLanes(
     end?: 0 | 1
     exact?: Pt
     fatLayer?: number
+    /** centreline corners ("x,y") where a member's outer mitre would cut into another net's clearance */
+    bevel?: [Set<string>, Set<string>]
     active?: boolean
     cong?: number
     exactVias?: number
@@ -1765,13 +1769,22 @@ export function routeNegotiatedLanes(
     }
     return out
   }
-  /** Offset of a polyline by d (left of travel for d > 0). Outer corners sharper than 45 degrees are
-   *  bevelled, so no point of the offset lies farther than |d| from the centreline (a mitre would
-   *  reach |d| / cos(turn / 2) out, into copper the centreline's clearance never reserved).
-   *  `from[i]` is the index in the result of the (first) point offset from pts[i]. */
-  function offsetPolyline(pts: Pt[], d: number): Pt[] & { from: number[] } {
-    const out = [] as unknown as Pt[] & { from: number[] }
+  /** Offset of a polyline by d (left of travel for d > 0), mitred. An outer corner sharper than 45
+   *  degrees reaches |d| / cos(turn / 2) from the centreline, beyond the clearance the centreline
+   *  reserved; `bevel(i)` selects such corners to bevel instead (no point then lies farther than |d|).
+   *  `from[i]` is the index in the result of the (first) point offset from pts[i]; `sharp` lists the
+   *  sharp outer corners as [vertex index, mitre point]. */
+  function offsetPolyline(
+    pts: Pt[],
+    d: number,
+    bevel: (i: number) => boolean = () => false,
+  ): Pt[] & { from: number[]; sharp: [number, Pt][] } {
+    const out = [] as unknown as Pt[] & {
+      from: number[]
+      sharp: [number, Pt][]
+    }
     out.from = []
+    out.sharp = []
     const nrm = (a: Pt, b: Pt) => {
       const L = Math.hypot(b.x - a.x, b.y - a.y)
       return { x: -(b.y - a.y) / L, y: (b.x - a.x) / L }
@@ -1788,16 +1801,20 @@ export function routeNegotiatedLanes(
         cos = n1.x * n2.x + n1.y * n2.y,
         // left turn: n1 x n2 > 0; the offset is on the outside when it lies right of a left turn
         turn = n1.x * n2.y - n1.y * n2.x
+      const k = d / (1 + cos),
+        mitre = {
+          x: pts[i].x + (n1.x + n2.x) * k,
+          y: pts[i].y + (n1.y + n2.y) * k,
+        }
       if (cos < Math.SQRT1_2 - 1e-6 && turn * d < 0) {
-        out.push({ x: pts[i].x + n1.x * d, y: pts[i].y + n1.y * d })
-        out.push({ x: pts[i].x + n2.x * d, y: pts[i].y + n2.y * d })
-        continue
+        out.sharp.push([i, mitre])
+        if (bevel(i)) {
+          out.push({ x: pts[i].x + n1.x * d, y: pts[i].y + n1.y * d })
+          out.push({ x: pts[i].x + n2.x * d, y: pts[i].y + n2.y * d })
+          continue
+        }
       }
-      const k = d / (1 + cos)
-      out.push({
-        x: pts[i].x + (n1.x + n2.x) * k,
-        y: pts[i].y + (n1.y + n2.y) * k,
-      })
+      out.push(mitre)
     }
     return out
   }
@@ -1889,7 +1906,7 @@ export function routeNegotiatedLanes(
     n: Net,
     ec: number,
     trims: [number, number],
-  ): { pts: [Pt[], Pt[]]; ok: boolean } {
+  ): { pts: [Pt[], Pt[]]; ok: boolean; sharp: [string, Pt][][] } {
     const pr = n.pair!,
       centre = pairCentre(n, ec),
       xL = xy(n.path![n.laneAt!]).x
@@ -1925,10 +1942,16 @@ export function routeNegotiatedLanes(
         ? c2[iTrim + 1].x - xL
         : 0
     let ok = true
+    const vkey = (q: Pt) => `${q.x.toFixed(4)},${q.y.toFixed(4)}`
+    const sharp: [string, Pt][][] = [[], []]
     const out = [0, 1].map((m) => {
       const side = m === pr.leftMember ? +1 : -1
-      const raw = offsetPolyline(c2, side * H),
-        anchor = iTrim >= 0 ? raw[raw.from[iTrim]] : undefined
+      const raw = offsetPolyline(c2, side * H, (i) =>
+        !!n.bevel?.[m].has(vkey(c2[i])),
+      )
+      for (const [i, q] of raw.sharp)
+        if (!n.bevel?.[m].has(vkey(c2[i]))) sharp[m].push([vkey(c2[i]), q])
+      const anchor = iTrim >= 0 ? raw[raw.from[iTrim]] : undefined
       // On the inside of a sharp turn the offset folds into a tiny knot: take the chord instead (the
       // length it saves is given back by the member's trim).
       let poly = unknot(raw, anchor)
@@ -1952,7 +1975,7 @@ export function routeNegotiatedLanes(
       }
       return poly
     }) as [Pt[], Pt[]]
-    return { pts: out, ok }
+    return { pts: out, ok, sharp }
   }
   const stubLen = (st: Net) =>
     st.path
@@ -2135,7 +2158,8 @@ export function routeNegotiatedLanes(
   }
 
   // ---------- targets ----------
-  function evaluate(): {
+  /** `settled`: no net is in conflict, so the geometry is final enough to judge clearances on. */
+  function evaluate(settled = false): {
     ok: boolean
     msgs: string[]
     over: Net[]
@@ -2148,6 +2172,7 @@ export function routeNegotiatedLanes(
       untunable: Net[] = []
     let ok = true
     const routable = nets.filter((n) => n.kind !== "stub" && n.active)
+    const tuned = new Map<Net, ReturnType<typeof pairTune>>()
     for (const n of routable) {
       if (
         !n.path ||
@@ -2251,6 +2276,7 @@ export function routeNegotiatedLanes(
         }
       } else {
         const t = pairTune(n, n.target)
+        tuned.set(n, t)
         if (!t.ok) {
           ok = false
           msgs.push(
@@ -2269,6 +2295,115 @@ export function routeNegotiatedLanes(
           changed.push(n, ...n.pair!.stubs)
         }
       }
+    }
+    // A pair member's outer mitre at a sharp corner reaches past the clearance its centreline reserved.
+    // Once nothing is in conflict, a corner whose mitre comes too close to another net's copper is
+    // bevelled (which only removes copper) and the pair is re-tuned; every other corner keeps its mitre.
+    const fats = routable.filter((n) => n.kind === "fat" && tuned.has(n))
+    if (settled && fats.length) {
+      const memOf = new Map<Net, [Pt[], Pt[]]>()
+      const sharpOf = new Map<Net, [string, Pt][][]>()
+      for (const n of fats) {
+        const t = tuned.get(n)!,
+          r = pairMembers(n, t.ec, t.trims),
+          // the copper actually emitted: each member joined onto its stubs (hairpins dropped)
+          joined = [0, 1].map((k) => joinMember(n, k, r.pts[k]).mem) as [
+            Pt[],
+            Pt[],
+          ]
+        memOf.set(n, joined)
+        sharpOf.set(
+          n,
+          r.sharp.map((list, k) =>
+            list.filter(([, q]) =>
+              joined[k].some((j) => Math.hypot(j.x - q.x, j.y - q.y) < 1e-9),
+            ),
+          ),
+        )
+      }
+      const segD = (p: Pt, ax: number, ay: number, bx: number, by: number) => {
+        const dx = bx - ax,
+          dy = by - ay,
+          L = dx * dx + dy * dy,
+          k = L
+            ? Math.max(0, Math.min(1, ((p.x - ax) * dx + (p.y - ay) * dy) / L))
+            : 0
+        return Math.hypot(p.x - ax - k * dx, p.y - ay - k * dy)
+      }
+      const polyD = (p: Pt, pl: Pt[]) => {
+        let m = Infinity
+        for (let i = 1; i < pl.length; i++)
+          m = Math.min(m, segD(p, pl[i - 1].x, pl[i - 1].y, pl[i].x, pl[i].y))
+        return m
+      }
+      // distance from p to a routed path's copper centreline on layer l (its vias counted by their rim)
+      const pathD = (p: Pt, ids: number[], l: number) => {
+        let m = Infinity
+        for (let i = 1; i < ids.length; i++) {
+          const la = layerOf(ids[i - 1]),
+            lb = layerOf(ids[i]),
+            a = xy(ids[i - 1] - la * NN),
+            b = xy(ids[i] - lb * NN)
+          if (la === l && lb === l) m = Math.min(m, segD(p, a.x, a.y, b.x, b.y))
+          else if (la !== lb)
+            m = Math.min(
+              m,
+              Math.hypot(p.x - a.x, p.y - a.y) - cfg.viaD / 2 + cfg.w / 2,
+            )
+        }
+        return m
+      }
+      const padClear = srj.minTraceToPadEdgeClearance ?? 0.12
+      const clashes = (n: Net, p: Pt) => {
+        const l = n.fatLayer ?? 0,
+          own = new Set(
+            n.pair!.conns.flatMap((c: any) => c.pointsToConnect.map(padKey)),
+          )
+        for (const o of fats)
+          if (o !== n && (o.fatLayer ?? 0) === l)
+            for (const pl of memOf.get(o)!)
+              if (polyD(p, pl) < cfg.w + GAP - 1e-6) return true
+        for (const o of nets) {
+          if (o === n || !o.active || !o.path || o.kind === "fat") continue
+          if (o.kind === "stub" && n.pair!.stubs.includes(o)) continue
+          if (pathD(p, o.path, l) < cfg.w + GAP - 1e-6) return true
+        }
+        for (const g of frozenSegs[l])
+          if (segD(p, g[0], g[1], g[2], g[3]) < cfg.w / 2 + g[4] + GAP - 1e-6)
+            return true
+        for (const g of frozenVias)
+          if (Math.hypot(p.x - g[0], p.y - g[1]) < cfg.w / 2 + g[2] + GAP - 1e-6)
+            return true
+        for (const o of srj.obstacles) {
+          if (
+            o.isCopperPour ||
+            !o.layers.includes(LAYERS[l]) ||
+            own.has(padKey(o.center))
+          )
+            continue
+          const dx = Math.abs(p.x - o.center.x),
+            dy = Math.abs(p.y - o.center.y),
+            hx = Math.abs(o.width) / 2,
+            hy = Math.abs(o.height) / 2
+          if (dx > hx + 1 || dy > hy + 1) continue
+          const d =
+            o.shape === "circle"
+              ? Math.hypot(dx, dy) - hx
+              : Math.hypot(Math.max(0, dx - hx), Math.max(0, dy - hy))
+          if (d < cfg.w / 2 + padClear - 1e-6) return true
+        }
+        return false
+      }
+      for (const n of fats)
+        sharpOf.get(n)!.forEach((list, m) => {
+          for (const [k, p] of list)
+            if (clashes(n, p)) {
+              n.bevel ??= [new Set(), new Set()]
+              n.bevel[m].add(k)
+              ok = false
+              msgs.push(`${n.label} bevels a corner at ${k}`)
+            }
+        })
     }
     return { ok, msgs, over, changed, untunable }
   }
@@ -2515,7 +2650,7 @@ export function routeNegotiatedLanes(
         continue
       }
       const ev =
-        it % cfg.evalEvery === cfg.evalEvery - 1 || !total ? evaluate() : null
+        it % cfg.evalEvery === cfg.evalEvery - 1 || !total ? evaluate(!total) : null
       if (it % 5 === 4 || !total)
         log(
           `  iter ${it} [${((performance.now() - t0) / 1e3).toFixed(0)}s] pres=${presFac.toFixed(1)} conflicts=${total} nets=${bad.length} ${bad.slice(0, 8).join(",")} vias=${nets.reduce((s, n) => s + viaCount(n), 0)}` +
