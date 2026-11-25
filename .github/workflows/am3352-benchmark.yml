@@ -10,6 +10,10 @@ on:
         description: Run balanced timing controls instead of the gallery
         type: boolean
         default: false
+      bundled_control:
+        description: Time the built package instead of unbundled source
+        type: boolean
+        default: false
 permissions:
   contents: read
 jobs:
@@ -105,18 +109,33 @@ jobs:
           for revision in base head; do
             (cd "$revision" && bun install --ignore-scripts --backend=copyfile)
           done
+      - name: Build both actual distribution packages
+        if: inputs.bundled_control == true
+        run: |
+          for revision in base head; do
+            (cd "$revision" && bun run build)
+          done
+          sha256sum base/dist/index.js head/dist/index.js
       - name: Verify identical harness source
         run: |
           cmp base/scripts/benchmark.ts head/scripts/benchmark.ts
           cmp base/scripts/am3352-samples.ts head/scripts/am3352-samples.ts
           cmp base/scripts/validate-am3352-sample.ts head/scripts/validate-am3352-sample.ts
           sha256sum base/scripts/benchmark.ts head/scripts/benchmark.ts
-      - name: Balanced isolated head-base-base-head controls
+      - name: Balanced isolated package controls
+        env:
+          BUNDLED_CONTROL: ${{ inputs.bundled_control }}
         run: |
           mkdir -p timing
           index=0
-          for revision in head base base head; do
-            bun "$revision/scripts/benchmark.ts" --worker '${{ matrix.sample }}' --timeout-seconds 3600 --solver "$GITHUB_WORKSPACE/$revision/lib/index.ts" > "timing/$index-$revision.log"
+          for revision in base head head base; do
+            worker="$revision/scripts/benchmark.ts"
+            solver="$GITHUB_WORKSPACE/$revision/lib/index.ts"
+            if [ "$BUNDLED_CONTROL" = true ]; then
+              worker="base/scripts/benchmark.ts"
+              solver="$GITHUB_WORKSPACE/$revision/dist/index.js"
+            fi
+            bun "$worker" --worker '${{ matrix.sample }}' --timeout-seconds 3600 --solver "$solver" > "timing/$index-$revision.log"
             index=$((index + 1))
           done
           python3 - <<'PY_TIMING'
