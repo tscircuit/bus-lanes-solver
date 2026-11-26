@@ -1,3 +1,7 @@
+import {
+  IncompleteLengthTuningError,
+  tuneSmoothLengths,
+} from "./smooth-length-tuning"
 import { CopperConflictIndex } from "./copper-conflict-index"
 import { getCopperLayerNames } from "@tscircuit/fanout-solver"
 import { checkPcbTraceSelfShorts } from "@tscircuit/checks"
@@ -33,6 +37,8 @@ export interface SurfaceBridgeOptions {
   gridStep?: number
   maxExpansions?: number
   maxLength?: number
+  /** Required whole-signal length, including both owned approaches. */
+  minLength?: number
   searchPadding?: number
   /** Negotiated copper contributes cost while input.traces remain hard. */
   softTraces?: Trace[]
@@ -82,9 +88,8 @@ export function surfaceBridgeEligible(
     pads[0].layer === pads[1].layer &&
     [physical[0], physical.at(-1)!].includes(pads[0].layer) &&
     (!!innerCarrier(input) ||
-      (input.allowedLayers?.length === 2 &&
-        input.allowedLayers.includes(physical[0]) &&
-        input.allowedLayers.includes(physical.at(-1)!)))
+      (signalLayers(input, connection).includes(physical[0]) &&
+        signalLayers(input, connection).includes(physical.at(-1)!)))
   )
 }
 
@@ -110,9 +115,8 @@ export function* routeSurfaceBridge(
     pads[1].layer !== surface ||
     ![physical[0], physical.at(-1)!].includes(surface) ||
     (!inner &&
-      (input.allowedLayers?.length !== 2 ||
-        !input.allowedLayers.includes(surface) ||
-        !input.allowedLayers.includes(bridge)))
+      (!signalLayers(input, connection).includes(surface) ||
+        !signalLayers(input, connection).includes(bridge)))
   )
     return null
   const diameter = input.minViaPadDiameter ?? 0.3,
@@ -506,12 +510,16 @@ export function* routeSurfaceBridge(
         fixed,
         softTraces,
       )
-      if (
-        result &&
-        length(joinSignalEscapes(result.carrier, result.escapes).route) <=
-          maxLength + 1e-8
-      )
-        return result
+      if (result) {
+        const matched = matchSurfaceBridgeMinimum({
+          input,
+          connection,
+          route: result,
+          minLength: options.minLength ?? 0,
+          maxLength,
+        })
+        if (matched) return matched
+      }
     }
     const x = current.cell % columns,
       y = Math.floor(current.cell / columns),
@@ -919,4 +927,56 @@ export function surfaceBridgeSelfShorts(
     ),
   ]
   return checkPcbTraceSelfShorts(circuit).length > 0
+}
+
+/** Reject an untunable shortcut while the existing search can still choose
+ * another carrier. Owned approaches and supplied copper stay fixed. */
+function matchSurfaceBridgeMinimum({
+  input,
+  connection,
+  route,
+  minLength,
+  maxLength,
+}: {
+  input: SimpleRouteJson
+  connection: Connection
+  route: SurfaceBridgeRoute
+  minLength: number
+  maxLength: number
+}): SurfaceBridgeRoute | null {
+  const measured = length(joinSignalEscapes(route.carrier, route.escapes).route)
+  if (measured > maxLength + 1e-8) return null
+  if (measured >= minLength - 1e-8) return route
+  const carrier = route.carrier
+  const tuningInput: SimpleRouteJson = {
+    ...input,
+    connections: [
+      {
+        ...connection,
+        pointsToConnect: [carrier.route[0], carrier.route.at(-1)!] as Wire[],
+      },
+    ],
+    traces: [...(input.traces ?? []), ...route.escapes],
+    buses: [
+      {
+        busId: "surface_minimum",
+        connectionNames: [connection.name],
+        minLength,
+        maxLength,
+      },
+    ],
+    differentialPairs: [],
+  }
+  try {
+    const matched = tuneSmoothLengths(
+      tuningInput,
+      [carrier],
+      new Map([[connection.name, minLength]]),
+      { maxCandidates: 4096, packMeanders: true },
+    )[0]
+    return { ...route, carrier: matched }
+  } catch (error) {
+    if (!(error instanceof IncompleteLengthTuningError)) throw error
+    return null
+  }
 }

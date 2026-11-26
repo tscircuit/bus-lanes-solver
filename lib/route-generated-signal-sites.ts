@@ -1,3 +1,4 @@
+import { negotiateSurfaceRoutes } from "./negotiate-surface-routes"
 import {
   finishGeneratedSurfaceCarriers,
   type CompletedGeneratedSurfaceCarriers,
@@ -27,6 +28,26 @@ export function* routeGeneratedSignalSites(
       EXPANDED_GRID_PROBE_STEPS,
     )
     if (expandedGridRoute) return expandedGridRoute
+  }
+  const surface = yield* runBoundedRouting(
+    negotiateSurfaceRoutes(request.input, {
+      native: request.input,
+      pending: request.input,
+      escapes: [],
+      retained: [],
+      traces: [],
+    }),
+    request.maxSteps,
+  )
+  if (surface) {
+    const completed = yield* finishGeneratedSurfaceCarriers({
+      input: request.input,
+      carriers: surface.traces,
+      escapes: surface.escapes,
+      options: request.options,
+      maxSteps: request.maxSteps,
+    })
+    if (completed) return completed
   }
   return yield* completeGeneratedSignalSites(request)
 }

@@ -260,6 +260,12 @@ export function* negotiateSurfaceRoutes(
     const result = yield* routeSurfaceBridge(input, reversed, {
       gridStep: useHistory ? 0.1 : undefined,
       ...settings,
+      minLength: Math.max(
+        0,
+        ...(native.buses ?? [])
+          .filter((bus) => bus.connectionNames.includes(connection.name))
+          .map((bus) => bus.minLength ?? 0),
+      ),
       history,
       softTraces: soft,
     })
@@ -273,6 +279,9 @@ export function* negotiateSurfaceRoutes(
             carrier: {
               ...result.carrier,
               route: [...result.carrier.route].reverse(),
+              curvedSegments: result.carrier.curvedSegments
+                ?.map((index) => result.carrier.route.length - index)
+                .sort((a, b) => a - b),
             },
             escapes: [...result.escapes].reverse(),
           }
