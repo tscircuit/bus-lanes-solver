@@ -1,3 +1,4 @@
+import { runBoundedRouting } from "./run-bounded-routing"
 import { effectiveCarrierLayers } from "./effective-carrier-layers"
 import { nativeGroupsEligible, routeNativeGroups } from "./route-native-groups"
 import {
@@ -17,7 +18,10 @@ import { withInferredSurfaceLayers } from "./effective-carrier-layers"
 import { withSkewRoundoffReserve } from "./skew-roundoff-reserve"
 import { initialSignalDogbones } from "./initial-signal-dogbones"
 import { routeMultiTerminalBuses } from "./route-multi-terminal-buses"
-import { routeGeneratedSignalSites } from "./route-generated-signal-sites"
+import {
+  routeGeneratedSignalSites,
+  routeGeneratedSurfaceCarriers,
+} from "./route-generated-signal-sites"
 import { independentBusGroups } from "./route-independent-buses"
 import { routeFreshIndependentBuses } from "./route-fresh-independent-buses"
 import { retargetGeneratedEscape } from "./retarget-generated-escape"
@@ -1331,6 +1335,19 @@ export class BusLanesPipelineSolver extends BaseSolver {
         this.childOptions(),
         terminalLayers,
       )
+    if (
+      this.canNegotiateGeneratedSites &&
+      hasLengthConstraints(this.routingInput)
+    ) {
+      this.surfaceFinishing = runBoundedRouting(
+        routeGeneratedSurfaceCarriers({
+          input: this.routingInput,
+          options: this.childOptions(),
+          maxSteps: 3000,
+        }),
+        3000,
+      )
+    }
     this.child.MAX_ITERATIONS = getProvisionalCarrierSearchIterations({
       input: laneInput,
       availableIterations: this.child.MAX_ITERATIONS,
@@ -1399,6 +1416,7 @@ export class BusLanesPipelineSolver extends BaseSolver {
         this.stats = { ...this.stats, routingStage: "native_surface_geometry" }
         if (!state.done) return
         this.surfaceFinishing = undefined
+        if (!state.value && this.child && !this.child.failed) return
         if (!state.value)
           throw Error(
             "Generated native surface approaches could not satisfy full-path geometry and matching",

@@ -32,45 +32,8 @@ export function* routeGeneratedSignalSites(
     if (expandedGridRoute) return expandedGridRoute
   }
   if (hasLengthConstraints(request.input)) {
-    const commonInnerLayers = signalLayers(
-      request.input,
-      request.input.connections[0],
-    ).filter(
-      (layer) =>
-        /^inner\d+$/.test(layer) &&
-        request.input.connections.every((connection) =>
-          signalLayers(request.input, connection).includes(layer),
-        ),
-    )
-    const views = [
-      ...commonInnerLayers.map((layer) => ({
-        ...request.input,
-        allowedLayers: [layer],
-      })),
-      request.input,
-    ]
-    for (const native of views) {
-      const surface = yield* runBoundedRouting(
-        negotiateSurfaceRoutes(native, {
-          native,
-          pending: native,
-          escapes: [],
-          retained: [],
-          traces: [],
-        }),
-        request.maxSteps,
-      )
-      if (surface) {
-        const completed = yield* finishGeneratedSurfaceCarriers({
-          input: request.input,
-          carriers: surface.traces,
-          escapes: surface.escapes,
-          options: request.options,
-          maxSteps: request.maxSteps,
-        })
-        if (completed) return completed
-      }
-    }
+    const completed = yield* routeGeneratedSurfaceCarriers(request)
+    if (completed) return completed
   }
   return yield* completeGeneratedSignalSites(request)
 }
@@ -115,6 +78,51 @@ function* negotiateGeneratedSignalSites(
       },
     )
     if (routed) return routed
+  }
+  return null
+}
+
+export function* routeGeneratedSurfaceCarriers(
+  request: GeneratedSignalSitesRequest,
+): Generator<void, CompletedGeneratedSurfaceCarriers | null> {
+  const commonInnerLayers = signalLayers(
+    request.input,
+    request.input.connections[0],
+  ).filter(
+    (layer) =>
+      /^inner\d+$/.test(layer) &&
+      request.input.connections.every((connection) =>
+        signalLayers(request.input, connection).includes(layer),
+      ),
+  )
+  const views = [
+    ...commonInnerLayers.map((layer) => ({
+      ...request.input,
+      allowedLayers: [layer],
+    })),
+    request.input,
+  ]
+  for (const native of views) {
+    const surface = yield* runBoundedRouting(
+      negotiateSurfaceRoutes(native, {
+        native,
+        pending: native,
+        escapes: [],
+        retained: [],
+        traces: [],
+      }),
+      request.maxSteps,
+    )
+    if (surface) {
+      const completed = yield* finishGeneratedSurfaceCarriers({
+        input: request.input,
+        carriers: surface.traces,
+        escapes: surface.escapes,
+        options: request.options,
+        maxSteps: request.maxSteps,
+      })
+      if (completed) return completed
+    }
   }
   return null
 }
