@@ -976,13 +976,16 @@ export class BusLanesPipelineSolver extends BaseSolver {
       // Selecting the second-ranked layer for every group puts independent
       // buses onto the same crowded layer instead of exploring an alternative.
       const hasExistingHandoff = members.some((connection) =>
-        connection.pointsToConnect.some((point) => point.layers !== undefined),
+        connection.pointsToConnect.some(
+          (point) =>
+            point.layers !== undefined &&
+            !isUnroutedComponentPad(this.routingInput, connection, point),
+        ),
       )
-      if (hasExistingHandoff && allowed.length > 1)
-        this.hasNativeCarrierAlternatives = true
       let target = allowed[0]
-      if (hasExistingHandoff && this.carrierStrategy.name === "native_fallback")
-        target = allowed[this.attempt % allowed.length]
+      // Supplied handoffs can reach other carrier layers without moving a via.
+      // Retry those layers while retaining the ranked allocation for new pads.
+      if (hasExistingHandoff) target = allowed[this.attempt % allowed.length]
       for (const name of group) targets.set(name, target)
       load.set(target, load.get(target)! + group.size)
     }

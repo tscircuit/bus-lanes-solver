@@ -30,6 +30,8 @@ test("a termination branch cannot bypass the tuned primary path", () => {
   const branch: Trace = {
     ...trunk,
     pcb_trace_id: "branch",
+    coupledSection: [1, 3],
+    curvedSegments: [1, 2, 3],
     route: [from, { x: -2, y: -1 }, { x: 0, y: -1 }, terminal].map((point) => ({
       ...point,
       route_type: "wire",
@@ -66,5 +68,7 @@ test("a termination branch cannot bypass the tuned primary path", () => {
       to,
     }),
   ).toBe(5)
+  expect(trimmed.coupledSection).toEqual([0, 1])
+  expect(trimmed.curvedSegments).toEqual([1])
   expect({ input, trunk, branch }).toEqual(original)
 })

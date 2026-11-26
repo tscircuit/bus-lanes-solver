@@ -49,9 +49,17 @@ export function trimBranchToTrunk({
     }
     if (!junction) continue
     const start: Wire = { ...wire, x: junction.x, y: junction.y }
+    let coupledSection: Trace["coupledSection"]
+    if (branch.coupledSection && branch.coupledSection[1] > index) {
+      coupledSection = [
+        Math.max(0, branch.coupledSection[0] - index),
+        branch.coupledSection[1] - index,
+      ]
+    }
     return {
       ...branch,
       route: [start, ...branch.route.slice(index + 1)],
+      coupledSection,
       curvedSegments: branch.curvedSegments
         ?.filter((ending) => ending > index)
         .map((ending) => ending - index),
