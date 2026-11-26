@@ -1,0 +1,11 @@
+{
+  "board": "OrangeCrab",
+  "benchmark": "ShiboSoftwareDev/core-ddr-benchmark",
+  "benchmarkCommit": "16b6352dc25e951192d88cb99a7cfe96abf62285",
+  "coreCommit": "abe9820189e7a1b83c00afe31a1a5a6a159268ab",
+  "captureRun": "https://github.com/tscircuit/core/actions/runs/45723399073",
+  "inputSha256": "a25302a9dc0d03e5edcc904de259646439f8e66c38c2455cc2ae29fe61871ccb",
+  "pendingSignals": 28,
+  "preloadedDataSignals": 22,
+  "note": "Fresh Core native request with every authored OrangeCrab timing relationship compiled through public bus declarations; selected CPU-to-RAM clock paths preserve resistor branches. Geometry, physical rules and numeric goals are unchanged."
+}
