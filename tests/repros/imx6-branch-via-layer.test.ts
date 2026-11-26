@@ -2,11 +2,20 @@ import "bun-match-svg"
 import { expect, test } from "bun:test"
 import { readFileSync } from "node:fs"
 import { gunzipSync } from "node:zlib"
+import {
+  validateOriginalEndpointConnectivity,
+  validateRoutedCopperDrc,
+} from "@tscircuit/fanout-solver"
 import { getSvgFromGraphicsObject } from "graphics-debug"
 import { BusLanesPipelineSolver, BusLanesSolver } from "../../lib"
-import type { SimpleRouteJson } from "../../lib/types"
+import type { SimpleRouteJson, Trace } from "../../lib/types"
 
-test("i.MX6 DRAM_DATA8 bottom branch asks for a new via beside the escape via it joins", async (): Promise<void> => {
+type PhysicalInput = SimpleRouteJson & {
+  obstacles: (SimpleRouteJson["obstacles"][number] & { type: "rect" })[]
+  traces: (Trace & { connection_name: string })[]
+}
+
+test("i.MX6 DRAM_DATA8 bottom branch joins its escape via on the bottom layer", async (): Promise<void> => {
   const input = JSON.parse(
     gunzipSync(
       readFileSync(
@@ -16,22 +25,40 @@ test("i.MX6 DRAM_DATA8 bottom branch asks for a new via beside the escape via it
         ),
       ),
     ).toString(),
-  ) as SimpleRouteJson
+  ) as PhysicalInput
   const [connection] = input.connections
   expect(connection!.pointsToConnect.map((point) => point.layer)).toEqual([
     "bottom",
     "top",
     "top",
   ])
-  const solver = new BusLanesPipelineSolver(structuredClone(input))
+  const original = structuredClone(input)
+  const solver = new BusLanesPipelineSolver(input)
   solver.solve()
-  expect(solver.solved).toBe(false)
-  expect(solver.error).toContain("No collision-free local dogbone assignment")
+  expect(solver.error).toBeNull()
+  expect(solver.solved).toBe(true)
+  expect(input).toEqual(original)
 
-  // Native pads and the three labelled terminals only; no candidate copper.
-  const graphics = new BusLanesSolver(input).visualize()
+  const traces = solver.traces.map((trace) => {
+    if (!trace.connection_name) throw Error("Completed DDR trace has no owner")
+    return { ...trace, connection_name: trace.connection_name }
+  })
+  const context = { inputSrj: input, routedSrj: { ...input, traces } }
+  const connectivity = validateOriginalEndpointConnectivity(context)
+  expect(connectivity.connectedConnectionCount).toBe(1)
+  expect(connectivity.connectedEndpointCount).toBe(3)
+  expect(connectivity.valid).toBe(true)
+  expect(
+    validateRoutedCopperDrc({
+      ...context,
+      clearance: input.minTraceToPadEdgeClearance!,
+      allowBlindAndBuriedVias: false,
+    }).issues,
+  ).toEqual([])
+
+  const graphics = new BusLanesSolver({ ...input, traces }).visualize()
   graphics.title =
-    "i.MX6 DRAM_DATA8: FAILED. The bottom-pad branch asks for a new via beside the escape via it joins"
+    "i.MX6 DRAM_DATA8: all three terminals connected; the bottom pad joins the escape via on the bottom layer"
   graphics.texts = [
     {
       x: Math.min(
@@ -47,13 +74,6 @@ test("i.MX6 DRAM_DATA8 bottom branch asks for a new via beside the escape via it
       anchorSide: "bottom_left",
     },
   ]
-  for (const terminal of connection!.pointsToConnect)
-    graphics.points!.push({
-      x: terminal.x,
-      y: terminal.y,
-      color: "#e11d48",
-      label: `${terminal.pcb_port_id} (${terminal.layer})`,
-    })
   await expect(
     getSvgFromGraphicsObject(graphics, { backgroundColor: "white" }),
   ).toMatchSvgSnapshot(import.meta.path)
