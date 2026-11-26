@@ -488,7 +488,10 @@ export class BusLanesSolver extends BaseSolver {
       this.input.buses?.length &&
       this.pendingExits === undefined
     ) {
-      this.pendingExitSearch ??= pendingPackageExits(this.input, this.fixed)
+      this.pendingExitSearch ??= pendingPackageExits({
+        input: this.input,
+        fixed: this.fixed,
+      })
       const step = this.pendingExitSearch.next()
       if (!step.done) return
       this.pendingExits = step.value

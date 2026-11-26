@@ -18,10 +18,15 @@ const certificates = new WeakMap<SimpleRouteJson, Map<string, Trace[]>>()
  * measured in the package's own frame so that a rotated package is not given
  * guides across the open board beside it. These soft guides retain native
  * connectivity aliases; they never become routed connections. */
-export function* pendingPackageExits(
-  input: SimpleRouteJson,
-  fixed: Copper[],
-): Generator<void, Copper[]> {
+export function* pendingPackageExits({
+  input,
+  fixed,
+  includeViaLandings = false,
+}: {
+  input: SimpleRouteJson
+  fixed: Copper[]
+  includeViaLandings?: boolean
+}): Generator<void, Copper[]> {
   const pads = input.obstacles.filter((pad) => pad.componentId)
   const regions = packageApproachRegions(input, 0)
   const frames = new Map(
@@ -108,7 +113,7 @@ export function* pendingPackageExits(
             search.step()
             yield
           }
-          if (search.solved) {
+          if (search.solved && includeViaLandings) {
             for (const physicalLayer of getCopperLayerNames(input.layerCount))
               result.push({
                 a: end,

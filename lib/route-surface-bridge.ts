@@ -990,29 +990,32 @@ function matchSurfaceBridgeMinimum({
     ],
     differentialPairs: [],
   }
+  const conflicts = new CopperConflictIndex()
   try {
     const matched = tuneSmoothLengths(
       tuningInput,
       [carrier],
-      new Map([[connection.name, minLength]]),
+      new Map<Connection["name"], number>([[connection.name, minLength]]),
       {
         maxCandidates: 4096,
         packMeanders: true,
-        candidateScore: (trace) => {
+        candidateScore: (trace: Trace): number => {
           const copper = fixedCopper({
             ...input,
             obstacles: [],
             traces: [trace],
           })
-          return new CopperConflictIndex().firstConflict(
-            copper,
-            softCopper,
-            input.minTraceToPadEdgeClearance ??
-              input.defaultObstacleMargin ??
-              0.075,
+          if (
+            conflicts.firstConflict(
+              copper,
+              softCopper,
+              input.minTraceToPadEdgeClearance ??
+                input.defaultObstacleMargin ??
+                0.075,
+            )
           )
-            ? 1
-            : 0
+            return 1
+          return 0
         },
       },
     )[0]

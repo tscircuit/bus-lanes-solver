@@ -235,7 +235,11 @@ export function* negotiateSurfaceRoutes(
       },
     }
   }
-  const pendingExits = yield* pendingPackageExits(native, fixedCopper(native))
+  const pendingExits = yield* pendingPackageExits({
+    input: native,
+    fixed: fixedCopper(native),
+    includeViaLandings: true,
+  })
   const pendingGuides: Trace[] = pendingExits.map((copper, index) => ({
     type: "pcb_trace",
     pcb_trace_id: `pending_package_exit_${index}`,
