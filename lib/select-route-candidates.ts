@@ -1,6 +1,6 @@
 import { length } from "./geometry"
 import { RouteConflictIndex } from "./route-conflict-index"
-import type { Trace, Wire } from "./types"
+import type { ConnectionName, Trace, Wire } from "./types"
 
 // Dense early candidate ids dominate compatibility checks. Keep that cache
 // bounded (4 KiB per candidate); unusually long searches use the sparse map.
@@ -57,10 +57,22 @@ export class RouteCandidatePool {
   private routeSignatures = new WeakMap<Trace["route"], string>()
   private revision = 0
   private selection?: { revision: number; key: string; result: Trace[] | null }
-  constructor(
-    private clearance: number,
-    private limit = 120,
-  ) {}
+  private readonly clearance: number
+  private readonly limit: number
+  private readonly fixedLengthByConnectionName: ReadonlyMap<ConnectionName, number>
+  constructor({
+    clearance,
+    limit = 120,
+    fixedLengthByConnectionName = new Map<ConnectionName, number>(),
+  }: {
+    clearance: number
+    limit?: number
+    fixedLengthByConnectionName?: ReadonlyMap<ConnectionName, number>
+  }) {
+    this.clearance = clearance
+    this.limit = limit
+    this.fixedLengthByConnectionName = fixedLengthByConnectionName
+  }
 
   add(unit: string, traces: Trace[]) {
     const pool = this.pools.get(unit) ?? []
@@ -80,7 +92,11 @@ export class RouteCandidatePool {
       })
       .join(",")}]`
     if (signatures.has(signature)) return
-    const lengths = traces.map((trace) => length(trace.route))
+    const lengths = traces.map(
+      (trace) =>
+        length(trace.route) +
+        (this.fixedLengthByConnectionName.get(trace.connection_name!) ?? 0),
+    )
     const candidate = {
       traces,
       key: signature,
