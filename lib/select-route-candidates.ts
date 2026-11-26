@@ -1,6 +1,7 @@
 import { length } from "./geometry"
+import { fixedRouteLength } from "./route-lengths"
 import { RouteConflictIndex } from "./route-conflict-index"
-import type { ConnectionName, Trace, Wire } from "./types"
+import type { ConnectionName, SimpleRouteJson, Trace, Wire } from "./types"
 
 // Dense early candidate ids dominate compatibility checks. Keep that cache
 // bounded (4 KiB per candidate); unusually long searches use the sparse map.
@@ -34,6 +35,11 @@ class CandidateConflicts {
   }
 }
 
+interface LengthGoal {
+  fixedLengthMm: number
+  minimumLengthMm: number
+}
+
 type Candidate = {
   traces: Trace[]
   key: string
@@ -59,19 +65,30 @@ export class RouteCandidatePool {
   private selection?: { revision: number; key: string; result: Trace[] | null }
   private readonly clearance: number
   private readonly limit: number
-  private readonly fixedLengthByConnectionName: ReadonlyMap<ConnectionName, number>
+  private readonly lengthGoalByConnectionName = new Map<ConnectionName, LengthGoal>()
   constructor({
     clearance,
     limit = 120,
-    fixedLengthByConnectionName = new Map<ConnectionName, number>(),
+    input,
   }: {
     clearance: number
     limit?: number
-    fixedLengthByConnectionName?: ReadonlyMap<ConnectionName, number>
+    input?: SimpleRouteJson
   }) {
     this.clearance = clearance
     this.limit = limit
-    this.fixedLengthByConnectionName = fixedLengthByConnectionName
+    if (!input) return
+    for (const connection of input.connections) {
+      this.lengthGoalByConnectionName.set(connection.name, {
+        fixedLengthMm: fixedRouteLength(input, connection.name),
+        minimumLengthMm: Math.max(
+          0,
+          ...(input.buses ?? [])
+            .filter((bus) => bus.connectionNames.includes(connection.name))
+            .map((bus) => bus.minLength ?? 0),
+        ),
+      })
+    }
   }
 
   add(unit: string, traces: Trace[]) {
@@ -92,16 +109,17 @@ export class RouteCandidatePool {
       })
       .join(",")}]`
     if (signatures.has(signature)) return
-    const lengths = traces.map(
-      (trace) =>
-        length(trace.route) +
-        (this.fixedLengthByConnectionName.get(trace.connection_name!) ?? 0),
-    )
+    const lengths = traces.map((trace) => {
+      const goal = this.lengthGoalByConnectionName.get(trace.connection_name!)
+      const actual = length(trace.route) + (goal?.fixedLengthMm ?? 0)
+      const minimum = goal?.minimumLengthMm ?? 0
+      return { target: Math.max(actual, minimum), correction: Math.abs(actual - minimum) }
+    })
     const candidate = {
       traces,
       key: signature,
-      length: lengths.reduce((sum, value) => sum + value, 0),
-      peak: Math.max(...lengths),
+      length: lengths.reduce((sum, value) => sum + value.correction, 0),
+      peak: Math.max(...lengths.map((value) => value.target)),
       layers: [...new Set(traces.map((t) => (t.route[0] as Wire).layer))],
       singleLayer: traces.every(
         (t) =>

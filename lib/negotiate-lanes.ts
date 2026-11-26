@@ -1,5 +1,5 @@
 import { repairGridJogs } from "./repair-grid-jogs"
-import { maximumCarrierLength, hasLengthConstraints, fixedRouteLength } from "./route-lengths"
+import { maximumCarrierLength, hasLengthConstraints } from "./route-lengths"
 import { routeAnalyticLane } from "./route-analytic-lane"
 import { refineRouteCandidates } from "./refine-route-candidates"
 import { routeViaWaypoint } from "./route-via-waypoint"
@@ -108,12 +108,7 @@ export function* negotiateLanes({
   const candidates = new RouteCandidatePool({
     clearance,
     limit: 240,
-    fixedLengthByConnectionName: new Map(
-      input.connections.map((connection) => [
-        connection.name,
-        fixedRouteLength(input, connection.name),
-      ]),
-    ),
+    input,
   })
   const conflicts = new RouteConflictIndex()
   const unitNames = units.map((unit) => unit.connections[0].name)
