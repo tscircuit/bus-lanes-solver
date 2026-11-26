@@ -127,7 +127,15 @@ export function* prepareMultiTerminalFanouts({
         const attachment = connection.pointsToConnect
           .slice(0, 2)
           .sort((a, b) => distance(a, terminal) - distance(b, terminal))[0]
-        return { ...connection, pointsToConnect: [attachment, terminal] }
+        // An escaped through via also exists on the terminal's layer, so the
+        // branch can join it there without another via.
+        const layer = attachment.layers?.includes(terminal.layer)
+          ? terminal.layer
+          : attachment.layer
+        return {
+          ...connection,
+          pointsToConnect: [{ ...attachment, layer }, terminal],
+        }
       })
     const names = new Set(branches.map((connection) => connection.name))
     const solver = new BusLanesPipelineSolver(
