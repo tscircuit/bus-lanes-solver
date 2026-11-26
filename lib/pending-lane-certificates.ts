@@ -1,4 +1,3 @@
-import { hasLengthConstraints } from "./route-lengths"
 import { getCopperLayerNames } from "@tscircuit/fanout-solver"
 import { applyToPoint } from "transformation-matrix"
 import { GridVisibilitySearch } from "./grid-visibility"
@@ -110,17 +109,16 @@ export function* pendingPackageExits(
             yield
           }
           if (search.solved) {
-            // Keep room for the pending pad's through via while tuning copper.
-            if (hasLengthConstraints(input)) {
-              for (const physicalLayer of getCopperLayerNames(input.layerCount))
-                result.push({
-                  a: end,
-                  b: end,
-                  radius: (input.minViaPadDiameter ?? 0.6) / 2,
-                  layer: physicalLayer,
-                  owners,
-                })
-            }
+            for (const physicalLayer of getCopperLayerNames(input.layerCount))
+              result.push({
+                a: end,
+                b: end,
+                radius: (input.minViaPadDiameter ?? 0.6) / 2,
+                layer: physicalLayer,
+                owners,
+              })
+          }
+          if (search.solved)
             for (let index = 1; index < search.result.length; index++)
               result.push({
                 a: search.result[index - 1],
@@ -129,7 +127,6 @@ export function* pendingPackageExits(
                 layer,
                 owners,
               })
-          }
         } finally {
           if (!search.solved && !search.failed) search.cancel()
         }

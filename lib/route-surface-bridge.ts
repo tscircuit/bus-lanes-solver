@@ -16,11 +16,7 @@ import { MinHeap } from "./min-heap"
 import { reduceOrdinaryTurns } from "./reduce-ordinary-turns"
 import { signalWidth } from "./repair-bus-dogbones"
 import { routeAnglesAreConventional } from "./route-angle-validation"
-import {
-  maximumCarrierLength,
-  fixedRouteLength,
-  hasLengthConstraints,
-} from "./route-lengths"
+import { maximumCarrierLength, fixedRouteLength } from "./route-lengths"
 import type {
   Connection,
   Point,
@@ -81,24 +77,17 @@ function innerCarrier(input: SimpleRouteJson) {
     : undefined
 }
 
-function surfaceBridgeLayers(
-  input: SimpleRouteJson,
-  connection: Connection,
-): string[] {
-  if (input.allowedLayers) return input.allowedLayers
-  if (!hasLengthConstraints(input)) return []
-  return signalLayers(input, connection).filter(
-    (layer) => layer === "top" || layer === "bottom",
-  )
-}
-
 export function surfaceBridgeEligible(
   input: SimpleRouteJson,
   connection: Connection,
 ): boolean {
   const physical = getCopperLayerNames(input.layerCount),
     pads = connection.pointsToConnect,
-    permitted = surfaceBridgeLayers(input, connection)
+    permitted =
+      input.allowedLayers ??
+      signalLayers(input, connection).filter(
+        (layer) => layer === physical[0] || layer === physical.at(-1),
+      )
   return (
     physical.length >= 2 &&
     pads.length === 2 &&
@@ -130,7 +119,11 @@ export function* routeSurfaceBridge(
     inner = innerCarrier(input),
     bridge =
       inner ?? (surface === physical[0] ? physical.at(-1)! : physical[0]),
-    permitted = surfaceBridgeLayers(input, connection)
+    permitted =
+      input.allowedLayers ??
+      signalLayers(input, connection).filter(
+        (layer) => layer === physical[0] || layer === physical.at(-1),
+      )
   if (
     pads[1].layer !== surface ||
     ![physical[0], physical.at(-1)!].includes(surface) ||
@@ -743,9 +736,7 @@ function materialize(
   // Keep every avoided ordinary route hard during simplification. Only
   // already crossed provisional routes may still participate in negotiation.
   let refinementCopper = fixed
-  const negotiatedInner =
-    softTraces.length > 0 &&
-    (hasLengthConstraints(input) || /^inner\d+$/.test(layers[1]))
+  const negotiatedInner = softTraces.length > 0
   if (negotiatedInner) {
     const provisional: Trace = {
       type: "pcb_trace",
@@ -999,32 +990,29 @@ function matchSurfaceBridgeMinimum({
     ],
     differentialPairs: [],
   }
-  const conflicts = new CopperConflictIndex()
   try {
     const matched = tuneSmoothLengths(
       tuningInput,
       [carrier],
-      new Map<Connection["name"], number>([[connection.name, minLength]]),
+      new Map([[connection.name, minLength]]),
       {
         maxCandidates: 4096,
         packMeanders: true,
-        candidateScore: (trace: Trace): number => {
+        candidateScore: (trace) => {
           const copper = fixedCopper({
             ...input,
             obstacles: [],
             traces: [trace],
           })
-          if (
-            conflicts.firstConflict(
-              copper,
-              softCopper,
-              input.minTraceToPadEdgeClearance ??
-                input.defaultObstacleMargin ??
-                0.075,
-            )
+          return new CopperConflictIndex().firstConflict(
+            copper,
+            softCopper,
+            input.minTraceToPadEdgeClearance ??
+              input.defaultObstacleMargin ??
+              0.075,
           )
-            return 1
-          return 0
+            ? 1
+            : 0
         },
       },
     )[0]
