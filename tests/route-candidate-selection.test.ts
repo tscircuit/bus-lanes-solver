@@ -16,7 +16,7 @@ const trace = (name: string, points: number[][]): Trace => ({
 })
 
 test("selects compatible generated alternatives instead of the latest colliding routes", () => {
-  const pool = new RouteCandidatePool(0.1)
+  const pool = new RouteCandidatePool({ clearance: 0.1 })
   const direct = trace("a", [
     [0, 0],
     [2, 0],
@@ -40,7 +40,7 @@ test("selects compatible generated alternatives instead of the latest colliding 
 })
 
 test("cannot split a paired candidate or accept an incomplete assignment", () => {
-  const pool = new RouteCandidatePool(0.1)
+  const pool = new RouteCandidatePool({ clearance: 0.1 })
   pool.add("pair", [
     trace("p", [
       [0, 0],
@@ -62,7 +62,7 @@ test("cannot split a paired candidate or accept an incomplete assignment", () =>
 })
 
 test("an unsatisfiable candidate pool can recover when a new route is generated", () => {
-  const pool = new RouteCandidatePool(0.1)
+  const pool = new RouteCandidatePool({ clearance: 0.1 })
   pool.add("a", [
     trace("a", [
       [0, 0],
@@ -88,7 +88,7 @@ test("an unsatisfiable candidate pool can recover when a new route is generated"
 })
 
 test("retiring older candidates preserves exclusions and accepts new compatible geometry", () => {
-  const pool = new RouteCandidatePool(0.1, 3)
+  const pool = new RouteCandidatePool({ clearance: 0.1, limit: 3 })
   const crossing = trace("b", [
     [1, -1],
     [1, 1],
@@ -116,7 +116,7 @@ test("retiring older candidates preserves exclusions and accepts new compatible 
 })
 
 test("a long independent bus does not hide a shorter bus's avoidable detour", () => {
-  const pool = new RouteCandidatePool(0.1)
+  const pool = new RouteCandidatePool({ clearance: 0.1 })
   const long = trace("a", [
     [0, 0],
     [20, 0],
@@ -141,7 +141,7 @@ test("a long independent bus does not hide a shorter bus's avoidable detour", ()
 })
 
 test("repeated unsatisfiable selections remain recoverable without losing collision exclusions", () => {
-  const pool = new RouteCandidatePool(0.1)
+  const pool = new RouteCandidatePool({ clearance: 0.1 })
   pool.add("a", [
     trace("a", [
       [0, 0],
@@ -167,7 +167,7 @@ test("repeated unsatisfiable selections remain recoverable without losing collis
 })
 
 test("retired geometry can be added again and selections respect the requested units", () => {
-  const pool = new RouteCandidatePool(0.1, 2)
+  const pool = new RouteCandidatePool({ clearance: 0.1, limit: 2 })
   const detour = trace("a", [
     [0, 0],
     [0, 2],

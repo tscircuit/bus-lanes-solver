@@ -979,7 +979,8 @@ export class BusLanesPipelineSolver extends BaseSolver {
         connection.pointsToConnect.some((point) => point.layers !== undefined),
       )
       let target = allowed[0]
-      if (hasExistingHandoff) target = allowed[this.attempt % allowed.length]
+      if (hasExistingHandoff && hasLengthConstraints(this.routingInput))
+        target = allowed[this.attempt % allowed.length]
       for (const name of group) targets.set(name, target)
       load.set(target, load.get(target)! + group.size)
     }

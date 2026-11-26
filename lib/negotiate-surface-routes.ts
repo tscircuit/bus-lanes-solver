@@ -1,3 +1,4 @@
+import { hasLengthConstraints } from "./route-lengths"
 import { pendingPackageExits } from "./pending-lane-certificates"
 import { CopperConflictIndex } from "./copper-conflict-index"
 import { generatedEscapeHolesConflict } from "./expanded-signal-sites"
@@ -235,18 +236,21 @@ export function* negotiateSurfaceRoutes(
       },
     }
   }
-  const pendingExits = yield* pendingPackageExits(native, fixedCopper(native))
-  const pendingGuides: Trace[] = pendingExits.map((copper, index) => ({
-    type: "pcb_trace",
-    pcb_trace_id: `pending_package_exit_${index}`,
-    connection_name: copper.owners[0],
-    route: [copper.a, copper.b].map((point) => ({
-      ...point,
-      route_type: "wire",
-      layer: copper.layer,
-      width: 2 * copper.radius,
-    })),
-  }))
+  let pendingGuides: Trace[] = []
+  if (hasLengthConstraints(native)) {
+    const pendingExits = yield* pendingPackageExits(native, fixedCopper(native))
+    pendingGuides = pendingExits.map((copper, index) => ({
+      type: "pcb_trace",
+      pcb_trace_id: `pending_package_exit_${index}`,
+      connection_name: copper.owners[0],
+      route: [copper.a, copper.b].map((point) => ({
+        ...point,
+        route_type: "wire",
+        layer: copper.layer,
+        width: 2 * copper.radius,
+      })),
+    }))
+  }
   function* search(
     index: number,
     input: SimpleRouteJson,
