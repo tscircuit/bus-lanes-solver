@@ -1,3 +1,4 @@
+import { createViaPadHoleClearanceChecker } from "./via-pad-hole-clearance"
 import {
   IncompleteLengthTuningError,
   tuneSmoothLengths,
@@ -81,15 +82,21 @@ export function surfaceBridgeEligible(
   connection: Connection,
 ): boolean {
   const physical = getCopperLayerNames(input.layerCount),
-    pads = connection.pointsToConnect
+    pads = connection.pointsToConnect,
+    permitted =
+      input.allowedLayers ??
+      signalLayers(input, connection).filter(
+        (layer) => layer === physical[0] || layer === physical.at(-1),
+      )
   return (
     physical.length >= 2 &&
     pads.length === 2 &&
     pads[0].layer === pads[1].layer &&
     [physical[0], physical.at(-1)!].includes(pads[0].layer) &&
     (!!innerCarrier(input) ||
-      (signalLayers(input, connection).includes(physical[0]) &&
-        signalLayers(input, connection).includes(physical.at(-1)!)))
+      (permitted.length === 2 &&
+        permitted.includes(physical[0]) &&
+        permitted.includes(physical.at(-1)!)))
   )
 }
 
@@ -110,13 +117,20 @@ export function* routeSurfaceBridge(
   const pads = connection.pointsToConnect,
     surface = pads[0].layer,
     inner = innerCarrier(input),
-    bridge = inner ?? (surface === physical[0] ? physical.at(-1)! : physical[0])
+    bridge =
+      inner ?? (surface === physical[0] ? physical.at(-1)! : physical[0]),
+    permitted =
+      input.allowedLayers ??
+      signalLayers(input, connection).filter(
+        (layer) => layer === physical[0] || layer === physical.at(-1),
+      )
   if (
     pads[1].layer !== surface ||
     ![physical[0], physical.at(-1)!].includes(surface) ||
     (!inner &&
-      (!signalLayers(input, connection).includes(surface) ||
-        !signalLayers(input, connection).includes(bridge)))
+      (permitted.length !== 2 ||
+        !permitted.includes(surface) ||
+        !permitted.includes(bridge)))
   )
     return null
   const diameter = input.minViaPadDiameter ?? 0.3,
@@ -269,10 +283,15 @@ export function* routeSurfaceBridge(
           nativePadCells.add(cell)
       }
   }
+  const holeClearsOwnPads = createViaPadHoleClearanceChecker({
+    input,
+    connection,
+  })
   const landing = (cell: number) => {
     // A native pad is the trace terminal, not a manufactured handoff. Even
     // same-net via-in-pad placement is rejected by the native route validator.
-    if (nativePadCells.has(cell)) return false
+    if (nativePadCells.has(cell) || !holeClearsOwnPads(point(cell)))
+      return false
     if (lands[cell]) return lands[cell] === 1
     const at = point(cell),
       clear =
@@ -974,7 +993,13 @@ function matchSurfaceBridgeMinimum({
       new Map([[connection.name, minLength]]),
       { maxCandidates: 4096, packMeanders: true },
     )[0]
-    return { ...route, carrier: matched }
+    const result = { ...route, carrier: matched }
+    if (
+      length(joinSignalEscapes(matched, route.escapes).route) >
+      maxLength + 1e-8
+    )
+      return null
+    return result
   } catch (error) {
     if (!(error instanceof IncompleteLengthTuningError)) throw error
     return null

@@ -1,3 +1,4 @@
+import { createViaPadHoleClearanceChecker } from "./via-pad-hole-clearance"
 import { getCopperLayerNames } from "@tscircuit/fanout-solver"
 import { CopperConflictIndex } from "./copper-conflict-index"
 import { length, simplify } from "./geometry"
@@ -135,37 +136,10 @@ export class NativeCarrierRouter {
       N = this.cellCount
     const width = input.minTraceWidth,
       diameter = input.minViaPadDiameter ?? 0.3
-    // A same-net pad is transparent to copper clearance, but not to a drill.
-    // Keep its physical hole out of SMT pads unless fabrication permits it.
-    const ownPads =
-      input.allowViaInPad === true
-        ? []
-        : input.obstacles.filter(
-            (o) =>
-              o.componentId &&
-              (o.connectedTo.includes(c.name) ||
-                o.connectedTo.includes(c.source_trace_id ?? c.name) ||
-                c.pointsToConnect.some(
-                  (p) => p.pcb_port_id && o.connectedTo.includes(p.pcb_port_id),
-                )),
-          )
-    const holeRadius = (input.minViaHoleDiameter ?? 0.15) / 2
-    const holeClearsOwnPads = (p: Point) =>
-      ownPads.every((o) => {
-        const angle = (-(o.ccwRotationDegrees ?? 0) * Math.PI) / 180
-        const dx = p.x - o.center.x,
-          dy = p.y - o.center.y
-        const x = dx * Math.cos(angle) - dy * Math.sin(angle),
-          y = dx * Math.sin(angle) + dy * Math.cos(angle)
-        const distance =
-          o.shape === "circle"
-            ? Math.hypot(dx, dy) - o.width / 2
-            : Math.hypot(
-                Math.max(0, Math.abs(x) - o.width / 2),
-                Math.max(0, Math.abs(y) - o.height / 2),
-              )
-        return distance >= holeRadius + 1e-5
-      })
+    const holeClearsOwnPads = createViaPadHoleClearanceChecker({
+      input,
+      connection: c,
+    })
     const wireMargin = width / 2 + (input.minBoardEdgeClearance ?? 0)
     const viaMargin = diameter / 2 + (input.minBoardEdgeClearance ?? 0)
     const softGroups = (options.softTraces ?? []).map((t) =>

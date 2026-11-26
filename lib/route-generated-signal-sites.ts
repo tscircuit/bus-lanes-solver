@@ -1,3 +1,4 @@
+import { hasLengthConstraints } from "./route-lengths"
 import { negotiateSurfaceRoutes } from "./negotiate-surface-routes"
 import {
   finishGeneratedSurfaceCarriers,
@@ -29,25 +30,27 @@ export function* routeGeneratedSignalSites(
     )
     if (expandedGridRoute) return expandedGridRoute
   }
-  const surface = yield* runBoundedRouting(
-    negotiateSurfaceRoutes(request.input, {
-      native: request.input,
-      pending: request.input,
-      escapes: [],
-      retained: [],
-      traces: [],
-    }),
-    request.maxSteps,
-  )
-  if (surface) {
-    const completed = yield* finishGeneratedSurfaceCarriers({
-      input: request.input,
-      carriers: surface.traces,
-      escapes: surface.escapes,
-      options: request.options,
-      maxSteps: request.maxSteps,
-    })
-    if (completed) return completed
+  if (hasLengthConstraints(request.input)) {
+    const surface = yield* runBoundedRouting(
+      negotiateSurfaceRoutes(request.input, {
+        native: request.input,
+        pending: request.input,
+        escapes: [],
+        retained: [],
+        traces: [],
+      }),
+      request.maxSteps,
+    )
+    if (surface) {
+      const completed = yield* finishGeneratedSurfaceCarriers({
+        input: request.input,
+        carriers: surface.traces,
+        escapes: surface.escapes,
+        options: request.options,
+        maxSteps: request.maxSteps,
+      })
+      if (completed) return completed
+    }
   }
   return yield* completeGeneratedSignalSites(request)
 }
