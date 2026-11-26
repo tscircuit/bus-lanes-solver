@@ -43,7 +43,7 @@ interface LengthGoal {
 type Candidate = {
   traces: Trace[]
   key: string
-  length: number
+  cost: number
   peak: number
   id: number
   layers: string[]
@@ -109,6 +109,8 @@ export class RouteCandidatePool {
       })
       .join(",")}]`
     if (signatures.has(signature)) return
+    // Rank the finished path, including fixed fanouts and declared minima.
+    // Below that minimum, prefer routes requiring less additional tuning.
     const lengths = traces.map((trace) => {
       const goal = this.lengthGoalByConnectionName.get(trace.connection_name!)
       const actual = length(trace.route) + (goal?.fixedLengthMm ?? 0)
@@ -118,7 +120,7 @@ export class RouteCandidatePool {
     const candidate = {
       traces,
       key: signature,
-      length: lengths.reduce((sum, value) => sum + value.correction, 0),
+      cost: lengths.reduce((sum, value) => sum + value.correction, 0),
       peak: Math.max(...lengths.map((value) => value.target)),
       layers: [...new Set(traces.map((t) => (t.route[0] as Wire).layer))],
       singleLayer: traces.every(
@@ -325,7 +327,7 @@ export class RouteCandidatePool {
       return null
     }
     return visit(
-      domains.map((domain) => [...domain].sort((a, b) => a.length - b.length)),
+      domains.map((domain) => [...domain].sort((a, b) => a.cost - b.cost)),
     )
   }
 
