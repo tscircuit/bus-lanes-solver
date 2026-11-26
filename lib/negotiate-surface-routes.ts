@@ -235,22 +235,28 @@ export function* negotiateSurfaceRoutes(
       },
     }
   }
-  const pendingExits = yield* pendingPackageExits({
-    input: native,
-    fixed: fixedCopper(native),
-    includeViaLandings: true,
-  })
-  const pendingGuides: Trace[] = pendingExits.map((copper, index) => ({
-    type: "pcb_trace",
-    pcb_trace_id: `pending_package_exit_${index}`,
-    connection_name: copper.owners[0],
-    route: [copper.a, copper.b].map((point) => ({
-      ...point,
-      route_type: "wire",
-      layer: copper.layer,
-      width: 2 * copper.radius,
-    })),
-  }))
+  const needsMinimumTuning = (native.buses ?? []).some(
+    (bus) => (bus.minLength ?? 0) > 0,
+  )
+  let pendingGuides: Trace[] = []
+  if (needsMinimumTuning) {
+    const pendingExits = yield* pendingPackageExits({
+      input: native,
+      fixed: fixedCopper(native),
+      includeViaLandings: true,
+    })
+    pendingGuides = pendingExits.map((copper, index) => ({
+      type: "pcb_trace",
+      pcb_trace_id: `pending_package_exit_${index}`,
+      connection_name: copper.owners[0],
+      route: [copper.a, copper.b].map((point) => ({
+        ...point,
+        route_type: "wire",
+        layer: copper.layer,
+        width: 2 * copper.radius,
+      })),
+    }))
+  }
   function* search(
     index: number,
     input: SimpleRouteJson,
