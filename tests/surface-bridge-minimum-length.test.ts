@@ -4,6 +4,7 @@ import { length } from "../lib/geometry"
 import { joinSignalEscapes } from "../lib/join-signal-escapes"
 import { routeSurfaceBridge } from "../lib/route-surface-bridge"
 import type { SimpleRouteJson } from "../lib/types"
+import { nativeValidationSrj } from "./fixtures/expect-completed-routing"
 
 test("surface candidates meet the required whole-signal minimum before selection", () => {
   const input: SimpleRouteJson = {
@@ -43,11 +44,11 @@ test("surface candidates meet the required whole-signal minimum before selection
   expect(length(trace.route)).toBeLessThanOrEqual(9 + 1e-7)
   expect(
     validateRoutedCopperDrc({
-      inputSrj: input,
-      routedSrj: { ...input, traces: [trace] },
+      inputSrj: nativeValidationSrj(input),
+      routedSrj: nativeValidationSrj({ ...input, traces: [trace] }),
       clearance: 0.1,
       allowBlindAndBuriedVias: false,
-    } as Parameters<typeof validateRoutedCopperDrc>[0]).valid,
+    }).valid,
   ).toBe(true)
   expect(input).toEqual(original)
 })

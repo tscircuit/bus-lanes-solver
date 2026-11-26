@@ -19,13 +19,14 @@ import { routeAnglesAreConventional } from "./route-angle-validation"
 import { maximumCarrierLength, fixedRouteLength } from "./route-lengths"
 import type {
   Connection,
+  ConnectionName,
   Point,
   SimpleRouteJson,
   Trace,
   Via,
   Wire,
 } from "./types"
-import { fixedCopper, VectorScene } from "./vector-scene"
+import { fixedCopper, VectorScene, type Copper } from "./vector-scene"
 import { connectors } from "./vector-visibility"
 
 export interface SurfaceBridgeOptions {
@@ -964,7 +965,7 @@ function matchSurfaceBridgeMinimum({
   route: SurfaceBridgeRoute
   minLength: number
   maxLength: number
-  softCopper: ReturnType<typeof fixedCopper>
+  softCopper: Copper[]
 }): SurfaceBridgeRoute | null {
   const measured = length(joinSignalEscapes(route.carrier, route.escapes).route)
   if (measured > maxLength + 1e-8) return null
@@ -995,7 +996,7 @@ function matchSurfaceBridgeMinimum({
     const matched = tuneSmoothLengths(
       tuningInput,
       [carrier],
-      new Map<Connection["name"], number>([[connection.name, minLength]]),
+      new Map<ConnectionName, number>([[connection.name, minLength]]),
       {
         maxCandidates: 4096,
         packMeanders: true,
