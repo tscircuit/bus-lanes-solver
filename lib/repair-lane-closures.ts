@@ -485,11 +485,7 @@ function* repairLayer(
       (t) => !subset.includes(t.connection_name!),
     )
     const hardBase = [...fixed, ...remaining.flatMap(copper)]
-    const pool = new RouteCandidatePool({
-      input,
-      clearance,
-      limit: domainLimit,
-    })
+    const pool = new RouteCandidatePool(clearance, domainLimit)
     const candidateMap = new Map<string, Trace[]>()
     const signatures = new Map<string, Set<string>>()
     const add = (trace: Trace) => {
@@ -626,11 +622,7 @@ function* repairLayer(
         )
         for (const forced of remotes)
           for (const option of snapshot.get(forced)!) {
-            const conditional = new RouteCandidatePool({
-              input,
-              clearance,
-              limit: domainLimit,
-            })
+            const conditional = new RouteCandidatePool(clearance, domainLimit)
             for (const remote of remotes)
               for (const candidate of remote === forced
                 ? [option]

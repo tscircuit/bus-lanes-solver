@@ -28,7 +28,7 @@ test("conditional searches replace incompatible shortest-path alternatives", () 
       },
     ],
   }
-  const pool = new RouteCandidatePool({ clearance: 0.1 })
+  const pool = new RouteCandidatePool(0.1)
   for (const connection of input.connections) {
     pool.add(connection.name, [
       {
