@@ -7,9 +7,9 @@ function reserveSkewRoundoff(limit: number): number {
 }
 
 /** Private targets in board-world mm. Length tuning and envelope cleanup use
- * small geometric epsilons; reserve at most 1 nm inside every bus skew bound
- * so final copper also satisfies strict downstream checks. Clearance-limited
- * coupled pairs retain the same reserve for their individual pair tolerance.
+ * small geometric epsilons; reserve at most 1 nm inside plain-bus skew bounds
+ * so final copper also satisfies strict downstream checks. Paired buses retain
+ * their existing clearance-dependent reserve and individual pair tolerance.
  * Public input, output constraints and physical clearances remain unchanged. */
 export function withSkewRoundoffReserve(
   input: SimpleRouteJson,
@@ -39,11 +39,27 @@ export function withSkewRoundoffReserve(
       })
     }),
   )
-  const hasBusSkew = input.buses?.some((bus) => bus.maxLengthSkew !== undefined)
-  if (!affectedPairs.size && !hasBusSkew) return input
+  const pairedConnectionNames = new Set(
+    (input.differentialPairs ?? []).flatMap((pair) => pair.connectionNames),
+  )
+  const hasPlainBusSkew = input.buses?.some(
+    (bus) =>
+      bus.maxLengthSkew !== undefined &&
+      bus.connectionNames.every((name) => !pairedConnectionNames.has(name)),
+  )
+  if (!affectedPairs.size && !hasPlainBusSkew) return input
+  const affectedConnectionNames = new Set(
+    [...affectedPairs].flatMap((pair) => pair.connectionNames),
+  )
   const buses = input.buses?.map((bus) => {
     if (bus.maxLengthSkew === undefined) return bus
-
+    const isPlainBus = bus.connectionNames.every(
+      (name) => !pairedConnectionNames.has(name),
+    )
+    const includesAffectedPair = bus.connectionNames.some((name) =>
+      affectedConnectionNames.has(name),
+    )
+    if (!isPlainBus && !includesAffectedPair) return bus
     const maxLengthSkew = reserveSkewRoundoff(bus.maxLengthSkew)
     return { ...bus, maxLengthSkew }
   })
