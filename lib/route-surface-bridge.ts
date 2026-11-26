@@ -536,6 +536,7 @@ export function* routeSurfaceBridge(
           route: result,
           minLength: options.minLength ?? 0,
           maxLength,
+          softCopper,
         })
         if (matched) return matched
       }
@@ -956,12 +957,14 @@ function matchSurfaceBridgeMinimum({
   route,
   minLength,
   maxLength,
+  softCopper,
 }: {
   input: SimpleRouteJson
   connection: Connection
   route: SurfaceBridgeRoute
   minLength: number
   maxLength: number
+  softCopper: ReturnType<typeof fixedCopper>
 }): SurfaceBridgeRoute | null {
   const measured = length(joinSignalEscapes(route.carrier, route.escapes).route)
   if (measured > maxLength + 1e-8) return null
@@ -992,7 +995,26 @@ function matchSurfaceBridgeMinimum({
       tuningInput,
       [carrier],
       new Map([[connection.name, minLength]]),
-      { maxCandidates: 4096, packMeanders: true },
+      {
+        maxCandidates: 4096,
+        packMeanders: true,
+        candidateScore: (trace) => {
+          const copper = fixedCopper({
+            ...input,
+            obstacles: [],
+            traces: [trace],
+          })
+          return new CopperConflictIndex().firstConflict(
+            copper,
+            softCopper,
+            input.minTraceToPadEdgeClearance ??
+              input.defaultObstacleMargin ??
+              0.075,
+          )
+            ? 1
+            : 0
+        },
+      },
     )[0]
     const result = { ...route, carrier: matched }
     if (

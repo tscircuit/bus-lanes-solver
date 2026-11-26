@@ -1,3 +1,4 @@
+import { getCopperLayerNames } from "@tscircuit/fanout-solver"
 import { applyToPoint } from "transformation-matrix"
 import { GridVisibilitySearch } from "./grid-visibility"
 import { VectorScene, type Copper } from "./vector-scene"
@@ -106,6 +107,16 @@ export function* pendingPackageExits(
           while (!search.solved && !search.failed) {
             search.step()
             yield
+          }
+          if (search.solved) {
+            for (const physicalLayer of getCopperLayerNames(input.layerCount))
+              result.push({
+                a: end,
+                b: end,
+                radius: (input.minViaPadDiameter ?? 0.6) / 2,
+                layer: physicalLayer,
+                owners,
+              })
           }
           if (search.solved)
             for (let index = 1; index < search.result.length; index++)
