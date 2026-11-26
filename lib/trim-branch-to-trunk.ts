@@ -18,8 +18,11 @@ export function trimBranchToTrunk({
   const copper = fixedCopper({
     ...input,
     obstacles: [],
-    traces: trunk.filter(
-      (trace) => trace.connection_name === branch.connection_name,
+    traces: [...(input.traces ?? []), ...trunk].filter(
+      (trace) =>
+        trace.connection_name === branch.connection_name ||
+        (branch.source_trace_id !== undefined &&
+          trace.source_trace_id === branch.source_trace_id),
     ),
   })
   for (let index = branch.route.length - 2; index >= 0; index--) {
@@ -46,7 +49,13 @@ export function trimBranchToTrunk({
     }
     if (!junction) continue
     const start: Wire = { ...wire, x: junction.x, y: junction.y }
-    return { ...branch, route: [start, ...branch.route.slice(index + 1)] }
+    return {
+      ...branch,
+      route: [start, ...branch.route.slice(index + 1)],
+      curvedSegments: branch.curvedSegments
+        ?.filter((ending) => ending > index)
+        .map((ending) => ending - index),
+    }
   }
   return branch
 }
