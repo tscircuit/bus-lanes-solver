@@ -84,11 +84,7 @@ export function surfaceBridgeEligible(
 ): boolean {
   const physical = getCopperLayerNames(input.layerCount),
     pads = connection.pointsToConnect,
-    permitted =
-      input.allowedLayers ??
-      signalLayers(input, connection).filter(
-        (layer) => layer === physical[0] || layer === physical.at(-1),
-      )
+    permitted = input.allowedLayers ?? signalLayers(input, connection)
   return (
     physical.length >= 2 &&
     pads.length === 2 &&
@@ -120,11 +116,7 @@ export function* routeSurfaceBridge(
     inner = innerCarrier(input),
     bridge =
       inner ?? (surface === physical[0] ? physical.at(-1)! : physical[0]),
-    permitted =
-      input.allowedLayers ??
-      signalLayers(input, connection).filter(
-        (layer) => layer === physical[0] || layer === physical.at(-1),
-      )
+    permitted = input.allowedLayers ?? signalLayers(input, connection)
   if (
     pads[1].layer !== surface ||
     ![physical[0], physical.at(-1)!].includes(surface) ||

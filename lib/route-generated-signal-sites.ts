@@ -95,13 +95,20 @@ export function* routeGeneratedSurfaceCarriers(
         signalLayers(request.input, connection).includes(layer),
       ),
   )
-  const views = [
-    ...commonInnerLayers.map((layer) => ({
-      ...request.input,
-      allowedLayers: [layer],
-    })),
-    request.input,
-  ]
+  const views: SimpleRouteJson[] = commonInnerLayers.map((layer) => ({
+    ...request.input,
+    allowedLayers: [layer],
+  }))
+  if (
+    !request.input.allowedLayers &&
+    request.input.connections.every((connection) =>
+      ["top", "bottom"].every((layer) =>
+        signalLayers(request.input, connection).includes(layer),
+      ),
+    )
+  )
+    views.push({ ...request.input, allowedLayers: ["top", "bottom"] })
+  views.push(request.input)
   for (const native of views) {
     const surface = yield* runBoundedRouting(
       negotiateSurfaceRoutes(native, {
