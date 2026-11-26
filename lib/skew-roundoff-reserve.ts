@@ -6,10 +6,9 @@ export function reserveSkewRoundoff(limit: number): number {
   return limit - margin
 }
 
-/** Private targets in board-world mm. Length tuning and envelope cleanup use
- * small geometric epsilons; reserve at most 1 nm inside plain-bus skew bounds
- * so final copper also satisfies strict downstream checks. Paired buses retain
- * their existing clearance-dependent reserve and individual pair tolerance.
+/** Private targets for clearance-limited paired polygons, in board-world mm. Polygon cleanup and envelope
+ * optimization use small geometric epsilons; reserve at most 1 nm inside each
+ * requested skew bound so final copper also satisfies strict downstream checks.
  * Public input, output constraints and physical clearances remain unchanged. */
 export function withSkewRoundoffReserve(
   input: SimpleRouteJson,
@@ -39,27 +38,16 @@ export function withSkewRoundoffReserve(
       })
     }),
   )
-  const pairedConnectionNames = new Set(
-    (input.differentialPairs ?? []).flatMap((pair) => pair.connectionNames),
-  )
-  const hasPlainBusSkew = input.buses?.some(
-    (bus) =>
-      bus.maxLengthSkew !== undefined &&
-      bus.connectionNames.every((name) => !pairedConnectionNames.has(name)),
-  )
-  if (!affectedPairs.size && !hasPlainBusSkew) return input
-  const affectedConnectionNames = new Set(
+  if (!affectedPairs.size) return input
+  const affectedNames = new Set(
     [...affectedPairs].flatMap((pair) => pair.connectionNames),
   )
   const buses = input.buses?.map((bus) => {
     if (bus.maxLengthSkew === undefined) return bus
-    const isPlainBus = bus.connectionNames.every(
-      (name) => !pairedConnectionNames.has(name),
-    )
     const includesAffectedPair = bus.connectionNames.some((name) =>
-      affectedConnectionNames.has(name),
+      affectedNames.has(name),
     )
-    if (!isPlainBus && !includesAffectedPair) return bus
+    if (!includesAffectedPair) return bus
     const maxLengthSkew = reserveSkewRoundoff(bus.maxLengthSkew)
     return { ...bus, maxLengthSkew }
   })
