@@ -1,4 +1,3 @@
-import { hasLengthConstraints } from "./route-lengths"
 import { pendingPackageExits } from "./pending-lane-certificates"
 import { CopperConflictIndex } from "./copper-conflict-index"
 import { generatedEscapeHolesConflict } from "./expanded-signal-sites"
@@ -237,7 +236,7 @@ export function* negotiateSurfaceRoutes(
     }
   }
   let pendingGuides: Trace[] = []
-  if (hasLengthConstraints(native)) {
+  if (native.buses?.some((bus) => (bus.minLength ?? 0) > 0)) {
     const pendingExits = yield* pendingPackageExits({
       input: native,
       fixed: fixedCopper(native),

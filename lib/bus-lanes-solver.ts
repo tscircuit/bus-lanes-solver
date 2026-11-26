@@ -491,7 +491,6 @@ export class BusLanesSolver extends BaseSolver {
       this.pendingExitSearch ??= pendingPackageExits({
         input: this.input,
         fixed: this.fixed,
-        includeViaLandings: hasLengthConstraints(this.input),
       })
       const step = this.pendingExitSearch.next()
       if (!step.done) return
