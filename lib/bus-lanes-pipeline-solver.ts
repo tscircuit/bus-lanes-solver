@@ -975,7 +975,11 @@ export class BusLanesPipelineSolver extends BaseSolver {
       // Reconsider equally good layers without discarding load balancing.
       // Selecting the second-ranked layer for every group puts independent
       // buses onto the same crowded layer instead of exploring an alternative.
-      const target = allowed[0]
+      const hasExistingHandoff = members.some((connection) =>
+        connection.pointsToConnect.some((point) => point.layers !== undefined),
+      )
+      let target = allowed[0]
+      if (hasExistingHandoff) target = allowed[this.attempt % allowed.length]
       for (const name of group) targets.set(name, target)
       load.set(target, load.get(target)! + group.size)
     }
