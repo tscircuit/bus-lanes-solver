@@ -426,13 +426,17 @@ export class VectorScene {
       denominator = dx * dx + dy * dy
     if (++this.visibleCalls === 16) {
       this.copperIndex = new CopperIndex(this.copper)
-      this.preparedCopper = new Map(
-        this.copper.map((copper) => [copper, prepareCopper(copper)]),
-      )
+      this.preparedCopper = new Map()
     }
     if (this.copperIndex)
-      return !this.copperIndex.some({ minX, maxX, minY, maxY }, (c) =>
-        copperTooClosePrepared(
+      return !this.copperIndex.some({ minX, maxX, minY, maxY }, (c) => {
+        if (c.rect) return copperTooClose(a, b, c, this.margin - 1e-8)
+        let prepared = this.preparedCopper!.get(c)
+        if (!prepared) {
+          prepared = prepareCopper(c)
+          this.preparedCopper!.set(c, prepared)
+        }
+        return copperTooClosePrepared(
           a.x,
           a.y,
           b.x,
@@ -440,10 +444,10 @@ export class VectorScene {
           dx,
           dy,
           denominator,
-          this.preparedCopper!.get(c)!,
+          prepared,
           this.margin - 1e-8,
-        ),
-      )
+        )
+      })
     for (const c of this.copper) {
       const r = c.rect ?? {
         minX: Math.min(c.a.x, c.b.x) - c.radius,
