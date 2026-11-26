@@ -975,17 +975,22 @@ export class BusLanesPipelineSolver extends BaseSolver {
       // Reconsider equally good layers without discarding load balancing.
       // Selecting the second-ranked layer for every group puts independent
       // buses onto the same crowded layer instead of exploring an alternative.
-      const hasExistingHandoff = members.some((connection) =>
-        connection.pointsToConnect.some(
-          (point) =>
-            point.layers !== undefined &&
-            !isUnroutedComponentPad(this.routingInput, connection, point),
-        ),
-      )
+      const canRetryBusLayer =
+        buses.some(
+          (bus) =>
+            bus.connectionNames.length === this.routingInput.connections.length,
+        ) &&
+        members.some((connection) =>
+          connection.pointsToConnect.some(
+            (point) =>
+              point.layers !== undefined &&
+              !isUnroutedComponentPad(this.routingInput, connection, point),
+          ),
+        )
       let target = allowed[0]
-      // Supplied handoffs can reach other carrier layers without moving a via.
-      // Retry those layers while retaining the ranked allocation for new pads.
-      if (hasExistingHandoff) target = allowed[this.attempt % allowed.length]
+      // A single bus can retry reachable layers without moving supplied vias.
+      // Independent buses retain the ranked, load-balanced allocation above.
+      if (canRetryBusLayer) target = allowed[this.attempt % allowed.length]
       for (const name of group) targets.set(name, target)
       load.set(target, load.get(target)! + group.size)
     }
