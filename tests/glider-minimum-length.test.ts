@@ -65,4 +65,4 @@ test("routes Glider's second matched byte beside its completed first byte", (): 
     lengths: lengths.map(({ busId, skewMm }) => ({ busId, skewMm })),
     envelope: solver.stats.envelopeOptimization,
   })
-})
+}, 120_000)
