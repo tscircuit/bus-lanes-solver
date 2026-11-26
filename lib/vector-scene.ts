@@ -374,6 +374,7 @@ export function copperTooClosePrepared(
 export class VectorScene {
   private visibleCalls = 0
   private copperIndex?: CopperIndex
+  private preparedCopper?: Map<Copper, PreparedCopper>
   readonly copper: Copper[]
   readonly owners: Set<string>
   readonly margin: number
@@ -420,11 +421,28 @@ export class VectorScene {
       maxX = Math.max(a.x, b.x) + this.margin,
       minY = Math.min(a.y, b.y) - this.margin,
       maxY = Math.max(a.y, b.y) + this.margin
-    if (++this.visibleCalls === 16)
+    const dx = b.x - a.x,
+      dy = b.y - a.y,
+      denominator = dx * dx + dy * dy
+    if (++this.visibleCalls === 16) {
       this.copperIndex = new CopperIndex(this.copper)
+      this.preparedCopper = new Map(
+        this.copper.map((copper) => [copper, prepareCopper(copper)]),
+      )
+    }
     if (this.copperIndex)
       return !this.copperIndex.some({ minX, maxX, minY, maxY }, (c) =>
-        copperTooClose(a, b, c, this.margin - 1e-8),
+        copperTooClosePrepared(
+          a.x,
+          a.y,
+          b.x,
+          b.y,
+          dx,
+          dy,
+          denominator,
+          this.preparedCopper!.get(c)!,
+          this.margin - 1e-8,
+        ),
       )
     for (const c of this.copper) {
       const r = c.rect ?? {
