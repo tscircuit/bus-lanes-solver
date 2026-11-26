@@ -1,16 +1,14 @@
-# A13 data routing blocks the pending RAM mask pads
+# A13 data routing and pending RAM mask pads
 
-The native OLIMEX A13 board completes all 32 data paths, with unchanged supplied copper and passing DRC, but the bus solver's escape search can no longer find an escape for RAM DM0 (E7) or DM1 (D3). Both pads have escapes before the RAM bytes are routed. The remaining 64 connections have not been routed in this reproduction.
+The native A13 bus phases route 32 data paths before the remaining address, control and strobe signals. On bus-lanes-solver 0.0.65 the completed data lanes leave RAM DM0 (E7) accessible and close the escape beside DM1 (D3). The updated solver preserves an escape to the bottom signal layer for both pads.
 
 ![Completed data paths and pending mask-pad status](../../tests/__snapshots__/a13-pending-mask-access-pcb.snap.svg)
 
-The TSX and native PCB source are copied unchanged from [core-ddr-benchmark at 24dc44c](https://github.com/ShiboSoftwareDev/core-ddr-benchmark/tree/24dc44c166d4258c3538f8b1f66953f1b6f58690/circuits). The test freshly routes both RAM bytes after the 16 supplied CPU-side data paths. It checks all 32 paths, DRC and supplied-copper preservation before generating the SVG. Mask access uses the bus solver's existing site and package-exit searches; an escape is necessary access, not proof that the whole pending net can be routed.
+The test freshly routes both RAM bytes after the 16 supplied CPU-side data paths. It checks all 32 paths, DRC, supplied-copper preservation and access to both mask pads before rendering the SVG. The remaining 64 nets are routed by a separate phase in the full board.
 
 ```sh
 bun test tests/a13-pending-mask-access.test.ts --timeout 900000
 bun repros/a13-pending-mask-access/capture.tsx /path/to/core
 ```
 
-The fixture uses the published Core 0.0.2396 inputs from [the release comparison](https://github.com/tscircuit/core/actions/runs/43921005346), with bus solver 0.0.58. Geometry, clearances, layer restrictions and logical nets are unchanged. No pending-intent producer is required.
-
-The committed fixture uses the previously verified CPU-byte output. The capture command freshly routes all four data phases and records their requests before starting the remaining signals. The snapshot contains only completed data copper; it does not present the pending mask connections as routed.
+The existing fixture was captured with Core 0.0.2396 and bus-lanes-solver 0.0.58. Its RAM byte inputs have the same pads, placement, constraints and 16 incoming CPU trace geometries as the full run on tscircuit 0.0.3280. The capture command runs all four bus phases from the original TSX. [Native board source](https://github.com/ShiboSoftwareDev/core-ddr-benchmark/tree/24dc44c166d4258c3538f8b1f66953f1b6f58690/circuits) · [Original capture](https://github.com/tscircuit/core/actions/runs/43921005346)

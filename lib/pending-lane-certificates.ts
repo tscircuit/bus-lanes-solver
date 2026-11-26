@@ -3,7 +3,7 @@ import { GridVisibilitySearch } from "./grid-visibility"
 import { VectorScene, type Copper } from "./vector-scene"
 import type { Connection, SimpleRouteJson, Trace } from "./types"
 import { packageApproachRegions } from "./package-approach-regions"
-import { getConnectedPadGroups } from "./connected-pad-groups"
+import { getPendingPadGroups } from "./connected-pad-groups"
 import { getPackagePadFrame } from "./package-pad-frame"
 
 const certificates = new WeakMap<SimpleRouteJson, Map<string, Trace[]>>()
@@ -32,47 +32,19 @@ export function* pendingPackageExits(
       ),
     ]),
   )
-  const groups = getConnectedPadGroups(pads)
-  const assigned = new Set([
-    ...input.connections.flatMap((connection) => [
-      connection.name,
-      connection.source_trace_id,
-      ...connection.pointsToConnect.flatMap((point) => [
-        point.pointId,
-        point.pcb_port_id,
-      ]),
-    ]),
-    ...(input.traces ?? []).flatMap((trace) => [
-      trace.connection_name,
-      trace.source_trace_id,
-    ]),
-  ])
   const width = input.minTraceWidth
   const clearance =
     input.minTraceToPadEdgeClearance ?? input.defaultObstacleMargin ?? 0.075
   const extension = (input.minViaPadDiameter ?? 0.6) / 2 + width / 2 + clearance
   const result: Copper[] = []
-  for (const group of groups) {
-    if (group.size < 2) continue
+  for (const group of getPendingPadGroups(input, pads)) {
     const owners = [...new Set([...group].flatMap((pad) => pad.connectedTo))]
-    if (owners.some((owner) => assigned.has(owner))) continue
-    const ports = new Set(
-      [...group].flatMap((pad) => {
-        const port = (
-          pad as typeof pad & { circuitJsonMetadata?: { pcb_port_id?: string } }
-        ).circuitJsonMetadata?.pcb_port_id
-        return port ? [port] : []
-      }),
-    )
-    if (ports.size < 2) continue
     const ownerSet = new Set(owners)
     const foreignCopper = fixed.filter(
       (copper) => !copper.owners.some((owner) => ownerSet.has(owner)),
     )
     for (const pad of group) {
-      const port = (
-        pad as typeof pad & { circuitJsonMetadata?: { pcb_port_id?: string } }
-      ).circuitJsonMetadata?.pcb_port_id
+      const port = pad.circuitJsonMetadata?.pcb_port_id
       if (!port) continue
       const { field, boardToPackage, packageToBoard } = frames.get(
         pad.componentId!,

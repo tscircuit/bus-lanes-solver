@@ -1,3 +1,5 @@
+import { length } from "./geometry"
+import { routeAroundPendingBallEscapes } from "./route-around-pending-ball-escapes"
 import { effectiveCarrierLayers } from "./effective-carrier-layers"
 import { nativeGroupsEligible, routeNativeGroups } from "./route-native-groups"
 import {
@@ -1683,7 +1685,34 @@ export class BusLanesPipelineSolver extends BaseSolver {
     this.traces = traces
     this.acceptedTraces = structuredClone(traces)
     this.phase = "optimize_envelope"
-    this.envelopeOptimization = this.optimizeEnvelope()
+    this.envelopeOptimization = this.refineAcceptedTraces()
+  }
+  private *refineAcceptedTraces(): Generator<void, void> {
+    yield* this.optimizeEnvelope()
+    // Replan planar lanes only when the planar solver completed this bus.
+    // A proposal gets at most the work already spent on the accepted lanes.
+    if (!this.child?.solved) return
+    const options = this.childOptions()
+    const routed = yield* routeAroundPendingBallEscapes(
+      { input: this.routingInput, traces: this.acceptedTraces! },
+      {
+        ...options,
+        maxSearchIterations: Math.min(
+          this.child.iterations,
+          options.maxSearchIterations!,
+        ),
+      },
+    )
+    if (routed === this.acceptedTraces) return
+    this.acceptedTraces = routed
+    this.stats = {
+      ...this.stats,
+      busLengths: busLengthReports(this.routingInput, routed),
+      traceLengthsMm: routed.map((trace) => ({
+        name: trace.connection_name,
+        length: length(trace.route),
+      })),
+    }
   }
   visualize() {
     return (

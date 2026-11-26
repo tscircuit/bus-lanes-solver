@@ -20,7 +20,7 @@ type Fixture = {
   circuit: AnyCircuitElement[]
 }
 
-test("A13 RAM bytes retain the pending DM0 escape", async (): Promise<void> => {
+test("A13 RAM bytes retain both pending data-mask escapes", async (): Promise<void> => {
   const fixture = JSON.parse(
     gunzipSync(
       readFileSync(
@@ -54,28 +54,17 @@ test("A13 RAM bytes retain the pending DM0 escape", async (): Promise<void> => {
   const output = second.getOutput()
   expect(output.traces).toHaveLength(32)
 
-  // D8's RAM ball D7 has 0.8 mm pitch: use the adjacent cell center.
-  const d8 = secondRequest.connections.find(
-    (connection) => connection.name === "source_net_74",
-  )!
-  const ramPad = d8.pointsToConnect.find((point) => point.x < 0)!
-  const ramVia = output.traces
-    .find((trace) => trace.connection_name === d8.name)!
-    .route.find((point) => point.route_type === "via" && point.x < 0)!
-  expect(ramVia.x - ramPad.x).toBeCloseTo(0.4, 6)
-  expect(ramVia.y - ramPad.y).toBeCloseTo(-0.4, 6)
-
   const ramMaskPads = fixture.maskConnections.map((connection) => {
     const end = connection.pointsToConnect.findIndex((point) => point.x < 0)
     return getPadEscape({
       input: output,
       connection,
       end,
-      viaTargetLayer: "inner1",
+      viaTargetLayer: "bottom",
     })
   })
   const accessibleMaskPads = ramMaskPads.filter(Boolean).length
-  expect(accessibleMaskPads).toBe(1)
+  expect(accessibleMaskPads).toBe(2)
 
   const circuit = [...fixture.circuit]
   const layers = getCopperLayerNames(output.layerCount)

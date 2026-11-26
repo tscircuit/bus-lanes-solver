@@ -75,6 +75,8 @@ export interface Trace {
 export interface Obstacle {
   type?: string
   componentId?: string
+  isNonPlatedHole?: boolean
+  circuitJsonMetadata?: { pcb_port_id?: string }
   shape?: "circle"
   ccwRotationDegrees?: number
   center: Point
@@ -102,6 +104,7 @@ export interface SimpleRouteJson {
   buses?: Bus[]
   defaultObstacleMargin?: number
   minTraceToPadEdgeClearance?: number
+  minViaEdgeToPadEdgeClearance?: number
   minBoardEdgeClearance?: number
   outline?: Point[]
   differentialPairs?: Array<{
