@@ -35,11 +35,6 @@ class CandidateConflicts {
   }
 }
 
-interface LengthGoal {
-  fixedLengthMm: number
-  minimumLengthMm: number
-}
-
 type Candidate = {
   traces: Trace[]
   key: string
@@ -65,9 +60,9 @@ export class RouteCandidatePool {
   private selection?: { revision: number; key: string; result: Trace[] | null }
   private readonly clearance: number
   private readonly limit: number
-  private readonly lengthGoalByConnectionName = new Map<
+  private readonly minimumCarrierLengthByConnectionName = new Map<
     ConnectionName,
-    LengthGoal
+    number
   >()
   constructor({
     clearance,
@@ -82,15 +77,17 @@ export class RouteCandidatePool {
     this.limit = limit
     if (!input) return
     for (const connection of input.connections) {
-      this.lengthGoalByConnectionName.set(connection.name, {
-        fixedLengthMm: fixedRouteLength(input, connection.name),
-        minimumLengthMm: Math.max(
-          0,
-          ...(input.buses ?? [])
-            .filter((bus) => bus.connectionNames.includes(connection.name))
-            .map((bus) => bus.minLength ?? 0),
-        ),
-      })
+      const minimumLengthMm = Math.max(
+        0,
+        ...(input.buses ?? [])
+          .filter((bus) => bus.connectionNames.includes(connection.name))
+          .map((bus) => bus.minLength ?? 0),
+      )
+      if (minimumLengthMm === 0) continue
+      this.minimumCarrierLengthByConnectionName.set(
+        connection.name,
+        Math.max(0, minimumLengthMm - fixedRouteLength(input, connection.name)),
+      )
     }
   }
 
@@ -115,9 +112,10 @@ export class RouteCandidatePool {
     // Rank the finished path, including fixed fanouts and declared minima.
     // Below that minimum, prefer routes requiring less additional tuning.
     const lengths = traces.map((trace) => {
-      const goal = this.lengthGoalByConnectionName.get(trace.connection_name!)
-      const actual = length(trace.route) + (goal?.fixedLengthMm ?? 0)
-      const minimum = goal?.minimumLengthMm ?? 0
+      const actual = length(trace.route)
+      const minimum =
+        this.minimumCarrierLengthByConnectionName.get(trace.connection_name!) ??
+        0
       return {
         target: Math.max(actual, minimum),
         correction: Math.abs(actual - minimum),
