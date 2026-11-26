@@ -1,0 +1,47 @@
+name: Inspect completed native-matching AM metrics
+on:
+  push:
+    branches: [analysis/native-matching-am-reports-20261126]
+    paths: [.github/workflows/native-matching-am-metrics.yml]
+permissions:
+  contents: read
+  actions: read
+jobs:
+  summarize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 01212d0e75d7a2cf865e81e79ab0b77beb8b1e4f
+          persist-credentials: false
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.0
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: 45870644217
+          pattern: am3352-*
+          path: reports
+      - name: Read numeric results without exporting route geometry or net identities
+        run: |
+          bun -e '
+            import {loadSamplePairs,summarizeComparison,renderComparison} from "./scripts/pr-benchmark/report.ts";
+            const pairs=await loadSamplePairs("reports");
+            const options={samples:pairs,mainSha:"01212d0e75d7a2cf865e81e79ab0b77beb8b1e4f",prSha:"e71752110cf7f3d6d6039509a1f7c8198c578ab7",controllerSha:"01212d0e75d7a2cf865e81e79ab0b77beb8b1e4f",prNumber:272,timeoutSeconds:3600,runUrl:"https://github.com/tscircuit/bus-lanes-solver/actions/runs/45870644217"};
+            const summary=summarizeComparison(options);
+            for(const row of summary.samples) {
+              row.main.reason=null;
+              row.pr.reason=null;
+            }
+            console.log("AM_NUMERIC_SUMMARY="+JSON.stringify(summary));
+            function safeNumbers(value) {
+              if(value===null || typeof value==="number" || typeof value==="boolean") return value;
+              if(Array.isArray(value)) return value.map(safeNumbers);
+              if(value && typeof value==="object") return Object.fromEntries(Object.entries(value).filter(([k])=>!["x","y","bounds","cpu","ram","issues","reason","error"].includes(k)).map(([k,v])=>[k,safeNumbers(v)]).filter(([k,v])=>v!==undefined));
+            }
+            for(const pair of pairs) for(const ref of ["main","pr"]) {
+              const r=pair[ref].report;
+              console.log("AM_NUMERIC_RESULT="+JSON.stringify({sample:pair.sample,ref,exitCode:pair[ref].exitCode,timedOut:pair[ref].timedOut,status:r?.status,failureCode:r?.failureCode,solveMilliseconds:r?.solveMilliseconds,routedSignals:r?.routedSignals,requestedSignals:r?.requestedSignals,iterations:r?.iterations,inputUnchanged:r?.inputUnchanged,fixedPowerPreserved:r?.fixedPowerPreserved,errorFlags:{timeout:/timeout|exceeded|time limit/i.test(r?.error??""),matching:/match|skew|length/i.test(r?.error??""),routing:/rout|path|carrier/i.test(r?.error??""),validation:/valid|DRC|clearance|copper|overlap/i.test(r?.error??"")},validation:safeNumbers(r?.validation)}));
+            }
+          '
