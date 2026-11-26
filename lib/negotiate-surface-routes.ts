@@ -1,3 +1,4 @@
+import { pendingPackageExits } from "./pending-lane-certificates"
 import { CopperConflictIndex } from "./copper-conflict-index"
 import { generatedEscapeHolesConflict } from "./expanded-signal-sites"
 import type { FlexibleSignalState } from "./flexible-signal-state"
@@ -234,6 +235,18 @@ export function* negotiateSurfaceRoutes(
       },
     }
   }
+  const pendingExits = yield* pendingPackageExits(native, fixedCopper(native))
+  const pendingGuides: Trace[] = pendingExits.map((copper, index) => ({
+    type: "pcb_trace",
+    pcb_trace_id: `pending_package_exit_${index}`,
+    connection_name: copper.owners[0],
+    route: [copper.a, copper.b].map((point) => ({
+      ...point,
+      route_type: "wire",
+      layer: copper.layer,
+      width: 2 * copper.radius,
+    })),
+  }))
   function* search(
     index: number,
     input: SimpleRouteJson,
@@ -267,7 +280,7 @@ export function* negotiateSurfaceRoutes(
           .map((bus) => bus.minLength ?? 0),
       ),
       history,
-      softTraces: soft,
+      softTraces: [...soft, ...pendingGuides],
     })
     if (!result) {
       searches.set(key, null)

@@ -16,7 +16,7 @@ import { MinHeap } from "./min-heap"
 import { reduceOrdinaryTurns } from "./reduce-ordinary-turns"
 import { signalWidth } from "./repair-bus-dogbones"
 import { routeAnglesAreConventional } from "./route-angle-validation"
-import { maximumCarrierLength } from "./route-lengths"
+import { maximumCarrierLength, fixedRouteLength } from "./route-lengths"
 import type {
   Connection,
   Point,
@@ -735,7 +735,7 @@ function materialize(
   // Keep every avoided ordinary route hard during simplification. Only
   // already crossed provisional routes may still participate in negotiation.
   let refinementCopper = fixed
-  const negotiatedInner = !!innerCarrier(input) && softTraces.length > 0
+  const negotiatedInner = softTraces.length > 0
   if (negotiatedInner) {
     const provisional: Trace = {
       type: "pcb_trace",
@@ -965,7 +965,8 @@ function matchSurfaceBridgeMinimum({
 }): SurfaceBridgeRoute | null {
   const measured = length(joinSignalEscapes(route.carrier, route.escapes).route)
   if (measured > maxLength + 1e-8) return null
-  if (measured >= minLength - 1e-8) return route
+  const fixedLengthMm = fixedRouteLength(input, connection.name)
+  if (measured + fixedLengthMm >= minLength - 1e-8) return route
   const carrier = route.carrier
   const tuningInput: SimpleRouteJson = {
     ...input,
@@ -981,7 +982,7 @@ function matchSurfaceBridgeMinimum({
         busId: "surface_minimum",
         connectionNames: [connection.name],
         minLength,
-        maxLength,
+        maxLength: maxLength + fixedLengthMm,
       },
     ],
     differentialPairs: [],
