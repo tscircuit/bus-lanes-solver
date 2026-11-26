@@ -47,8 +47,13 @@ export function segmentDistance(ab: [Point, Point], cd: [Point, Point]) {
     pointSegmentDistance(d, ab),
   )
 }
-export const length = (path: Point[]) =>
-  path.slice(1).reduce((sum, p, i) => sum + distance(path[i], p), 0)
+export function length(path: Point[]): number {
+  let total = 0
+  for (let i = 1; i < path.length; i++) {
+    total += distance(path[i - 1], path[i])
+  }
+  return total
+}
 export function simplify(path: Point[]) {
   const result: Point[] = []
   for (const [index, point] of path.entries()) {
