@@ -1,4 +1,5 @@
 import type { Connection, Point, SimpleRouteJson } from "./types"
+import { clearanceToCopper, fixedCopper } from "./vector-scene"
 
 /** A same-net pad is transparent to copper clearance, but not to a drill. */
 export function createViaPadHoleClearanceChecker({
@@ -24,20 +25,9 @@ export function createViaPadHoleClearanceChecker({
               )),
         )
   const holeRadius = (input.minViaHoleDiameter ?? 0.15) / 2
-  return (p: Point): boolean =>
-    ownPads.every((o) => {
-      const angle = (-(o.ccwRotationDegrees ?? 0) * Math.PI) / 180
-      const dx = p.x - o.center.x,
-        dy = p.y - o.center.y
-      const x = dx * Math.cos(angle) - dy * Math.sin(angle),
-        y = dx * Math.sin(angle) + dy * Math.cos(angle)
-      const distance =
-        o.shape === "circle"
-          ? Math.hypot(dx, dy) - o.width / 2
-          : Math.hypot(
-              Math.max(0, Math.abs(x) - o.width / 2),
-              Math.max(0, Math.abs(y) - o.height / 2),
-            )
-      return distance >= holeRadius + 1e-5
-    })
+  const padCopper = fixedCopper({ ...input, obstacles: ownPads, traces: [] })
+  return (point: Point): boolean =>
+    padCopper.every(
+      (pad) => clearanceToCopper(point, point, pad) >= holeRadius + 1e-5,
+    )
 }
