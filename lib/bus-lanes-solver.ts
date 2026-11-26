@@ -739,7 +739,7 @@ export class BusLanesSolver extends BaseSolver {
         return
       }
       const width = Math.max(...original.map((t) => (t.route[0] as Wire).width))
-      for (const multiplier of [16, 24, 28, 32]) {
+      for (const multiplier of [16, 24, 28, 32, 12, 8, 6, 4]) {
         const spread = spreadTuningLanes(input, original, width * multiplier)
         if (spread) yield spread
       }
