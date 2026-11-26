@@ -975,11 +975,7 @@ export class BusLanesPipelineSolver extends BaseSolver {
       // Reconsider equally good layers without discarding load balancing.
       // Selecting the second-ranked layer for every group puts independent
       // buses onto the same crowded layer instead of exploring an alternative.
-      const hasExistingHandoff = members.some((connection) =>
-        connection.pointsToConnect.some((point) => point.layers !== undefined),
-      )
-      let target = allowed[0]
-      if (hasExistingHandoff) target = allowed[this.attempt % allowed.length]
+      const target = allowed[0]
       for (const name of group) targets.set(name, target)
       load.set(target, load.get(target)! + group.size)
     }
@@ -1420,7 +1416,13 @@ export class BusLanesPipelineSolver extends BaseSolver {
         this.stats = { ...this.stats, routingStage: "native_surface_geometry" }
         if (!state.done) return
         this.surfaceFinishing = undefined
-        if (!state.value && this.child && !this.child.failed) return
+        if (
+          !state.value &&
+          this.child &&
+          !this.child.solved &&
+          !this.child.failed
+        )
+          return
         if (!state.value)
           throw Error(
             "Generated native surface approaches could not satisfy full-path geometry and matching",
