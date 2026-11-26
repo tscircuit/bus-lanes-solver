@@ -44,8 +44,12 @@ test("collective escape rejection reports a proven empty domain for pair repair"
   }
 }, 120000)
 
-test("the surface caller invokes generated-pair repair after collective rejection", () => {
+test("a skew-only bus invokes generated-pair repair after collective rejection", () => {
   const state = loadAm3352CollectiveEscapes()
+  for (const bus of state.native.buses ?? []) {
+    delete bus.minLength
+    delete bus.maxLength
+  }
   const pairNames = new Set(
     state.native.differentialPairs!.flatMap((p) => p.connectionNames),
   )
@@ -70,7 +74,7 @@ test("the surface caller invokes generated-pair repair after collective rejectio
   let next = work.next(),
     steps = 0
   try {
-    while (!next.done && steps++ < 5000) next = work.next()
+    while (!next.done && steps++ < 50000) next = work.next()
     expect(next.done).toBe(true)
     expect(next.value).toBeNull()
     expect(blocked).toHaveLength(1)

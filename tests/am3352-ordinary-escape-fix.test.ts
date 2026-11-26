@@ -159,9 +159,11 @@ test("expanded D13 and repaired CK coexist in one ordinary negotiation", () => {
   expect(state).toEqual(before)
 }, 120000)
 
-test("unbounded surface buses preserve the established ordinary search", () => {
+test("unbounded surface buses without generated pairs preserve the established ordinary search", () => {
   const state = loadAm3352OrdinaryEscapes(),
     before = structuredClone(state)
+  state.native.differentialPairs = []
+  before.native.differentialPairs = []
   for (const bus of state.native.buses ?? []) {
     delete bus.maxLength
     delete bus.minLength
