@@ -65,7 +65,10 @@ export class RouteCandidatePool {
   private selection?: { revision: number; key: string; result: Trace[] | null }
   private readonly clearance: number
   private readonly limit: number
-  private readonly lengthGoalByConnectionName = new Map<ConnectionName, LengthGoal>()
+  private readonly lengthGoalByConnectionName = new Map<
+    ConnectionName,
+    LengthGoal
+  >()
   constructor({
     clearance,
     limit = 120,
@@ -115,7 +118,10 @@ export class RouteCandidatePool {
       const goal = this.lengthGoalByConnectionName.get(trace.connection_name!)
       const actual = length(trace.route) + (goal?.fixedLengthMm ?? 0)
       const minimum = goal?.minimumLengthMm ?? 0
-      return { target: Math.max(actual, minimum), correction: Math.abs(actual - minimum) }
+      return {
+        target: Math.max(actual, minimum),
+        correction: Math.abs(actual - minimum),
+      }
     })
     const candidate = {
       traces,
