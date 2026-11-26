@@ -13,6 +13,7 @@ import { effectiveCarrierLayers } from "./effective-carrier-layers"
 import { selectBranchAttachment } from "./select-branch-attachment"
 import { joinMultiTerminalEscapes } from "./join-multi-terminal-escapes"
 import { prepareMultiTerminalFanouts } from "./prepare-multi-terminal-fanouts"
+import { trimBranchToTrunk } from "./trim-branch-to-trunk"
 import type {
   Connection,
   Obstacle,
@@ -187,8 +188,15 @@ export function* routeMultiTerminalBuses(
       if (!solver.solved)
         throw Error(solver.error ?? "Multi-terminal routing failed")
       for (const trace of solver.traces) {
+        let completedTrace = trace
+        if (terminalIndex > 1)
+          completedTrace = trimBranchToTrunk({
+            input,
+            branch: trace,
+            trunk: completed,
+          })
         completed.push({
-          ...trace,
+          ...completedTrace,
           pcb_trace_id: `multi_terminal_${terminalIndex}_${trace.pcb_trace_id}`,
         })
       }
