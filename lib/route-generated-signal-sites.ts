@@ -1,5 +1,4 @@
 import { signalLayers } from "./flexible-signal-state"
-import { hasLengthConstraints } from "./route-lengths"
 import { negotiateSurfaceRoutes } from "./negotiate-surface-routes"
 import {
   finishGeneratedSurfaceCarriers,
@@ -31,10 +30,8 @@ export function* routeGeneratedSignalSites(
     )
     if (expandedGridRoute) return expandedGridRoute
   }
-  if (hasLengthConstraints(request.input)) {
-    const completed = yield* routeGeneratedSurfaceCarriers(request)
-    if (completed) return completed
-  }
+  const completed = yield* routeGeneratedSurfaceCarriers(request)
+  if (completed) return completed
   return yield* completeGeneratedSignalSites(request)
 }
 
@@ -85,6 +82,9 @@ function* negotiateGeneratedSignalSites(
 export function* routeGeneratedSurfaceCarriers(
   request: GeneratedSignalSitesRequest,
 ): Generator<void, CompletedGeneratedSurfaceCarriers | null> {
+  // A declared minimum can require space that fixed via sites cannot provide.
+  // Skew-only requests retain their existing generated-site search.
+  if (!request.input.buses?.some((bus) => (bus.minLength ?? 0) > 0)) return null
   const commonInnerLayers = signalLayers(
     request.input,
     request.input.connections[0],
