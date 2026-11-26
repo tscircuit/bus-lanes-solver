@@ -25,8 +25,9 @@ export function trimBranchToTrunk({
   for (let index = branch.route.length - 2; index >= 0; index--) {
     const a = branch.route[index]
     const b = branch.route[index + 1]
-    const wire =
-      a.route_type === "wire" ? a : b.route_type === "wire" ? b : undefined
+    let wire: Wire | undefined
+    if (a.route_type === "wire") wire = a
+    else if (b.route_type === "wire") wire = b
     if (!wire || distance(a, b) < 1e-8) continue
     let junction: Point | undefined
     for (const segment of copper) {
