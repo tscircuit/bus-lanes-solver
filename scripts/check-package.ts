@@ -75,6 +75,7 @@ try {
     "BusLanesSolver",
     "BusLanesPipelineSolver",
     "SingleLayerConnectivitySolver",
+    "optimizeRouteVias",
   ]
   const source = `import { ${names.join(", ")} } from "${name}";\n${names.map((n) => `if (typeof ${n} !== "function") throw new Error("Missing ${n}");`).join("\n")}\n`
   writeFileSync(join(consumer, "consumer.js"), source)

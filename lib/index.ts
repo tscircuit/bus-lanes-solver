@@ -12,3 +12,8 @@ export {
   SingleLayerConnectivitySolver,
   type SingleLayerConnectivityOptions,
 } from "./single-layer-connectivity-solver"
+
+export {
+  optimizeRouteVias,
+  type RouteViaOptimizationOptions,
+} from "./optimize-route-vias"
