@@ -592,6 +592,11 @@ test("loader parses nested JSON artifacts without executing code or following sy
       "throw Error('must never execute')",
     )
     await symlink(join(directory, "nested"), join(directory, "alias"))
+    await mkdir(join(directory, "control.pr.routes"))
+    await writeFile(
+      join(directory, "control.pr.routes", "control.json"),
+      JSON.stringify({ sample: "control", input: {}, traces: [] }),
+    )
     const loaded = await loadSamplePairs(directory)
     expect(loaded).toHaveLength(1)
     expect(loaded[0].sample).toBe("control")

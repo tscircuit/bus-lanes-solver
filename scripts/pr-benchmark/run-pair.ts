@@ -150,6 +150,8 @@ export async function runPair(options: PairOptions) {
         options.sample,
         "--timeout-seconds",
         String(options.timeoutSeconds),
+        "--routes-directory",
+        resolve(dirname(outputPath), `${options.sample}.${ref}.routes`),
         "--solver",
         resolve(ref === "main" ? options.mainSolverPath : options.prSolverPath),
       ],

@@ -209,6 +209,8 @@ export async function loadSamplePairs(
   async function visit(path: string) {
     for (const entry of await readdir(path, { withFileTypes: true })) {
       const filename = join(path, entry.name)
+      // Completed copper bundles are retained beside the paired timing reports.
+      if (entry.isDirectory() && entry.name.endsWith(".routes")) continue
       if (entry.isDirectory()) await visit(filename)
       else if (entry.isFile() && entry.name.endsWith(".json"))
         values.push(JSON.parse(await readFile(filename, "utf8")))
