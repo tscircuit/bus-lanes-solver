@@ -80,22 +80,10 @@ function routeAddressLane(input: SimpleRouteJson) {
   return { solver, drc }
 }
 
-test("a fixed through-via shorts a lane routed on the unused outer layer", () => {
-  const { drc } = routeAddressLane(board)
-  expect(drc.issues.map((issue) => issue.code)).toContain(
-    "different-net-trace-via-clearance",
-  )
-})
-
-test("a blind clock via leaves the top layer available for the address lane", async () => {
-  const input = { ...board, allowBlindAndBuriedVias: true }
-  const { solver, drc } = routeAddressLane(input)
+test("a top-layer address lane clears the full barrel of a fixed clock via", async () => {
+  const { solver, drc } = routeAddressLane(board)
   expect(drc.issues).toEqual([])
-  expectCompletedRouting(solver, input)
-  expect(
-    solver.getOutput().traces?.find((trace) => trace.connection_name === "A3")
-      ?.route,
-  ).toHaveLength(2)
+  expectCompletedRouting(solver, board)
   const graphics = new BusLanesSolver(solver.getOutput()).visualize()
   await expect(
     getSvgFromGraphicsObject(graphics, {
@@ -104,4 +92,15 @@ test("a blind clock via leaves the top layer available for the address lane", as
       svgHeight: 300,
     }),
   ).toMatchSvgSnapshot(import.meta.path)
+})
+
+test("a blind clock via leaves the top layer available for the address lane", () => {
+  const input = { ...board, allowBlindAndBuriedVias: true }
+  const { solver, drc } = routeAddressLane(input)
+  expect(drc.issues).toEqual([])
+  expectCompletedRouting(solver, input)
+  const addressLane = solver
+    .getOutput()
+    .traces?.find((trace) => trace.connection_name === "A3")
+  expect(addressLane?.route).toHaveLength(2)
 })
