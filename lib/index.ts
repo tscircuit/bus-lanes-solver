@@ -12,3 +12,8 @@ export {
   SingleLayerConnectivitySolver,
   type SingleLayerConnectivityOptions,
 } from "./single-layer-connectivity-solver"
+export {
+  NegotiatedLaneSolver,
+  type NegotiatedLaneOptions,
+  type NegotiatedLaneStage,
+} from "./negotiated-lane-solver"
