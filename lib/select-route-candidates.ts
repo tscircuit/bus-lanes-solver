@@ -1,6 +1,7 @@
 import { length } from "./geometry"
+import { fixedRouteLength } from "./route-lengths"
 import { RouteConflictIndex } from "./route-conflict-index"
-import type { Trace, Wire } from "./types"
+import type { ConnectionName, SimpleRouteJson, Trace, Wire } from "./types"
 
 // Dense early candidate ids dominate compatibility checks. Keep that cache
 // bounded (4 KiB per candidate); unusually long searches use the sparse map.
@@ -57,10 +58,38 @@ export class RouteCandidatePool {
   private routeSignatures = new WeakMap<Trace["route"], string>()
   private revision = 0
   private selection?: { revision: number; key: string; result: Trace[] | null }
-  constructor(
-    private clearance: number,
-    private limit = 120,
-  ) {}
+  private readonly clearance: number
+  private readonly limit: number
+  private readonly minimumCarrierLengthByConnectionName = new Map<
+    ConnectionName,
+    number
+  >()
+  constructor({
+    clearance,
+    limit = 120,
+    input,
+  }: {
+    clearance: number
+    limit?: number
+    input?: SimpleRouteJson
+  }) {
+    this.clearance = clearance
+    this.limit = limit
+    if (!input) return
+    for (const connection of input.connections) {
+      const minimumLengthMm = Math.max(
+        0,
+        ...(input.buses ?? [])
+          .filter((bus) => bus.connectionNames.includes(connection.name))
+          .map((bus) => bus.minLength ?? 0),
+      )
+      if (minimumLengthMm === 0) continue
+      this.minimumCarrierLengthByConnectionName.set(
+        connection.name,
+        Math.max(0, minimumLengthMm - fixedRouteLength(input, connection.name)),
+      )
+    }
+  }
 
   add(unit: string, traces: Trace[]) {
     const pool = this.pools.get(unit) ?? []
@@ -80,7 +109,15 @@ export class RouteCandidatePool {
       })
       .join(",")}]`
     if (signatures.has(signature)) return
-    const lengths = traces.map((trace) => length(trace.route))
+    // Copper below a declared minimum must be added again during matching.
+    // Shortening that carrier cannot reduce the finished path's length.
+    const lengths = traces.map((trace) =>
+      Math.max(
+        length(trace.route),
+        this.minimumCarrierLengthByConnectionName.get(trace.connection_name!) ??
+          0,
+      ),
+    )
     const candidate = {
       traces,
       key: signature,

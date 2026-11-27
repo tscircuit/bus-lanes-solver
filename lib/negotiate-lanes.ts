@@ -105,7 +105,11 @@ export function* negotiateLanes({
       ceilings.set(member.name, Math.min((limit * 4) / 3, hardLimit))
     }
   }
-  const candidates = new RouteCandidatePool(clearance, 240)
+  const candidates = new RouteCandidatePool({
+    clearance,
+    limit: 240,
+    input,
+  })
   const conflicts = new RouteConflictIndex()
   const unitNames = units.map((unit) => unit.connections[0].name)
   const matchingGroups = [
