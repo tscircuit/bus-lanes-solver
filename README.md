@@ -28,6 +28,20 @@ const routed = solver.getOutput()
 
 The `BusLanesSolver` core requires exactly two terminals on the same fixed layer and emits a planar carrier without vias. The integrated pipeline composes this core with owned terminal escapes and can add manufactured surface transitions for explicit TOP/BOTTOM inputs. Existing copper and obstacles remain fixed. Geometric winding sweeps, seam rotations and reverse searches choose lane order; planar congestion, crossed lane orders, unsupported constraints, and exhausted search budgets produce explicit failures. A bounded visibility-graph search failure is not a proof that no continuous planar solution exists.
 
+### Via optimization for completed routes
+
+`optimizeRouteVias(input, options)` accepts a fully routed SimpleRouteJson and
+returns a new array of traces. It uses Bus Lanes to reroute spans with repeat
+layer changes. It only accepts spans that reduce the physical via count and pass
+the caller's full-board connectivity and DRC check.
+
+Pass that check as `options.validate`. The optimizer checks the starting board
+and every proposed edit. It preserves terminal attachments, fixed traces,
+differential pairs, and bus timing members and references. Pass any other
+protected connections through `options.protectedConnectionNames`. The search
+is opt-in and shares the attempt budget in `options.maxCandidates` across
+traces in rounds.
+
 ## Matched single-layer routing
 
 The `control-inner1` AM3352 sample uses the pipeline's default matched goal.
