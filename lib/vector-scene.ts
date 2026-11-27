@@ -1,4 +1,8 @@
 import {
+  getCopperLayerNames,
+  getRouteViaSpanLayers,
+} from "@tscircuit/fanout-solver"
+import {
   applyToPoint,
   compose,
   inverse,
@@ -104,19 +108,21 @@ export function fixedCopper(input: SimpleRouteJson): Copper[] {
               },
       })
   }
-  const layers = Array.from({ length: input.layerCount }, (_, i) =>
-    i === 0 ? "top" : i === input.layerCount - 1 ? "bottom" : `inner${i}`,
-  )
+  const layerNames = getCopperLayerNames(input.layerCount)
   for (const t of input.traces ?? [])
     for (let i = 0; i < t.route.length; i++) {
       const p = t.route[i],
         q = t.route[i + 1],
         owners = [t.connection_name ?? "", t.source_trace_id ?? ""]
       if (p.route_type === "via") {
-        const a = layers.indexOf(p.from_layer),
-          b = layers.indexOf(p.to_layer)
-        for (const layer of p.layers ??
-          layers.slice(Math.min(a, b), Math.max(a, b) + 1))
+        const viaLayers = getRouteViaSpanLayers({
+          fromLayer: p.from_layer,
+          toLayer: p.to_layer,
+          layers: p.layers,
+          layerNames,
+          allowBlindAndBuriedVias: input.allowBlindAndBuriedVias ?? false,
+        })
+        for (const layer of viaLayers)
           result.push({
             a: p,
             b: p,
