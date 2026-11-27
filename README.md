@@ -39,7 +39,8 @@ Pass that check as `options.validate`. The optimizer checks the starting board
 and every proposed edit. It preserves terminal attachments, fixed traces,
 differential pairs, and bus timing members and references. Pass any other
 protected connections through `options.protectedConnectionNames`. The search
-is opt-in, with an attempt budget in `options.maxCandidates`.
+is opt-in and shares the attempt budget in `options.maxCandidates` across
+traces in rounds.
 
 ## Matched single-layer routing
 

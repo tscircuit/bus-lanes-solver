@@ -82,6 +82,32 @@ function spansToReplace(
   return spans
 }
 
+function rankReplacementSpans(
+  route: readonly RoutePoint[],
+  maxViasPerSpan: number,
+  minTraceWidth: number,
+): Replacement[] {
+  const pathLengths = [0]
+  const viaCounts = [0]
+  for (let i = 1; i < route.length; i++) {
+    pathLengths[i] = pathLengths[i - 1] + distance(route[i - 1], route[i])
+    viaCounts[i] = viaCounts[i - 1] + Number(route[i].route_type === "via")
+  }
+  return spansToReplace(route, maxViasPerSpan)
+    .map((span) => {
+      const eliminated =
+        viaCounts[span.end] -
+        viaCounts[span.start] -
+        Number(span.retain !== undefined)
+      const length = pathLengths[span.end] - pathLengths[span.start]
+      // Prefer the spans that remove many transitions without disturbing large
+      // stretches of the original lane.
+      return { span, priority: eliminated / Math.max(length, minTraceWidth) }
+    })
+    .sort((a, b) => b.priority - a.priority)
+    .map(({ span }) => span)
+}
+
 function containsTerminal(wire: Wire, terminal: Terminal): boolean {
   return (
     (terminal.layers ?? [terminal.layer]).includes(wire.layer) &&
@@ -389,35 +415,48 @@ export function optimizeRouteVias<T extends Trace>(
 
   let remaining = maxCandidates
   let viaCount = countPhysicalVias(board, traces)
-  for (const { index, connection } of eligible) {
-    const otherTraces = traces.filter((_, i) => i !== index)
-    while (remaining > 0) {
+  const getSpans = (index: number) =>
+    rankReplacementSpans(
+      traces[index].route,
+      maxViasPerSpan,
+      input.minTraceWidth,
+    )
+  let pending = eligible.map((route) => ({
+    ...route,
+    spans: getSpans(route.index),
+    cursor: 0,
+  }))
+  // Share the global budget in rounds. A densely routed connection can have
+  // hundreds of candidate spans and should not starve the other connections.
+  while (remaining > 0 && pending.length > 0) {
+    for (const candidate of pending) {
+      if (remaining === 0) break
+      const { index, connection } = candidate
+      const span = candidate.spans[candidate.cursor++]
+      if (!span) continue
+      remaining--
       const trace = traces[index]
-      let replaced = false
-      for (const span of spansToReplace(trace.route, maxViasPerSpan)) {
-        if (remaining === 0) break
-        remaining--
-        const route = replaceSpan({
-          input: board,
-          trace,
-          connection,
-          span,
-          otherTraces,
-          options,
-        })
-        if (!route) continue
-        const candidate = traces.with(index, { ...trace, route })
-        const candidateViaCount = countPhysicalVias(board, candidate)
-        if (candidateViaCount >= viaCount || !options.validate(candidate))
-          continue
-        traces[index] = candidate[index]
-        viaCount = candidateViaCount
-        replaced = true
-        break
-      }
-      if (!replaced) break
+      const otherTraces = traces.filter((_, i) => i !== index)
+      const route = replaceSpan({
+        input: board,
+        trace,
+        connection,
+        span,
+        otherTraces,
+        options,
+      })
+      if (!route) continue
+      const proposal = traces.with(index, { ...trace, route })
+      const proposedViaCount = countPhysicalVias(board, proposal)
+      if (proposedViaCount >= viaCount || !options.validate(proposal)) continue
+      traces[index] = proposal[index]
+      viaCount = proposedViaCount
+      candidate.spans = getSpans(index)
+      candidate.cursor = 0
     }
-    if (remaining <= 0) break
+    pending = pending.filter(
+      (candidate) => candidate.cursor < candidate.spans.length,
+    )
   }
   return traces
 }

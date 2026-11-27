@@ -158,3 +158,56 @@ test("honors the board audit and routes marked fixed or length constrained", () 
     optimizeRouteVias(constrained, { validate: validator(constrained) }),
   ).toEqual(constrained.traces)
 })
+
+test("shares a small search budget with a route after a blocked connection", () => {
+  const input = testRoute("top")
+  input.obstacles = [
+    {
+      center: { x: 5, y: 0 },
+      width: 0.8,
+      height: 6,
+      layers: ["top"],
+      connectedTo: [],
+    },
+  ]
+  const blocked = input.traces[0]
+  blocked.route = [
+    wire(0, 0),
+    wire(2, 0),
+    via(2, "top", "bottom"),
+    wire(2, 0, "bottom"),
+    wire(8, 0, "bottom"),
+    via(8, "bottom", "top"),
+    wire(8, 0),
+    wire(10, 0),
+  ]
+  input.connections.push({
+    name: "clear",
+    pointsToConnect: [
+      { x: 0, y: 2, layer: "top" },
+      { x: 4, y: 2, layer: "top" },
+    ],
+  })
+  input.traces.push({
+    type: "pcb_trace",
+    pcb_trace_id: "clear",
+    connection_name: "clear",
+    route: [
+      wire(0, 2),
+      wire(1, 2),
+      { ...via(1, "top", "bottom"), y: 2 },
+      wire(1, 2, "bottom"),
+      wire(3, 2, "bottom"),
+      { ...via(3, "bottom", "top"), y: 2 },
+      wire(3, 2),
+      wire(4, 2),
+    ],
+  })
+  const validate = validator(input)
+  const result = optimizeRouteVias(input, { validate, maxCandidates: 2 })
+  expect(result[0]).toEqual(blocked)
+  expect(
+    result[1].route.filter((point) => point.route_type === "via"),
+  ).toHaveLength(0)
+  expect(validate(result)).toBe(true)
+})
