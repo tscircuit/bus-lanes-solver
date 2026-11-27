@@ -8,7 +8,7 @@ import {
 } from "@tscircuit/fanout-solver"
 import { distance } from "./geometry"
 import { busLengthReports } from "./route-lengths"
-import { getSignalPathEndpoints } from "./measure-signal-path"
+import { getSignalPathEndpoints, measureSignalPath } from "./measure-signal-path"
 import { effectiveCarrierLayers } from "./effective-carrier-layers"
 import { selectBranchAttachment } from "./select-branch-attachment"
 import { joinMultiTerminalEscapes } from "./join-multi-terminal-escapes"
@@ -112,11 +112,25 @@ export function* routeMultiTerminalBuses(
       )
     const first = connection.pointsToConnect.find(
       (terminal) =>
-        terminal.layer === from.layer && distance(terminal, from) < 1e-8,
+        (terminal.layer === from.layer && distance(terminal, from) < 1e-8) ||
+        measureSignalPath({
+          input,
+          traces: input.traces ?? [],
+          connectionName: connection.name,
+          from,
+          to: terminal,
+        }) !== null,
     )
     const second = connection.pointsToConnect.find(
       (terminal) =>
-        terminal.layer === to.layer && distance(terminal, to) < 1e-8,
+        (terminal.layer === to.layer && distance(terminal, to) < 1e-8) ||
+        measureSignalPath({
+          input,
+          traces: input.traces ?? [],
+          connectionName: connection.name,
+          from: to,
+          to: terminal,
+        }) !== null,
     )
     if (!first || !second || first === second)
       throw Error("Timing path endpoints must belong to the routed connection")
@@ -199,7 +213,7 @@ export function* routeMultiTerminalBuses(
       if (!terminal) continue
       if (!effectiveCarrierLayers(input, connection).includes(terminal.layer))
         throw Error("No permitted surface layer for a multi-terminal branch")
-      const attachments: Terminal[] = completed
+      const attachments: Terminal[] = [...(input.traces ?? []), ...completed]
         .filter((trace) => trace.connection_name === connection.name)
         .flatMap((trace) => {
           const vias: Terminal[] = trace.route.flatMap((point) => {

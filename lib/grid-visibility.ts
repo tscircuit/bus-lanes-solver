@@ -1,3 +1,4 @@
+import { getPackageRoutingGrid } from "./get-package-routing-grid"
 import {
   LengthSearchFrontier,
   type LengthSearchLabel,
@@ -261,11 +262,24 @@ export class GridHistoryProjector {
       0.01,
       grid?.step ?? scene.input.minTraceWidth / (this.packageGrid ? 2 : 1),
     )
-    const b =
+    const aligned = !grid?.step && !grid?.bounds && this.packageGrid
+      ? getPackageRoutingGrid(scene.input, this.stepSize)
+      : undefined
+    if (aligned) this.stepSize = aligned.step
+    let b =
       grid?.bounds ??
       (this.packageGrid
         ? routingBounds(scene, this.stepSize)
         : scene.input.bounds)
+    if (aligned) {
+      const { origin, step } = aligned
+      b = {
+        minX: origin.x + Math.ceil((b.minX - origin.x) / step) * step,
+        minY: origin.y + Math.ceil((b.minY - origin.y) / step) * step,
+        maxX: origin.x + Math.floor((b.maxX - origin.x) / step) * step,
+        maxY: origin.y + Math.floor((b.maxY - origin.y) / step) * step,
+      }
+    }
     this.gridBounds = b
     this.origin = { x: b.minX, y: b.minY }
     this.nx = Math.ceil((b.maxX - b.minX) / this.stepSize) + 1
