@@ -1,4 +1,7 @@
-import { effectiveCarrierLayers } from "./effective-carrier-layers"
+import {
+  effectiveCarrierLayers,
+  explicitlyAllowsCarrierLayer,
+} from "./effective-carrier-layers"
 import { nativeGroupsEligible, routeNativeGroups } from "./route-native-groups"
 import {
   pinnedNativeBusesEligible,
@@ -1035,8 +1038,26 @@ export class BusLanesPipelineSolver extends BaseSolver {
     const terminalLayers = new Map<string, string[]>()
     this.hasNativeCarrierAlternatives = false
     for (const connection of this.routingInput.connections) {
+      if (
+        connection.pointsToConnect.every((point) => point.layers !== undefined)
+      ) {
+        const reachable = effectiveCarrierLayers(
+          this.routingInput,
+          connection,
+        ).filter((layer) =>
+          connection.pointsToConnect.every((point) =>
+            point.layers!.includes(layer),
+          ),
+        )
+        if (reachable.length > 1) terminalLayers.set(connection.name, reachable)
+        continue
+      }
       const explicitPadLayer = connection.pointsToConnect.every((point) =>
-        this.routingInput.allowedLayers?.includes(point.layer),
+        explicitlyAllowsCarrierLayer(
+          this.routingInput,
+          connection,
+          point.layer,
+        ),
       )
       if (
         !explicitPadLayer &&
@@ -1079,7 +1100,11 @@ export class BusLanesPipelineSolver extends BaseSolver {
           vias.every(
             (via) =>
               layer !== via.from_layer ||
-              this.routingInput.allowedLayers?.includes(layer),
+              explicitlyAllowsCarrierLayer(
+                this.routingInput,
+                connection,
+                layer,
+              ),
           ),
       )
       if (available.length < supported.length)

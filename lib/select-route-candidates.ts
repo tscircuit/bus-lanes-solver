@@ -1,6 +1,6 @@
 import { length } from "./geometry"
 import { RouteConflictIndex } from "./route-conflict-index"
-import type { Trace, Wire } from "./types"
+import type { ConnectionName, Trace, Wire } from "./types"
 
 // Dense early candidate ids dominate compatibility checks. Keep that cache
 // bounded (4 KiB per candidate); unusually long searches use the sparse map.
@@ -49,6 +49,9 @@ type Candidate = {
  * indivisible choice so candidate selection cannot separate its rails. */
 export class RouteCandidatePool {
   private pools = new Map<string, Candidate[]>()
+  private rejectedSelections = new Set<string>()
+  private selectedCandidateIds?: string
+  private lengthTargets = new Map<ConnectionName, number>()
   private nextId = 0
   private additions = 0
   private assignments = new Map<string, Candidate[] | null>()
@@ -211,6 +214,22 @@ export class RouteCandidatePool {
     return false
   }
 
+  setLengthTargets(targets: ReadonlyMap<ConnectionName, number>): void {
+    this.lengthTargets = new Map(targets)
+    this.revision++
+    this.selection = undefined
+    this.assignments.clear()
+  }
+
+  private peakCost(candidate: Candidate): number {
+    return Math.max(
+      candidate.peak,
+      ...candidate.traces.map(
+        (trace) => this.lengthTargets.get(trace.connection_name!) ?? 0,
+      ),
+    )
+  }
+
   private compatible(
     domains: Candidate[][],
     searchBudget = 50000,
@@ -250,7 +269,7 @@ export class RouteCandidatePool {
         }
       components.push(component)
     }
-    if (components.length > 1) {
+    if (components.length > 1 && this.rejectedSelections.size === 0) {
       const combined: Candidate[] = []
       for (const component of components) {
         const result = this.compatible(
@@ -275,7 +294,15 @@ export class RouteCandidatePool {
         if (!remaining[i].length) return null
         if (next < 0 || remaining[i].length < remaining[next].length) next = i
       }
-      if (next < 0) return selected as Candidate[]
+      if (next < 0) {
+        const key = selected
+          .map((candidate) => candidate!.id)
+          .sort((a, b) => a - b)
+          .join(",")
+        return this.rejectedSelections.has(key)
+          ? null
+          : (selected as Candidate[])
+      }
       for (const candidate of remaining[next]) {
         selected[next] = candidate
         const filtered = remaining.map((domain, i) =>
@@ -291,7 +318,13 @@ export class RouteCandidatePool {
       return null
     }
     return visit(
-      domains.map((domain) => [...domain].sort((a, b) => a.length - b.length)),
+      domains.map((domain) =>
+        [...domain].sort((a, b) =>
+          this.lengthTargets.size
+            ? this.peakCost(a) - this.peakCost(b) || b.length - a.length
+            : a.length - b.length,
+        ),
+      ),
     )
   }
 
@@ -318,6 +351,16 @@ export class RouteCandidatePool {
     return result?.slice() ?? null
   }
 
+  /** A complete geometric assignment can still have no feasible tuning bank. */
+  rejectSelected(): void {
+    if (!this.selectedCandidateIds)
+      throw Error("No carrier assignment was selected")
+    this.rejectedSelections.add(this.selectedCandidateIds)
+    this.selectedCandidateIds = undefined
+    this.selection = undefined
+    this.assignments.clear()
+  }
+
   private computeSelection(
     units: string[],
     matchingGroups: string[][],
@@ -326,7 +369,7 @@ export class RouteCandidatePool {
     let domains = units.map((unit) => this.pools.get(unit) ?? [])
     let best = this.compatible(domains)
     if (!best) return null
-    const peak = (candidate: Candidate) => candidate.peak
+    const peak = (candidate: Candidate) => this.peakCost(candidate)
     // First bound the overall detour, then minimize each matching group's
     // target independently. A long bus must not hide another bus's outlier.
     for (const group of [units, ...matchingGroups]) {
@@ -365,6 +408,10 @@ export class RouteCandidatePool {
         indices.has(i) ? domain.filter((c) => peak(c) <= ceiling) : domain,
       )
     }
+    this.selectedCandidateIds = best
+      .map((candidate) => candidate.id)
+      .sort((a, b) => a - b)
+      .join(",")
     return best.flatMap((c) => c.traces)
   }
 }

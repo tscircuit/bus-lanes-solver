@@ -39,6 +39,7 @@ export function* negotiateLanes({
   deferRetainedSelfClearance = false,
   checkReachability = false,
   analyticFallback = false,
+  matchRoutes,
 }: {
   input: SimpleRouteJson
   connections: Connection[]
@@ -51,6 +52,10 @@ export function* negotiateLanes({
   deferRetainedSelfClearance?: boolean
   checkReachability?: boolean
   analyticFallback?: boolean
+  matchRoutes?: (traces: Trace[]) => {
+    traces: Trace[] | null
+    carrierLengthTargets?: ReadonlyMap<ConnectionName, number>
+  }
 }): Generator<Trace[], Trace[] | null> {
   const flexibleTerminals = connections.some(
     (connection) => (terminalLayers.get(connection.name)?.length ?? 1) > 1,
@@ -698,8 +703,12 @@ export function* negotiateLanes({
     reportProgress?.(iteration + 1, missing)
     yield [...pairedTraces, ...routed.values()]
     if (missing) continue
-    const result = [...pairedTraces, ...routed.values()]
-    for (const trace of routed.values()) {
+    if (matchRoutes && !selected) {
+      if (!queue.includes(currentUnit)) queue.push(currentUnit)
+      continue
+    }
+    const result = structuredClone([...pairedTraces, ...routed.values()])
+    for (const trace of result.slice(pairedTraces.length)) {
       if (trace.coupledSection) continue
       const connection = connections.find(
           (c) => c.name === trace.connection_name,
@@ -732,7 +741,13 @@ export function* negotiateLanes({
       }
       if (!repaired.value) return null
     }
-    return result
+    if (!matchRoutes) return result
+    const matched = matchRoutes(result)
+    if (matched.traces) return matched.traces
+    candidates.rejectSelected()
+    if (matched.carrierLengthTargets)
+      candidates.setLengthTargets(matched.carrierLengthTargets)
+    for (const unit of units) if (!queue.includes(unit)) queue.push(unit)
   }
   return null
 }

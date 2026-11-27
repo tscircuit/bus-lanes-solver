@@ -56,6 +56,7 @@ import {
   assertLengthTargets,
   lengthConstraints,
   minimumLengthTargets,
+  fixedRouteLength,
   hasLengthConstraints,
   pairLengthReports,
 } from "./route-lengths"
@@ -97,6 +98,7 @@ export class BusLanesSolver extends BaseSolver {
   private bestPartial: Trace[] = []
   private pairedTraces: Trace[] = []
   private isRefinement = false
+  private matchingTargets?: Map<ConnectionName, number>
   private pairVariant = 0
   private pairIndex = 0
   private congestionPass = 0
@@ -583,6 +585,30 @@ export class BusLanesSolver extends BaseSolver {
         terminalLayers: this.terminalLayers,
         enableTerminalReservations: () => this.reservePackageExits!,
         analyticFallback: this.options.analyticFallback,
+        matchRoutes: hasLengthConstraints(this.input)
+          ? (traces) => {
+              const matcher = BusLanesSolver.forRefinement(
+                this.input,
+                traces,
+                this.options,
+              )
+              matcher.solve()
+              const carrierLengthTargets = new Map<ConnectionName, number>()
+              for (const trace of traces) {
+                const name = trace.connection_name!
+                const target = matcher.matchingTargets?.get(name)
+                if (target === undefined) continue
+                const carrierTarget =
+                  target - fixedRouteLength(this.input, name)
+                if (carrierTarget > length(trace.route) + 1e-7)
+                  carrierLengthTargets.set(name, carrierTarget)
+              }
+              return {
+                traces: matcher.solved ? matcher.traces : null,
+                carrierLengthTargets,
+              }
+            }
+          : undefined,
       })
       const step = this.negotiated.next()
       if (!step.done) {
@@ -803,6 +829,7 @@ export class BusLanesSolver extends BaseSolver {
           try {
             const targets = minimumLengthTargets(input, candidate)
             assertLengthTargets(input, targets)
+            this.matchingTargets = targets
             if (!this.options.smoothTuning) {
               this.traces = tuneLengths(input, candidate, targets)
             } else if (candidate.some((trace) => trace.coupledSection)) {
