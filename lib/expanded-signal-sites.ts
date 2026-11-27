@@ -9,6 +9,10 @@ import { routeAnglesAreConventional } from "./route-angle-validation"
 import type { Connection, SimpleRouteJson, Terminal, Trace, Via } from "./types"
 import { fixedCopper, VectorScene } from "./vector-scene"
 
+/** Longest surface escape to an expanded site, in mm. Every site via and
+ * escape point therefore lies within this distance of its pad. */
+export const MAX_SITE_SURFACE_LENGTH = 2
+
 export interface ExpandedSignalSite {
   point: Terminal
   escape: Trace
@@ -264,7 +268,7 @@ export function* expandedSignalSites({
         .filter((d) => d > 1e-4),
     )
     if (!Number.isFinite(pitch)) continue
-    const surfaceLimit = Math.min(2, 2.5 * pitch)
+    const surfaceLimit = Math.min(MAX_SITE_SURFACE_LENGTH, 2.5 * pitch)
     // Sample half-pitch channels even when their clearance is narrower than
     // one raster cell. A length-limited escape stays inside this local square.
     const pitchSteps = Math.max(

@@ -83,7 +83,7 @@ const hasViaSite = (request: SimpleRouteJson, pending: PendingPad): boolean =>
     viaTargetLayer: "bottom",
   }) === "via_site"
 
-test("ButterStick address/command tuning takes the last via sites of two pending RAM pads", async (): Promise<void> => {
+test("ButterStick address/command tuning leaves every pending RAM pad a via site", async (): Promise<void> => {
   // Core hands each phase request to the solver without options.
   const original = structuredClone(input)
   const solver = new BusLanesPipelineSolver(input)
@@ -127,10 +127,7 @@ test("ButterStick address/command tuning takes the last via sites of two pending
   const lost = pending.filter(
     (p) => hasViaSite(input, p) && !hasViaSite(routed, p),
   )
-  expect(lost.map((p) => p.net).sort()).toEqual([
-    "source_net_52",
-    "source_net_53",
-  ])
+  expect(lost.map((p) => p.net)).toEqual([])
 
   const graphics = new BusLanesSolver(routed).visualize()
   const left = Math.min(...input.obstacles.map((o) => o.center.x - o.width / 2))
