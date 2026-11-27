@@ -1,7 +1,7 @@
 import type { SimpleRouteJson } from "./types"
 import { pairedArcNeedsTangents } from "./paired-arc-sampling"
 
-function reserveSkewRoundoff(limit: number): number {
+export function reserveSkewRoundoff(limit: number): number {
   const margin = Math.min(1e-6, limit / 1000)
   return limit - margin
 }
