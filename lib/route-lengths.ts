@@ -4,6 +4,7 @@ import {
   getSignalPathEndpoints,
 } from "./measure-signal-path"
 import { minimumMeanLengthTargets } from "./minimum-mean-length-targets"
+import { reserveSkewRoundoff } from "./skew-roundoff-reserve"
 import type {
   Bus,
   ConnectionName,
@@ -252,10 +253,12 @@ export function lengthConstraints(
         tolerance: b.maxLengthSkew!,
         skewReference: b.skewReference,
         referenceNames: b.referenceConnectionNames,
+        reserveSkewOnTune: b.reserveSkewOnTune,
       })),
     ...(input.differentialPairs ?? []).map((p) => ({
       names: p.connectionNames,
       tolerance: p.lengthTolerance,
+      reserveSkewOnTune: p.reserveSkewOnTune,
     })),
   ]
 }
@@ -328,11 +331,15 @@ export function minimumLengthTargets(
   }
   for (let pass = 0; pass < targets.size; pass++) {
     let changed = false
-    for (const { names, tolerance } of constraints) {
-      const floor = Math.max(...names.map((n) => targets.get(n)!)) - tolerance
+    for (const { names, tolerance, reserveSkewOnTune } of constraints) {
+      const ceiling = Math.max(...names.map((n) => targets.get(n)!))
+      const floor = ceiling - tolerance
+      const tunedFloor = reserveSkewOnTune
+        ? ceiling - reserveSkewRoundoff(tolerance)
+        : floor
       for (const name of names)
         if (targets.get(name)! < floor - 1e-9) {
-          targets.set(name, floor)
+          targets.set(name, tunedFloor)
           changed = true
         }
     }

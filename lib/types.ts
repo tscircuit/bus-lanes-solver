@@ -29,6 +29,7 @@ export interface LengthSkewConstraint {
   tolerance: number
   skewReference?: "range" | "mean" | "references"
   referenceNames?: ConnectionName[]
+  reserveSkewOnTune?: boolean
 }
 export interface Bus {
   busId: string
@@ -39,6 +40,7 @@ export interface Bus {
   /** Minimum total planar copper per member, including supplied fanouts, in mm. */
   minLength?: number
   maxLengthSkew?: number
+  reserveSkewOnTune?: boolean
   /** Measure skew as a range (default) or maximum deviation from the mean. */
   skewReference?: LengthSkewConstraint["skewReference"]
   referenceConnectionNames?: ConnectionName[]
@@ -109,6 +111,7 @@ export interface SimpleRouteJson {
     lengthTolerance: number
     traceGap?: number
     maxUncoupledLength?: number
+    reserveSkewOnTune?: boolean
   }>
 }
 export interface SolverOptions {

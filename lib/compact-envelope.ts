@@ -1,5 +1,6 @@
 import { solve, type Constraint } from "yalps"
 import { fixedRouteLength, lengthConstraints } from "./route-lengths"
+import { reserveSkewRoundoff } from "./skew-roundoff-reserve"
 import { compactionMotionGroups } from "./compaction-motion-groups"
 import { projectCompactionDirections } from "./project-compaction-directions"
 import { CompactionCutSet } from "./compaction-cut-set"
@@ -164,13 +165,14 @@ export function* compactEnvelopeCandidate(
       const ceiling = Math.max(...members.map((m) => m.total)),
         v = `bus_shrink_${index}`
       // Cohorts reserve matching slack for simplex rounding and direction
-      // projection. Other modes retain the validated boundary solution. The
-      // output validator always enforces the original SRJ limits.
+      // projection; other modes reserve roundoff inside tolerance while keeping
+      // an already-matched boundary solution capped at tolerance.
+      const currentSkew = ceiling - Math.min(...members.map((m) => m.total))
       const allowedSkew = cohort
         ? Math.max(0, tolerance - 1e-5)
         : Math.max(
-            tolerance + 1e-8,
-            ceiling - Math.min(...members.map((m) => m.total)) + 1e-9,
+            reserveSkewRoundoff(tolerance),
+            Math.min(tolerance, currentSkew),
           )
       variables[v] = { objective: 0 }
       add(new Map([[v, 1]]), { max: ceiling })

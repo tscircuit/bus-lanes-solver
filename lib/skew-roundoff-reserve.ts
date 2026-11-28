@@ -1,14 +1,15 @@
 import type { SimpleRouteJson } from "./types"
 import { pairedArcNeedsTangents } from "./paired-arc-sampling"
 
-function reserveSkewRoundoff(limit: number): number {
+export function reserveSkewRoundoff(limit: number): number {
   const margin = Math.min(1e-6, limit / 1000)
   return limit - margin
 }
 
-/** Private targets for clearance-limited paired polygons, in board-world mm. Polygon cleanup and envelope
- * optimization use small geometric epsilons; reserve at most 1 nm inside each
- * requested skew bound so final copper also satisfies strict downstream checks.
+/** Private targets for generated-fanout and plain-bus routing, in board-world mm.
+ * Polygon cleanup and envelope optimization use small geometric epsilons; reserve
+ * at most 1 nm inside each requested skew bound so final copper also satisfies
+ * strict downstream checks, while keeping untuned boundary routes untouched.
  * Public input, output constraints and physical clearances remain unchanged. */
 export function withSkewRoundoffReserve(
   input: SimpleRouteJson,
@@ -38,7 +39,10 @@ export function withSkewRoundoffReserve(
       })
     }),
   )
-  if (!affectedPairs.size) return input
+  const hasSkewBounds =
+    Boolean(input.buses?.some((bus) => bus.maxLengthSkew !== undefined)) ||
+    Boolean(input.differentialPairs?.length)
+  if (!affectedPairs.size && !hasSkewBounds) return input
   const affectedNames = new Set(
     [...affectedPairs].flatMap((pair) => pair.connectionNames),
   )
@@ -47,12 +51,12 @@ export function withSkewRoundoffReserve(
     const includesAffectedPair = bus.connectionNames.some((name) =>
       affectedNames.has(name),
     )
-    if (!includesAffectedPair) return bus
+    if (!includesAffectedPair) return { ...bus, reserveSkewOnTune: true }
     const maxLengthSkew = reserveSkewRoundoff(bus.maxLengthSkew)
     return { ...bus, maxLengthSkew }
   })
   const differentialPairs = input.differentialPairs?.map((pair) => {
-    if (!affectedPairs.has(pair)) return pair
+    if (!affectedPairs.has(pair)) return { ...pair, reserveSkewOnTune: true }
     const lengthTolerance = reserveSkewRoundoff(pair.lengthTolerance)
     return { ...pair, lengthTolerance }
   })

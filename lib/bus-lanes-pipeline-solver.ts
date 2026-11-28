@@ -237,6 +237,14 @@ export class BusLanesPipelineSolver extends BaseSolver {
                     trace,
                     smoothTuning: this.options.smoothTuning,
                   }),
+              ) ||
+              [
+                ...busLengthReports(this.input, complete),
+                ...pairLengthReports(this.input, complete),
+              ].some(
+                (r) =>
+                  r.toleranceMm !== null &&
+                  (r.skewMm === null || r.skewMm > r.toleranceMm + 1e-9),
               )
             )
               continue
@@ -329,6 +337,14 @@ export class BusLanesPipelineSolver extends BaseSolver {
                       trace,
                       smoothTuning: this.options.smoothTuning,
                     }),
+                ) ||
+                [
+                  ...busLengthReports(this.input, complete),
+                  ...pairLengthReports(this.input, complete),
+                ].some(
+                  (r) =>
+                    r.toleranceMm !== null &&
+                    (r.skewMm === null || r.skewMm > r.toleranceMm + 1e-9),
                 )
               )
                 continue
