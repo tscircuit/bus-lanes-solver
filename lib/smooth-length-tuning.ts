@@ -10,6 +10,7 @@ import {
   assertLengthTargets,
 } from "./route-lengths"
 import { distance, length, simplify, segmentDistance } from "./geometry"
+import { createPendingViaSiteGuard } from "./pending-via-sites"
 import { VectorScene, fixedCopper, routeCopper } from "./vector-scene"
 import type {
   SimpleRouteJson,
@@ -44,7 +45,10 @@ export function matchSmoothLengths({
   packageOnlyPairTuning: boolean
 }): Trace[] {
   try {
-    return tuneSmoothLengths(input, traces, targets, { packageOnlyPairTuning })
+    return tuneSmoothLengths(input, traces, targets, {
+      packageOnlyPairTuning,
+      keepPendingViaSites: true,
+    })
   } catch (error) {
     if (
       !(error instanceof IncompleteLengthTuningError) ||
@@ -53,7 +57,10 @@ export function matchSmoothLengths({
       throw error
     const balanced = minimumBalancedLengthTargets({ input, traces })
     assertLengthTargets(input, balanced)
-    return tuneSmoothLengths(input, traces, balanced, { packageOnlyPairTuning })
+    return tuneSmoothLengths(input, traces, balanced, {
+      packageOnlyPairTuning,
+      keepPendingViaSites: true,
+    })
   }
 }
 
@@ -73,6 +80,9 @@ export function tuneSmoothLengths(
      * still be resolved before accepting the complete circuit. */
     candidateScore?: (trace: Trace) => number
     alignPeriods?: boolean
+    /** Completed-bus matching: a bank must leave every pad of a net routed by
+     * a later request at least one via site it still had. */
+    keepPendingViaSites?: boolean
   } = {},
 ) {
   let attempted = 0
@@ -82,6 +92,7 @@ export function tuneSmoothLengths(
   function* candidates(
     t: Trace,
     scene: VectorScene,
+    keepsPendingViaSites: ReturnType<typeof createPendingViaSiteGuard>,
     fractionOfDeficit = 1,
   ): Generator<Trace> {
     const connection = input.connections.find(
@@ -288,7 +299,12 @@ export function tuneSmoothLengths(
                 continue
               if (
                 !terminalViaCopperIsClear(next) ||
-                !tuningPathIsSelfClear(next, returnSpacing)
+                !tuningPathIsSelfClear(next, returnSpacing) ||
+                !keepsPendingViaSites(
+                  bump,
+                  connection.pointsToConnect[0].layer,
+                  width,
+                )
               )
                 continue
               const candidate: Trace = {
@@ -354,13 +370,21 @@ export function tuneSmoothLengths(
         (result[index].route[0] as Wire).width,
         [...fixed, ...result.flatMap(routeCopper)],
       )
+      const keepsPendingViaSites = options.keepPendingViaSites
+        ? createPendingViaSiteGuard(input, result)
+        : () => true
       let next: Trace | undefined
       if (!options.candidateScore)
-        next = candidates(result[index], scene).next().value
+        next = candidates(result[index], scene, keepsPendingViaSites).next()
+          .value
       else {
         let best = Infinity,
           evaluated = 0
-        for (const candidate of candidates(result[index], scene)) {
+        for (const candidate of candidates(
+          result[index],
+          scene,
+          keepsPendingViaSites,
+        )) {
           const score = options.candidateScore(candidate)
           if (score < best) {
             best = score
@@ -375,7 +399,12 @@ export function tuneSmoothLengths(
       // pending lane has exhausted those candidates.
       if (!next && allowPartial && (partialBanks.get(index) ?? 0) < 8) {
         for (const fraction of [0.5, 0.25]) {
-          next = candidates(result[index], scene, fraction).next().value
+          next = candidates(
+            result[index],
+            scene,
+            keepsPendingViaSites,
+            fraction,
+          ).next().value
           if (next) {
             partialBanks.set(index, (partialBanks.get(index) ?? 0) + 1)
             break
