@@ -38,7 +38,9 @@ export function withSkewRoundoffReserve(
       })
     }),
   )
-  if (!affectedPairs.size) return input
+  const coupledPairConnectionNames = new Set(
+    (input.differentialPairs ?? []).flatMap((pair) => pair.connectionNames),
+  )
   const affectedNames = new Set(
     [...affectedPairs].flatMap((pair) => pair.connectionNames),
   )
@@ -47,7 +49,10 @@ export function withSkewRoundoffReserve(
     const includesAffectedPair = bus.connectionNames.some((name) =>
       affectedNames.has(name),
     )
-    if (!includesAffectedPair) return bus
+    const isPlainBus = bus.connectionNames.every(
+      (name) => !coupledPairConnectionNames.has(name),
+    )
+    if (!includesAffectedPair && !isPlainBus) return bus
     const maxLengthSkew = reserveSkewRoundoff(bus.maxLengthSkew)
     return { ...bus, maxLengthSkew }
   })
