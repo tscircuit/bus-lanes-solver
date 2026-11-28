@@ -1,6 +1,6 @@
 {
   "name": "@tscircuit/bus-lanes-solver",
-  "version": "0.0.68",
+  "version": "0.0.69",
   "type": "module",
   "module": "dist/index.js",
   "main": "dist/index.js",
