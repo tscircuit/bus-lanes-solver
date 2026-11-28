@@ -32,6 +32,8 @@ export class NativeCarrierRouter {
   readonly carrier: string
   readonly cellCount: number
   private fixed: ReturnType<typeof fixedCopper>
+  /** Fixed copper a via must clear on layers it only crosses. */
+  private crossedFixed: ReturnType<typeof fixedCopper>
   private cached = new Map<string, GridRoutingAccess>()
   private regions = new Map<string, Bounds>()
   private frontier = new LengthSearchFrontier()
@@ -54,6 +56,9 @@ export class NativeCarrierRouter {
       throw Error("Native routing window must lie inside the board bounds")
     this.carrier = input.allowedLayers![0]
     this.fixed = fixedCopper(input)
+    // Crossed pour reservations form antipads around a via. Its terminal
+    // layers, TOP and the carrier, keep every reservation.
+    this.crossedFixed = this.fixed.filter((copper) => !copper.isCopperPour)
     this.cellCount =
       (Math.ceil((routingBounds.maxX - routingBounds.minX) / step) + 1) *
       (Math.ceil((routingBounds.maxY - routingBounds.minY) / step) + 1)
@@ -97,13 +102,14 @@ export class NativeCarrierRouter {
     layer: string,
     width: number,
     soft = [] as ReturnType<typeof fixedCopper>,
+    fixed = this.fixed,
   ) {
     const connection = {
       ...c,
       pointsToConnect: c.pointsToConnect.map((p) => ({ ...p, layer })),
     }
     const search = new GridVisibilitySearch(
-      new VectorScene(this.input, connection, width, this.fixed),
+      new VectorScene(this.input, connection, width, fixed),
       connection.pointsToConnect[0],
       connection.pointsToConnect[1],
       soft,
@@ -115,11 +121,19 @@ export class NativeCarrierRouter {
     search.cancel()
     return access
   }
-  private hardGrid(c: Connection, layer: string, width: number) {
+  /** Via barrel occupancy on one physical layer of the TOP-carrier span. */
+  private viaGrid(c: Connection, layer: string, width: number) {
     const key = `${c.name}:${layer}:${width}`
     const old = this.cached.get(key)
     if (old) return old
-    const grid = this.grid(c, layer, width)
+    const crossed = layer !== "top" && layer !== this.carrier
+    const grid = this.grid(
+      c,
+      layer,
+      width,
+      [],
+      crossed ? this.crossedFixed : this.fixed,
+    )
     this.cached.set(key, grid)
     if (this.cached.size > 30)
       this.cached.delete(this.cached.keys().next().value!)
@@ -176,7 +190,7 @@ export class NativeCarrierRouter {
         this.grid(c, layer, width, soft),
       )
     const physical = getCopperLayerNames(input.layerCount)
-    const vias = physical.map((layer) => this.hardGrid(c, layer, diameter))
+    const vias = physical.map((layer) => this.viaGrid(c, layer, diameter))
     const softVia = ["top", this.carrier].map((layer) =>
       this.grid(c, layer, diameter, soft),
     )

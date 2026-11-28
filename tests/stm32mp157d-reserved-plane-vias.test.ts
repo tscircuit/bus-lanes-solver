@@ -42,8 +42,7 @@ const svgOptions = {
 
 // Unbroken GND (inner1), MPU_CORE/DDR1V35 (inner2) and SYS3V3/MPU3V3 (inner4)
 // pours cover both BGAs. Signal vias between top and inner3 cross them.
-// Known failure until the stacked fix; bun reports a pass only while it fails.
-test.failing("routes STM32MP157D DDR byte-0 data through reserved inner planes", async (): Promise<void> => {
+test("routes STM32MP157D DDR byte-0 data through reserved inner planes", async (): Promise<void> => {
   const input: SimpleRouteJson = JSON.parse(readFixture("input.srj.json.gz"))
   const circuit: AnyCircuitElement[] = JSON.parse(
     readFixture("unrouted.circuit.json.gz"),

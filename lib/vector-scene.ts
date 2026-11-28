@@ -21,6 +21,8 @@ export interface Copper {
   radius: number
   layer: string
   owners: string[]
+  /** Copper of an unbroken pour reservation, not a pad, hole or trace. */
+  isCopperPour?: boolean
   rect?: { minX: number; maxX: number; minY: number; maxY: number }
   orientedRect?: {
     boardToPad: Matrix
@@ -76,6 +78,7 @@ export function fixedCopper(input: SimpleRouteJson): Copper[] {
           radius: 0,
           layer,
           owners: o.connectedTo,
+          ...(o.isCopperPour ? { isCopperPour: true } : {}),
           rect: bounds,
           orientedRect: { boardToPad: inverse(padToBoard), padToBoard, rect },
         })
@@ -93,6 +96,7 @@ export function fixedCopper(input: SimpleRouteJson): Copper[] {
         radius: o.shape === "circle" ? o.width / 2 : 0,
         layer,
         owners: o.connectedTo,
+        ...(o.isCopperPour ? { isCopperPour: true } : {}),
         rect:
           o.shape === "circle"
             ? undefined
