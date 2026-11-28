@@ -1,0 +1,102 @@
+{
+  "method": "one_native_bus_lanes_matched_solve",
+  "placement": {
+    "cpu": {
+      "x": 0,
+      "y": 0,
+      "rotation": 0
+    },
+    "ram": {
+      "x": 0,
+      "y": -27,
+      "rotation": 270
+    },
+    "status": "unrouted_placement_review"
+  },
+  "viaPadMm": 0.45,
+  "viaHoleMm": 0.25,
+  "allowedLayers": [
+    "top",
+    "bottom"
+  ],
+  "signalNames": {
+    "source_trace_0": "DDR_D13",
+    "source_trace_1": "DDR_D15",
+    "source_trace_2": "DDR_D12",
+    "source_trace_3": "DDR_DQSn1",
+    "source_trace_4": "DDR_D14",
+    "source_trace_5": "DDR_D11",
+    "source_trace_6": "DDR_D9",
+    "source_trace_7": "DDR_DQS1",
+    "source_trace_8": "DDR_D10",
+    "source_trace_9": "DDR_DQM1",
+    "source_trace_10": "DDR_D8",
+    "source_trace_11": "DDR_D0",
+    "source_trace_12": "DDR_DQM0",
+    "source_trace_13": "DDR_D2",
+    "source_trace_14": "DDR_DQS0",
+    "source_trace_15": "DDR_D1",
+    "source_trace_16": "DDR_D3",
+    "source_trace_17": "DDR_D6",
+    "source_trace_18": "DDR_DQSn0",
+    "source_trace_19": "DDR_D4",
+    "source_trace_20": "DDR_D7",
+    "source_trace_21": "DDR_D5",
+    "source_trace_22": "DDR_RASn",
+    "source_trace_23": "DDR_CK",
+    "source_trace_24": "DDR_ODT",
+    "source_trace_25": "DDR_CASn",
+    "source_trace_26": "DDR_CKn",
+    "source_trace_27": "DDR_CKE",
+    "source_trace_28": "DDR_CSn0",
+    "source_trace_29": "DDR_WEn",
+    "source_trace_30": "DDR_A10",
+    "source_trace_31": "DDR_BA0",
+    "source_trace_32": "DDR_BA2",
+    "source_trace_33": "DDR_A15",
+    "source_trace_34": "DDR_A3",
+    "source_trace_35": "DDR_A0",
+    "source_trace_36": "DDR_A12",
+    "source_trace_37": "DDR_BA1",
+    "source_trace_38": "DDR_A5",
+    "source_trace_39": "DDR_A2",
+    "source_trace_40": "DDR_A1",
+    "source_trace_41": "DDR_A4",
+    "source_trace_42": "DDR_A7",
+    "source_trace_43": "DDR_A9",
+    "source_trace_44": "DDR_A11",
+    "source_trace_45": "DDR_A6",
+    "source_trace_46": "DDR_RESETn",
+    "source_trace_47": "DDR_A13",
+    "source_trace_48": "DDR_A14",
+    "source_trace_49": "DDR_A8"
+  },
+  "lengthBudgets": {
+    "DDR_BYTE0": {
+      "maxPlanarLengthMm": 27.400000000000002,
+      "maxSkewMm": 0.635
+    },
+    "DDR_BYTE1": {
+      "maxPlanarLengthMm": 29.800000000000004,
+      "maxSkewMm": 0.635
+    },
+    "DDR_ADDRESS_COMMAND_CLOCK": {
+      "targetPlanarLengthMm": 36.62,
+      "minimumMm": 35.349999999999994,
+      "maximumMm": 37.89,
+      "maxSkewMm": 0.635
+    }
+  },
+  "scope": "DDR signal geometry only; no power fanouts, decoupling or reference pours are yet integrated",
+  "manualTracesApproved": false,
+  "automaticRepairsOutsideThisSolverRunApproved": false,
+  "wallTimeBudgetMs": 1200000,
+  "previousTest": "routing-test-001",
+  "inputSha256": "84e1668ef4e27390c157f11aad3694b323bfb1a3d1f140bbd8891e0e851ada11",
+  "inputReplayedByteForByte": true,
+  "solverOptions": {
+    "goal": "matched"
+  },
+  "authorization": "User approved one 20-minute test with the same placement and rules; repairs still require separate approval.",
+  "startedAt": "2026-10-27T18:19:33.923Z"
+}
