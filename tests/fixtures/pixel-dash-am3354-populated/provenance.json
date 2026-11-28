@@ -1,0 +1,12 @@
+{
+  "source": "Pixel Dash AM3354 + MT41K512M16VRP-107 IT:P DDR3L calibration layout",
+  "boardRevision": "b171443a66fb720f725cbbc1d1cb47f7c2b7148a",
+  "boardEntry": "am3354/channel.circuit.tsx",
+  "capture": "50 DDR signal routes and their 100 vias removed. Native pads, fixed vias and support traces retained. The SRJ also includes synthetic inner1 no-via-in-pad exclusions; the PCB snapshot shows physical geometry only.",
+  "inputSha256": "d3765feb08d1e8651c92e3979167e64067de0bb040f020c9fdb1d4a839c4577a",
+  "fixedCopperCircuitSha256": "309a175be67b444ba2fe93961157ed5d6258f5491d3a3498674169948d8de59d",
+  "requestedConnections": 50,
+  "obstacles": 1577,
+  "mode": "connectivity",
+  "routingBudgetMs": 240000
+}
