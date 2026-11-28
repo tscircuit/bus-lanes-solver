@@ -1,0 +1,61 @@
+{
+  "source": {
+    "name": "Four-motor USB-C STM32MP157D motherboard",
+    "package": "https://tscircuit.com/MustafaMulla29/four-motor-usbc-stm32mp157d",
+    "publishedVersion": "2.0.4",
+    "captureChanges": [
+      "DDR byte-lane pin wires use the buses 0.15 mm width instead of the 0.2 mm Wire default",
+      "Unchanged fanout-ddr DDR_DATA_SIGNALS phase: both data bytes with their DQS pairs (DQ0-DQ15, DQM0-DQM1, DQS0/DQS1 P and N)",
+      "All copper pours, placements, rules and footprints are unchanged"
+    ],
+    "components": [
+      {
+        "ref": "U70",
+        "part": "STM32MP157DAB1",
+        "package": "LFBGA354 0.8 mm"
+      },
+      {
+        "ref": "U71",
+        "part": "NT5CC256M16ER-EK",
+        "package": "DDR3L x16 BGA96 0.8 mm"
+      }
+    ]
+  },
+  "capture": {
+    "entry": "<Board route routingMode=\"fanout-ddr\" />",
+    "method": "Circuit autorouting:start event for the bus_lanes phase; Circuit JSON taken at the same moment",
+    "versions": {
+      "tscircuit": "0.0.3285",
+      "@tscircuit/core": "0.0.2462",
+      "@tscircuit/bus-lanes-solver": "0.0.65"
+    },
+    "phase": {
+      "name": "DDR_DATA_SIGNALS",
+      "autorouter": "bus_lanes",
+      "connections": 22,
+      "obstacles": 3330,
+      "layerCount": 6,
+      "differentialPairs": 2,
+      "buses": [
+        "DDR_BYTE0",
+        "DDR_BYTE1"
+      ]
+    }
+  },
+  "reservedPlanes": {
+    "description": "Unbroken copper pours passed to bus_lanes as isCopperPour obstacles",
+    "obstacleCountsByLayer": {
+      "inner1": 1,
+      "inner4": 365,
+      "inner2": 71
+    }
+  },
+  "files": {
+    "input.srj.json.gz": {
+      "uncompressedSha256": "2b1ca8f750571c2d602e62353fcf3927e51052d60267e6853cf21600f81c3331"
+    },
+    "unrouted.circuit.json.gz": {
+      "uncompressedSha256": "042fce52ce30ee5c0288e8845745de5d1e20697a833eff7c2ed948a402a72928"
+    }
+  }
+}
