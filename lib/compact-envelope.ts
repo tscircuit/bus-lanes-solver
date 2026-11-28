@@ -166,12 +166,15 @@ export function* compactEnvelopeCandidate(
       // Cohorts reserve matching slack for simplex rounding and direction
       // projection. Other modes retain the validated boundary solution. The
       // output validator always enforces the original SRJ limits.
+      const currentSkew = ceiling - Math.min(...members.map((m) => m.total))
+      const reserve = tolerance > 0 ? Math.min(1e-8, tolerance / 1000) : 0
       const allowedSkew = cohort
         ? Math.max(0, tolerance - 1e-5)
-        : Math.max(
-            tolerance + 1e-8,
-            ceiling - Math.min(...members.map((m) => m.total)) + 1e-9,
-          )
+        : currentSkew <= tolerance - reserve
+          ? tolerance - reserve
+          : currentSkew <= tolerance
+            ? currentSkew
+            : currentSkew + 1e-9
       variables[v] = { objective: 0 }
       add(new Map([[v, 1]]), { max: ceiling })
       for (const member of members) {

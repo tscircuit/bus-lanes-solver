@@ -254,6 +254,15 @@ export class BusLanesPipelineSolver extends BaseSolver {
                 !validator.solved ||
                 exteriorPairSpacingReports(view.input, carriers).some(
                   (r) => !r.matched,
+                ) ||
+                [
+                  ...busLengthReports(this.input, complete),
+                  ...pairLengthReports(this.input, complete),
+                ].some(
+                  (report) =>
+                    report.toleranceMm !== null &&
+                    report.skewMm !== null &&
+                    report.skewMm > report.toleranceMm + 1e-9,
                 )
               )
                 continue
@@ -352,7 +361,19 @@ export class BusLanesPipelineSolver extends BaseSolver {
                     validator.step()
                     yield
                   }
-                  if (!validator.solved) continue
+                  if (
+                    !validator.solved ||
+                    [
+                      ...busLengthReports(this.input, complete),
+                      ...pairLengthReports(this.input, complete),
+                    ].some(
+                      (report) =>
+                        report.toleranceMm !== null &&
+                        report.skewMm !== null &&
+                        report.skewMm > report.toleranceMm + 1e-9,
+                    )
+                  )
+                    continue
                 } finally {
                   if (!validator.solved && !validator.failed)
                     validator.tryFinalAcceptance()

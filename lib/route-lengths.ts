@@ -329,10 +329,15 @@ export function minimumLengthTargets(
   for (let pass = 0; pass < targets.size; pass++) {
     let changed = false
     for (const { names, tolerance } of constraints) {
-      const floor = Math.max(...names.map((n) => targets.get(n)!)) - tolerance
+      const ceiling = Math.max(...names.map((n) => targets.get(n)!))
+      const floor = ceiling - tolerance
+      // Keep already-compliant straight routes untouched, but aim tuned lanes
+      // slightly inside the bound so downstream strict skew checks pass.
+      const reserve = tolerance > 0 ? Math.min(1e-8, tolerance / 1000) : 0
+      const tunedTarget = Math.min(ceiling, floor + reserve)
       for (const name of names)
         if (targets.get(name)! < floor - 1e-9) {
-          targets.set(name, floor)
+          targets.set(name, tunedTarget)
           changed = true
         }
     }
